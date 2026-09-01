@@ -15,12 +15,7 @@ var (
 	fuVerifyURL string
 	fuTechnique string
 	fuMethod    string
-	fuHeaders   []string
-	fuInScope   []string
-	fuMaxRisk   int
-	fuThrottle  int
-	fuTimeout   int
-	fuEvidence  string
+	fuProbe     probeFlags
 )
 
 var verifyFileUploadCmd = &cobra.Command{
@@ -52,41 +47,28 @@ func init() {
 	verifyFileUploadCmd.Flags().StringVar(&fuVerifyURL, "verify-url", "", "URL to GET after upload to check accessibility")
 	verifyFileUploadCmd.Flags().StringVar(&fuTechnique, "technique", "", "Technique: extension_bypass, mime_bypass, content_type_mismatch, polyglot_file, zip_path_traversal (required)")
 	verifyFileUploadCmd.Flags().StringVar(&fuMethod, "method", "POST", "HTTP method")
-	verifyFileUploadCmd.Flags().StringSliceVar(&fuHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyFileUploadCmd.Flags().StringSliceVar(&fuInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyFileUploadCmd.Flags().IntVar(&fuMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyFileUploadCmd.Flags().IntVar(&fuThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyFileUploadCmd.Flags().IntVar(&fuTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyFileUploadCmd.Flags().StringVar(&fuEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyFileUploadCmd.MarkFlagRequired("url")
 	_ = verifyFileUploadCmd.MarkFlagRequired("filename")
 	_ = verifyFileUploadCmd.MarkFlagRequired("technique")
-	_ = verifyFileUploadCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyFileUploadCmd, &fuProbe)
 
 	verifyCmd.AddCommand(verifyFileUploadCmd)
 }
 
 func runVerifyFileUpload(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(fuHeaders)
 
 	cfg := verify.FileUploadConfig{
-		URL:       fuURL,
-		FieldName: fuField,
-		Filename:  fuFilename,
-		Content:   fuContent,
-		MIMEType:  fuMIMEType,
-		VerifyURL: fuVerifyURL,
-		Technique: fuTechnique,
-		Method:    fuMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    fuInScope,
-			MaxRisk:    fuMaxRisk,
-			ThrottleMs: fuThrottle,
-			TimeoutSec: fuTimeout,
-			Headers:    headers,
-			Evidence:   fuEvidence,
-		},
+		URL:         fuURL,
+		FieldName:   fuField,
+		Filename:    fuFilename,
+		Content:     fuContent,
+		MIMEType:    fuMIMEType,
+		VerifyURL:   fuVerifyURL,
+		Technique:   fuTechnique,
+		Method:      fuMethod,
+		ProbeConfig: buildProbeConfig(&fuProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

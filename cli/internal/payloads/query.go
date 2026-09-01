@@ -1,143 +1,113 @@
 package payloads
 
-import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	"strings"
-)
+import "sort"
 
-// QueryPayloads filters payloads and returns ranked results with tags.
-func QueryPayloads(db *sql.DB, f PayloadFilter) (*QueryOutput, error) {
-	var (
-		where     []string
-		whereArgs []any
-		rankCols  []rankCol
-	)
-
-	// Required filter: vuln_type (always exact match)
-	where = append(where, "p.vuln_type = ?")
-	whereArgs = append(whereArgs, f.VulnType)
-
-	// Optional nullable filters: broadening semantics
-	// When set: match exact value OR NULL (engine-agnostic payloads always included)
-	// When unset: match everything
-	addNullableFilter(&where, &whereArgs, &rankCols, "p.db_engine", f.DBEngine)
-	addNullableFilter(&where, &whereArgs, &rankCols, "p.runtime", f.Runtime)
-
-	// Optional exact filters (non-nullable columns)
-	addExactFilter(&where, &whereArgs, "p.technique", f.Technique)
-	addExactFilter(&where, &whereArgs, "p.injection_surface", f.Surface)
-	addNullableFilter(&where, &whereArgs, &rankCols, "p.content_type", f.ContentType)
-	addExactFilter(&where, &whereArgs, "p.encoding", f.Encoding)
-	addNullableFilter(&where, &whereArgs, &rankCols, "p.string_boundary", f.Boundary)
-
-	// Max risk filter
-	if f.MaxRisk > 0 {
-		where = append(where, "p.risk <= ?")
-		whereArgs = append(whereArgs, f.MaxRisk)
-	}
-
-	// Tag filter via subquery
-	if f.Tag != "" {
-		where = append(where, "EXISTS (SELECT 1 FROM payload_tags t WHERE t.payload_id = p.id AND t.tag = ?)")
-		whereArgs = append(whereArgs, f.Tag)
-	}
-
-	// Build rank expression: exact matches score 0, NULL fallback scores 1
-	// Use (0+0) instead of bare 0 to prevent SQLite interpreting it as a column index
-	rankSQL := "(0+0)"
-	var rankArgs []any
-	if len(rankCols) > 0 {
-		parts := make([]string, len(rankCols))
-		for i, rc := range rankCols {
-			parts[i] = fmt.Sprintf("CASE WHEN %s = ? THEN 0 ELSE 1 END", rc.column)
-			rankArgs = append(rankArgs, rc.value)
-		}
-		rankSQL = "(" + strings.Join(parts, " + ") + ")"
-	}
-
+// Query filters the store's payloads and returns ranked results with tags.
+//
+// It reproduces the semantics of the former SQLite query exactly:
+//   - vuln_type is a required exact match.
+//   - db_engine, runtime, content_type and string_boundary are nullable
+//     "broadening" filters: a set filter matches rows whose value equals it OR
+//     whose value is absent (engine-agnostic rows are always included).
+//   - technique, injection_surface and encoding are exact filters.
+//   - max_risk (when > 0) keeps rows with risk <= max_risk.
+//   - tag (when set) keeps rows carrying that tag.
+//
+// Results are ordered by broadening rank ASC (exact matches before absent-value
+// fallbacks), then risk ASC, then id ASC. Payload IDs are unique content
+// hashes, so id is a fully deterministic final tiebreaker and no true ties
+// remain — the ordering matches the SQLite `ORDER BY rank, risk, id`.
+func (s *Store) Query(f PayloadFilter) *QueryOutput {
 	limit := f.Limit
 	if limit <= 0 {
 		limit = 20
 	}
 
-	// Assemble args: WHERE args, then rank args, then LIMIT
-	allArgs := make([]any, 0, len(whereArgs)+len(rankArgs)+1)
-	allArgs = append(allArgs, whereArgs...)
-	allArgs = append(allArgs, rankArgs...)
-	allArgs = append(allArgs, limit)
-
-	query := fmt.Sprintf(`
-		SELECT p.id, p.vuln_type, p.db_engine, p.runtime, p.technique,
-		       p.injection_surface, p.content_type, p.encoding, p.string_boundary,
-		       p.evidence_type, p.risk, p.payload, p.placeholders, p.notes, p.source
-		FROM payloads p
-		WHERE %s
-		ORDER BY %s ASC, p.risk ASC, p.id ASC
-		LIMIT ?
-	`, strings.Join(where, " AND "), rankSQL)
-
-	rows, err := db.Query(query, allArgs...)
-	if err != nil {
-		return nil, fmt.Errorf("query payloads: %w", err)
+	type ranked struct {
+		p    Payload
+		rank int
 	}
-	defer rows.Close()
+	var matched []ranked
 
-	results := make([]PayloadResult, 0)
-	var ids []string
-
-	for rows.Next() {
-		var (
-			r                PayloadResult
-			dbEngine         sql.NullString
-			runtime          sql.NullString
-			contentType      sql.NullString
-			stringBoundary   sql.NullString
-			placeholdersJSON string
-			vulnType         string
-		)
-		err := rows.Scan(
-			&r.ID, &vulnType, &dbEngine, &runtime, &r.Technique,
-			&r.InjectionSurface, &contentType, &r.Encoding, &stringBoundary,
-			&r.EvidenceType, &r.Risk, &r.Payload, &placeholdersJSON, &r.Notes, &r.Source,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("scan row: %w", err)
+	for _, p := range s.payloads {
+		if p.VulnType != f.VulnType {
+			continue
 		}
 
-		if stringBoundary.Valid {
-			r.StringBoundary = &stringBoundary.String
+		rank := 0
+		if !nullableMatch(deref(p.DBEngine), f.DBEngine, &rank) {
+			continue
+		}
+		if !nullableMatch(deref(p.Runtime), f.Runtime, &rank) {
+			continue
+		}
+		if f.Technique != "" && p.Technique != f.Technique {
+			continue
+		}
+		if f.Surface != "" && p.InjectionSurface != f.Surface {
+			continue
+		}
+		if !nullableMatch(deref(p.ContentType), f.ContentType, &rank) {
+			continue
+		}
+		if f.Encoding != "" && p.Encoding != f.Encoding {
+			continue
+		}
+		if !nullableMatch(deref(p.StringBoundary), f.Boundary, &rank) {
+			continue
+		}
+		if f.MaxRisk > 0 && p.Risk > f.MaxRisk {
+			continue
+		}
+		if f.Tag != "" && !hasTag(p.Tags, f.Tag) {
+			continue
 		}
 
-		var placeholders []string
-		if err := json.Unmarshal([]byte(placeholdersJSON), &placeholders); err != nil {
+		matched = append(matched, ranked{p: p, rank: rank})
+	}
+
+	sort.Slice(matched, func(i, j int) bool {
+		a, b := matched[i], matched[j]
+		if a.rank != b.rank {
+			return a.rank < b.rank
+		}
+		if a.p.Risk != b.p.Risk {
+			return a.p.Risk < b.p.Risk
+		}
+		return a.p.ID < b.p.ID
+	})
+
+	if len(matched) > limit {
+		matched = matched[:limit]
+	}
+
+	results := make([]PayloadResult, 0, len(matched))
+	for _, m := range matched {
+		p := m.p
+		placeholders := p.Placeholders
+		if placeholders == nil {
 			placeholders = []string{}
 		}
-		r.Placeholders = placeholders
-		r.Tags = []string{}
-
-		results = append(results, r)
-		ids = append(ids, r.ID)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
-	}
-
-	// Batch load tags
-	if len(ids) > 0 {
-		tagMap, err := loadTags(db, ids)
-		if err != nil {
-			return nil, err
+		tags := p.Tags
+		if tags == nil {
+			tags = []string{}
 		}
-		for i := range results {
-			if tags, ok := tagMap[results[i].ID]; ok {
-				results[i].Tags = tags
-			}
-		}
+		results = append(results, PayloadResult{
+			ID:               p.ID,
+			Payload:          p.Payload,
+			Technique:        p.Technique,
+			InjectionSurface: p.InjectionSurface,
+			Encoding:         p.Encoding,
+			StringBoundary:   p.StringBoundary,
+			EvidenceType:     p.EvidenceType,
+			Risk:             p.Risk,
+			Placeholders:     placeholders,
+			Notes:            p.Notes,
+			Source:           p.Source,
+			Tags:             tags,
+		})
 	}
 
-	// Build echoed query
 	echoedQuery := map[string]any{
 		"vuln_type": f.VulnType,
 	}
@@ -174,60 +144,39 @@ func QueryPayloads(db *sql.DB, f PayloadFilter) (*QueryOutput, error) {
 		Query:   echoedQuery,
 		Count:   len(results),
 		Results: results,
-	}, nil
+	}
 }
 
-type rankCol struct {
-	column string
-	value  string
+// nullableMatch reproduces `(col = value OR col IS NULL)` plus the broadening
+// rank `CASE WHEN col = value THEN 0 ELSE 1 END`. An unset filter always
+// matches and adds no rank; a set filter matches an equal value (rank +0) or an
+// absent value (rank +1) and excludes any other value.
+func nullableMatch(colVal, filterVal string, rank *int) bool {
+	if filterVal == "" {
+		return true
+	}
+	if colVal == filterVal {
+		return true
+	}
+	if colVal == "" {
+		*rank++
+		return true
+	}
+	return false
 }
 
-// addNullableFilter: column = value OR column IS NULL.
-func addNullableFilter(where *[]string, args *[]any, ranks *[]rankCol, column, value string) {
-	if value == "" {
-		return
+func deref(s *string) string {
+	if s == nil {
+		return ""
 	}
-	*where = append(*where, fmt.Sprintf("(%s = ? OR %s IS NULL)", column, column))
-	*args = append(*args, value)
-	*ranks = append(*ranks, rankCol{column: column, value: value})
+	return *s
 }
 
-// addExactFilter: exact match only (non-nullable column).
-func addExactFilter(where *[]string, args *[]any, column, value string) {
-	if value == "" {
-		return
-	}
-	*where = append(*where, fmt.Sprintf("%s = ?", column))
-	*args = append(*args, value)
-}
-
-// loadTags batch-loads tags for a set of payload IDs.
-func loadTags(db *sql.DB, ids []string) (map[string][]string, error) {
-	placeholders := make([]string, len(ids))
-	args := make([]any, len(ids))
-	for i, id := range ids {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-
-	query := fmt.Sprintf(
-		"SELECT payload_id, tag FROM payload_tags WHERE payload_id IN (%s) ORDER BY payload_id, tag",
-		strings.Join(placeholders, ","),
-	)
-
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("load tags: %w", err)
-	}
-	defer rows.Close()
-
-	tagMap := make(map[string][]string)
-	for rows.Next() {
-		var payloadID, tag string
-		if err := rows.Scan(&payloadID, &tag); err != nil {
-			return nil, fmt.Errorf("scan tag: %w", err)
+func hasTag(tags []string, tag string) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
 		}
-		tagMap[payloadID] = append(tagMap[payloadID], tag)
 	}
-	return tagMap, rows.Err()
+	return false
 }

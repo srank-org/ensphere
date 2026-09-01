@@ -14,12 +14,7 @@ var (
 	pauthzHighToken string
 	pauthzLowToken  string
 	pauthzWatch     string
-	pauthzHeaders   []string
-	pauthzInScope   []string
-	pauthzMaxRisk   int
-	pauthzThrottle  int
-	pauthzTimeout   int
-	pauthzEvidence  string
+	pauthzProbe     probeFlags
 )
 
 var verifyPropertyAuthZCmd = &cobra.Command{
@@ -41,23 +36,17 @@ func init() {
 	verifyPropertyAuthZCmd.Flags().StringVar(&pauthzHighToken, "high-token", "", "High-privilege auth token (required)")
 	verifyPropertyAuthZCmd.Flags().StringVar(&pauthzLowToken, "low-token", "", "Low-privilege auth token (required)")
 	verifyPropertyAuthZCmd.Flags().StringVar(&pauthzWatch, "watch-fields", "", "Comma-separated fields to watch (optional)")
-	verifyPropertyAuthZCmd.Flags().StringSliceVar(&pauthzHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyPropertyAuthZCmd.Flags().StringSliceVar(&pauthzInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyPropertyAuthZCmd.Flags().IntVar(&pauthzMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyPropertyAuthZCmd.Flags().IntVar(&pauthzThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyPropertyAuthZCmd.Flags().IntVar(&pauthzTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyPropertyAuthZCmd.Flags().StringVar(&pauthzEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyPropertyAuthZCmd.MarkFlagRequired("url")
 	_ = verifyPropertyAuthZCmd.MarkFlagRequired("high-token")
 	_ = verifyPropertyAuthZCmd.MarkFlagRequired("low-token")
-	_ = verifyPropertyAuthZCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyPropertyAuthZCmd, &pauthzProbe)
 
 	verifyCmd.AddCommand(verifyPropertyAuthZCmd)
 }
 
 func runVerifyPropertyAuthZ(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(pauthzHeaders)
 
 	var watchFields []string
 	if pauthzWatch != "" {
@@ -75,14 +64,7 @@ func runVerifyPropertyAuthZ(cmd *cobra.Command, args []string) error {
 		HighPrivToken: pauthzHighToken,
 		LowPrivToken:  pauthzLowToken,
 		WatchFields:   watchFields,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    pauthzInScope,
-			MaxRisk:    pauthzMaxRisk,
-			ThrottleMs: pauthzThrottle,
-			TimeoutSec: pauthzTimeout,
-			Headers:    headers,
-			Evidence:   pauthzEvidence,
-		},
+		ProbeConfig:   buildProbeConfig(&pauthzProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

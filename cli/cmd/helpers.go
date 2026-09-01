@@ -7,11 +7,49 @@ import (
 	"os"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/srank/ensphere/internal/verify"
 )
 
 var errUsage = errors.New("usage error")
 var osExit = os.Exit
+
+// probeFlags holds the flags every verify probe shares. Register them with
+// addProbeFlags and turn them into a verify.ProbeConfig with buildProbeConfig.
+type probeFlags struct {
+	inScope  []string
+	maxRisk  int
+	throttle int
+	timeout  int
+	headers  []string
+	evidence string
+}
+
+// addProbeFlags registers the shared verify flags on cmd and marks --in-scope
+// required. Every verify_*.go command uses this; probes with extra required
+// flags mark those separately.
+func addProbeFlags(cmd *cobra.Command, f *probeFlags) {
+	cmd.Flags().StringSliceVar(&f.inScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8) (required)")
+	cmd.Flags().IntVar(&f.maxRisk, "max-risk", 3, "Maximum risk level (1-5)")
+	cmd.Flags().IntVar(&f.throttle, "throttle", 500, "Milliseconds between probes")
+	cmd.Flags().IntVar(&f.timeout, "timeout", 10, "HTTP request timeout in seconds")
+	cmd.Flags().StringSliceVar(&f.headers, "header", nil, "Custom headers (key:value, repeatable)")
+	cmd.Flags().StringVar(&f.evidence, "evidence", "./evidence.jsonl", "Evidence file path")
+	_ = cmd.MarkFlagRequired("in-scope")
+}
+
+// buildProbeConfig turns shared flag values into a ProbeConfig. It exits the
+// process on a malformed --header, matching the other verify error paths.
+func buildProbeConfig(f *probeFlags) verify.ProbeConfig {
+	return verify.ProbeConfig{
+		InScope:    f.inScope,
+		MaxRisk:    f.maxRisk,
+		ThrottleMs: f.throttle,
+		TimeoutSec: f.timeout,
+		Headers:    mustParseHeaders(f.headers),
+		Evidence:   f.evidence,
+	}
+}
 
 func parseHeaders(raw []string) (map[string]string, error) {
 	headers := make(map[string]string)

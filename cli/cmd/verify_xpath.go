@@ -11,12 +11,7 @@ var (
 	xpathParam     string
 	xpathTechnique string
 	xpathMethod    string
-	xpathHeaders   []string
-	xpathInScope   []string
-	xpathMaxRisk   int
-	xpathThrottle  int
-	xpathTimeout   int
-	xpathEvidence  string
+	xpathProbe     probeFlags
 )
 
 var verifyXPathCmd = &cobra.Command{
@@ -41,36 +36,23 @@ func init() {
 	verifyXPathCmd.Flags().StringVar(&xpathParam, "param", "", "Parameter/field name (required)")
 	verifyXPathCmd.Flags().StringVar(&xpathTechnique, "technique", "xpath_injection", "Technique: xpath_injection, xpath_blind_boolean, xpath_blind_error")
 	verifyXPathCmd.Flags().StringVar(&xpathMethod, "method", "GET", "HTTP method")
-	verifyXPathCmd.Flags().StringSliceVar(&xpathHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyXPathCmd.Flags().StringSliceVar(&xpathInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyXPathCmd.Flags().IntVar(&xpathMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyXPathCmd.Flags().IntVar(&xpathThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyXPathCmd.Flags().IntVar(&xpathTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyXPathCmd.Flags().StringVar(&xpathEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyXPathCmd.MarkFlagRequired("url")
 	_ = verifyXPathCmd.MarkFlagRequired("param")
-	_ = verifyXPathCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyXPathCmd, &xpathProbe)
 
 	verifyCmd.AddCommand(verifyXPathCmd)
 }
 
 func runVerifyXPath(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(xpathHeaders)
 
 	cfg := verify.XPathConfig{
-		URL:       xpathURL,
-		Param:     xpathParam,
-		Technique: xpathTechnique,
-		Method:    xpathMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    xpathInScope,
-			MaxRisk:    xpathMaxRisk,
-			ThrottleMs: xpathThrottle,
-			TimeoutSec: xpathTimeout,
-			Headers:    headers,
-			Evidence:   xpathEvidence,
-		},
+		URL:         xpathURL,
+		Param:       xpathParam,
+		Technique:   xpathTechnique,
+		Method:      xpathMethod,
+		ProbeConfig: buildProbeConfig(&xpathProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

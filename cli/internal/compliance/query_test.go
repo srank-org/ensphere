@@ -33,8 +33,16 @@ func TestGetMappingValidInvalidAndNoMapping(t *testing.T) {
 	if _, err := GetMapping("not-a-vuln"); err == nil || !strings.Contains(err.Error(), "invalid vuln_type") {
 		t.Fatalf("expected invalid vuln_type error, got %v", err)
 	}
-	if _, err := GetMapping("rate_limit"); err == nil || !strings.Contains(err.Error(), "no compliance mappings") {
-		t.Fatalf("expected no mapping error, got %v", err)
+	// rate_limit and limits are resource-consumption controls that must carry
+	// compliance mappings (OWASP API4, PCI-DSS 6.x, SOC 2, ISO 27001).
+	for _, vt := range []string{"rate_limit", "limits"} {
+		m, err := GetMapping(vt)
+		if err != nil {
+			t.Fatalf("GetMapping(%q): %v", vt, err)
+		}
+		if m.FrameworkCount == 0 || len(m.Mappings) == 0 {
+			t.Fatalf("expected framework mappings for %q, got %+v", vt, m)
+		}
 	}
 }
 

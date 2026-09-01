@@ -416,11 +416,10 @@ func selectSQLiBooleanPayloads(cfg SQLiConfig) (string, string, error) {
 }
 
 func querySQLiPayloads(cfg SQLiConfig, technique string) ([]payloads.PayloadResult, error) {
-	db, cleanup, err := payloads.Open()
+	store, err := payloads.Load()
 	if err != nil {
-		return nil, fmt.Errorf("open payload database: %w", err)
+		return nil, fmt.Errorf("load payload seeds: %w", err)
 	}
-	defer cleanup()
 
 	surfaces := []string{sqliSurfaceForMethod(cfg.Method)}
 	if surfaces[0] != "query" {
@@ -431,7 +430,7 @@ func querySQLiPayloads(cfg SQLiConfig, technique string) ([]payloads.PayloadResu
 	var results []payloads.PayloadResult
 	seen := make(map[string]bool)
 	for _, surface := range surfaces {
-		out, err := payloads.QueryPayloads(db, payloads.PayloadFilter{
+		out := store.Query(payloads.PayloadFilter{
 			VulnType:  "sqli",
 			DBEngine:  cfg.DBEngine,
 			Technique: technique,
@@ -441,9 +440,6 @@ func querySQLiPayloads(cfg SQLiConfig, technique string) ([]payloads.PayloadResu
 			MaxRisk:   cfg.MaxRisk,
 			Limit:     50,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("query SQLi payloads: %w", err)
-		}
 		for _, result := range out.Results {
 			if seen[result.ID] {
 				continue

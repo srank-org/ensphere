@@ -11,8 +11,8 @@ var version = "dev"
 
 var rootCmd = &cobra.Command{
 	Use:     "ensphere",
-	Short:   "Ensphere security testing toolkit",
-	Long:    "Curated payload database and security testing tools for authorized penetration testing.",
+	Short:   "Deterministic measurement CLI for Ensphere security assessments",
+	Long:    "Ensphere produces verifiable facts about a system you own: scoped probes, source sink scans, provider configuration reads, and a hash-chained evidence ledger. It never assigns a verdict; the analyst does.",
 	Version: version,
 }
 

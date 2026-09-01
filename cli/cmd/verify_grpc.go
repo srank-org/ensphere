@@ -9,12 +9,8 @@ import (
 var (
 	grpcURL       string
 	grpcTechnique string
-	grpcHeaders   []string
-	grpcInScope   []string
-	grpcMaxRisk   int
-	grpcThrottle  int
-	grpcTimeout   int
-	grpcEvidence  string
+	grpcTLSVerify bool
+	grpcProbe     probeFlags
 )
 
 var verifyGRPCCmd = &cobra.Command{
@@ -35,34 +31,23 @@ Examples:
 func init() {
 	verifyGRPCCmd.Flags().StringVar(&grpcURL, "url", "", "Target gRPC URL (required)")
 	verifyGRPCCmd.Flags().StringVar(&grpcTechnique, "technique", "", "Technique: grpc_reflection, grpc_plaintext (required)")
-	verifyGRPCCmd.Flags().StringSliceVar(&grpcHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyGRPCCmd.Flags().StringSliceVar(&grpcInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyGRPCCmd.Flags().IntVar(&grpcMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyGRPCCmd.Flags().IntVar(&grpcThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyGRPCCmd.Flags().IntVar(&grpcTimeout, "timeout", 10, "Request timeout in seconds")
-	verifyGRPCCmd.Flags().StringVar(&grpcEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
+	verifyGRPCCmd.Flags().BoolVar(&grpcTLSVerify, "tls-verify", true, "Verify the server TLS certificate")
 
 	_ = verifyGRPCCmd.MarkFlagRequired("url")
 	_ = verifyGRPCCmd.MarkFlagRequired("technique")
-	_ = verifyGRPCCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyGRPCCmd, &grpcProbe)
 
 	verifyCmd.AddCommand(verifyGRPCCmd)
 }
 
 func runVerifyGRPC(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(grpcHeaders)
 
 	cfg := verify.GRPCConfig{
-		URL:       grpcURL,
-		Technique: grpcTechnique,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    grpcInScope,
-			MaxRisk:    grpcMaxRisk,
-			ThrottleMs: grpcThrottle,
-			TimeoutSec: grpcTimeout,
-			Headers:    headers,
-			Evidence:   grpcEvidence,
-		},
+		URL:         grpcURL,
+		Technique:   grpcTechnique,
+		TLSVerify:   grpcTLSVerify,
+		ProbeConfig: buildProbeConfig(&grpcProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

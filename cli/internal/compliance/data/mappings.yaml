@@ -356,23 +356,6 @@ mappings:
       control_ids: ["A.8.26", "A.8.28"]
       description: "Application security and transaction integrity"
 
-  request_smuggling:
-    - framework: "OWASP Top 10 2025"
-      control_ids: ["A02:2025 - Security Misconfiguration"]
-      description: "Request smuggling exploits misconfigured HTTP processing"
-    - framework: "OWASP API Security Top 10 2023"
-      control_ids: ["API8:2023 - Security Misconfiguration"]
-      description: "Misconfigured HTTP processing"
-    - framework: "PCI-DSS v4.0.1"
-      control_ids: ["6.2.4", "1.3.1"]
-      description: "Secure HTTP proxy and load balancer configuration"
-    - framework: "SOC 2"
-      control_ids: ["CC6.1", "CC6.6"]
-      description: "Network security and HTTP processing controls"
-    - framework: "ISO 27001"
-      control_ids: ["A.8.20", "A.8.26"]
-      description: "Network security and application security"
-
   ldap:
     - framework: "OWASP Top 10 2025"
       control_ids: ["A05:2025 - Injection"]
@@ -671,3 +654,37 @@ mappings:
     - framework: "ISO 27001"
       control_ids: ["A.8.9", "A.8.26"]
       description: "Configuration management and application security"
+
+  rate_limit:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A02:2025 - Security Misconfiguration", "A06:2025 - Insecure Design"]
+      description: "Missing or ineffective rate limiting on abusable or billed endpoints"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API4:2023 - Unrestricted Resource Consumption"]
+      description: "Requests are not bounded per caller, so an attacker can consume resources or run up cost"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.2.4", "6.4.1"]
+      description: "Software engineering techniques and protection of public-facing applications against attacks"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.2"]
+      description: "Logical access controls and monitoring for anomalous activity"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.6", "A.8.20"]
+      description: "Capacity management and network security"
+
+  limits:
+    - framework: "OWASP Top 10 2025"
+      control_ids: ["A06:2025 - Insecure Design"]
+      description: "Missing size, count, or pagination caps let a caller consume storage, bandwidth, or database capacity"
+    - framework: "OWASP API Security Top 10 2023"
+      control_ids: ["API4:2023 - Unrestricted Resource Consumption"]
+      description: "Unbounded page size, upload size, or response size"
+    - framework: "PCI-DSS v4.0.1"
+      control_ids: ["6.2.4", "6.4.1"]
+      description: "Software engineering techniques and protection of public-facing applications against attacks"
+    - framework: "SOC 2"
+      control_ids: ["CC6.1", "CC7.2"]
+      description: "Logical access controls and monitoring for anomalous activity"
+    - framework: "ISO 27001"
+      control_ids: ["A.8.6", "A.8.20"]
+      description: "Capacity management and network security"

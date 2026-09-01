@@ -3,6 +3,7 @@ package verify
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
 )
@@ -95,6 +96,12 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "prototype_pollution", cfg.Technique, cfg.URL, "", verifyResp.StatusCode,
 		fmt.Sprintf("%dms", verifyResp.ElapsedMs), "probe", "verify after injection")
 
+	// Did the injected marker key and value appear in the post-injection
+	// response body? This is a raw reflection measurement, not a verdict.
+	const markerKey = "polluted"
+	const markerValue = "ensphere_pp_test"
+	markerReflected := strings.Contains(verifyResp.Body, markerKey) && strings.Contains(verifyResp.Body, markerValue)
+
 	snippet := verifyResp.Body
 	if len(snippet) > 500 {
 		snippet = snippet[:500]
@@ -131,6 +138,7 @@ func VerifyProtoPollution(cfg ProtoPollutionConfig) (*ProbeResult, error) {
 			InjectionProbe:  injection,
 			VerifyProbe:     verify,
 			HashesMatch:     baselineResp.BodyHash == verifyResp.BodyHash,
+			MarkerReflected: markerReflected,
 			PayloadUsed:     payload,
 			ResponseSnippet: snippet,
 		},

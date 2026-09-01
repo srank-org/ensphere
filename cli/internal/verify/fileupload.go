@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"fmt"
@@ -9,11 +10,77 @@ import (
 	"net/http"
 	"net/textproto"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/srank/ensphere/internal/evidence"
 )
+
+// fileUploadBuild is the concrete, inert upload a technique constructs.
+type fileUploadBuild struct {
+	filename     string
+	content      string // raw bytes to send (may be binary, e.g. a zip)
+	mimeType     string
+	construction string // neutral name of the construction used
+	contentDesc  string // human-readable description for the measurement record
+}
+
+const benignUploadText = "ensphere_upload_test"
+
+// buildFileUpload constructs the inert upload for a technique. Every build is
+// benign: no executable code, no payload that runs anywhere. The technique name
+// describes what file-type control is being probed; the construction field
+// records how the file was built.
+func buildFileUpload(technique, baseFilename string) (fileUploadBuild, error) {
+	base := baseFilename
+	if strings.TrimSpace(base) == "" {
+		base = "ensphere-upload"
+	}
+	stem := strings.TrimSuffix(base, path.Ext(base))
+	ext := strings.TrimPrefix(path.Ext(base), ".")
+	if ext == "" {
+		ext = "php"
+	}
+	switch technique {
+	case "extension_bypass":
+		// Double extension: an image extension in front of the original one.
+		fn := stem + ".jpg." + ext
+		return fileUploadBuild{filename: fn, content: benignUploadText, mimeType: "image/jpeg",
+			construction: "double_extension", contentDesc: benignUploadText}, nil
+	case "mime_bypass":
+		// Non-image bytes declared with an image content type.
+		return fileUploadBuild{filename: base, content: benignUploadText, mimeType: "image/png",
+			construction: "nonimage_bytes_image_content_type", contentDesc: benignUploadText}, nil
+	case "content_type_mismatch":
+		// Image bytes declared with text/html.
+		return fileUploadBuild{filename: base, content: "GIF89a", mimeType: "text/html",
+			construction: "image_bytes_html_content_type", contentDesc: "GIF89a header bytes"}, nil
+	case "polyglot_file":
+		// Valid GIF89a header followed by benign text.
+		return fileUploadBuild{filename: stem + ".gif", content: "GIF89a" + benignUploadText, mimeType: "image/gif",
+			construction: "gif89a_polyglot", contentDesc: "GIF89a header + benign text"}, nil
+	case "zip_path_traversal":
+		// In-memory zip whose single entry name contains a traversal segment.
+		entryName := "../ensphere-zip-slip.txt"
+		var buf bytes.Buffer
+		zw := zip.NewWriter(&buf)
+		w, err := zw.Create(entryName)
+		if err != nil {
+			return fileUploadBuild{}, fmt.Errorf("build zip: %w", err)
+		}
+		if _, err := w.Write([]byte(benignUploadText)); err != nil {
+			return fileUploadBuild{}, fmt.Errorf("write zip entry: %w", err)
+		}
+		if err := zw.Close(); err != nil {
+			return fileUploadBuild{}, fmt.Errorf("close zip: %w", err)
+		}
+		return fileUploadBuild{filename: stem + ".zip", content: buf.String(), mimeType: "application/zip",
+			construction: "zip_slip", contentDesc: "zip with entry name " + entryName}, nil
+	default:
+		return fileUploadBuild{}, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: extension_bypass, mime_bypass, content_type_mismatch, polyglot_file, zip_path_traversal", technique)}
+	}
+}
 
 // FileUploadConfig holds configuration for file upload vulnerability verification.
 type FileUploadConfig struct {
@@ -136,18 +203,23 @@ func VerifyFileUpload(cfg FileUploadConfig) (*ProbeResult, error) {
 func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {
 	probeCount := 0
 
+	build, err := buildFileUpload(cfg.Technique, cfg.Filename)
+	if err != nil {
+		return nil, err
+	}
+
 	// Upload probe
 	throttle.Wait()
 	probeCount++
-	uploadResp := MultipartHTTPProbe(cfg.Method, cfg.URL, cfg.FieldName, cfg.Filename, cfg.Content, cfg.MIMEType, cfg.Headers, cfg.TimeoutSec, cfg.InScope)
+	uploadResp := MultipartHTTPProbe(cfg.Method, cfg.URL, cfg.FieldName, build.filename, build.content, build.mimeType, cfg.Headers, cfg.TimeoutSec, cfg.InScope)
 	if uploadResp.Error != nil {
 		return nil, fmt.Errorf("upload probe: %w", uploadResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[UPLOAD] status=%d hash=%s\n", uploadResp.StatusCode, uploadResp.BodyHash[:16])
 	writeEvidence(ew, "file_upload", cfg.Technique, cfg.URL, cfg.FieldName, uploadResp.StatusCode,
-		fmt.Sprintf("%dms", uploadResp.ElapsedMs), "probe", fmt.Sprintf("filename=%s mime=%s", cfg.Filename, cfg.MIMEType))
+		fmt.Sprintf("%dms", uploadResp.ElapsedMs), "probe", fmt.Sprintf("construction=%s filename=%s mime=%s", build.construction, build.filename, build.mimeType))
 
-	filenameInResponse := strings.Contains(uploadResp.Body, cfg.Filename)
+	filenameInResponse := strings.Contains(uploadResp.Body, build.filename)
 	uploadAccepted := uploadResp.StatusCode >= 200 && uploadResp.StatusCode < 300
 
 	uploadRound := RoundResult{
@@ -199,14 +271,15 @@ func verifyFileUploadProbe(cfg FileUploadConfig, throttle *Throttle, timer *Time
 		Duration:   timer.Elapsed(),
 		Measurements: FileUploadMeasurements{
 			Technique:          cfg.Technique,
+			Construction:       build.construction,
 			UploadProbe:        uploadRound,
 			FilenameInResponse: filenameInResponse,
 			UploadAccepted:     uploadAccepted,
 			VerifyProbe:        verifyRound,
 			VerifyAccessible:   verifyAccessible,
-			FilenameSent:       cfg.Filename,
-			MIMETypeSent:       cfg.MIMEType,
-			ContentSent:        cfg.Content,
+			FilenameSent:       build.filename,
+			MIMETypeSent:       build.mimeType,
+			ContentSent:        build.contentDesc,
 			ResponseSnippet:    snippet,
 		},
 	}, nil

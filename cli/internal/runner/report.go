@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/srank/ensphere/internal/evidence"
@@ -20,7 +21,11 @@ var reportRequiredSessions = []Session{
 	{ID: "06", Directory: "06-ssrf"},
 	{ID: "07", Directory: "07-cloud"},
 	{ID: "08", Directory: "08-api"},
+	{ID: "08.5", Directory: "08.5-abuse"},
+	{ID: "08.7", Directory: "08.7-chains"},
 }
+
+var findingIDPattern = regexp.MustCompile(`^(VULN|CTRL)-[0-9]{3,}$`)
 
 func RunReport(workspace string) (*ReportGateOutput, error) {
 	if workspace == "" {
@@ -109,7 +114,7 @@ func validateSessionReportReadiness(workspace string, states map[string]string) 
 	for _, session := range reportRequiredSessions {
 		state := strings.ToUpper(strings.TrimSpace(states[session.ID]))
 		if !isTerminalState(state) {
-			issues = append(issues, gateIssue("error", "session_not_terminal", progressPath(workspace), fmt.Sprintf("Session %s is %s; Session 09 requires sessions 01, 01.5, and 02-08 to be DONE, SKIPPED, BLOCKED, or NOT_APPLICABLE", session.ID, state)))
+			issues = append(issues, gateIssue("error", "session_not_terminal", progressPath(workspace), fmt.Sprintf("Session %s is %s; Session 09 requires sessions 01, 01.5, and 02-08.7 to be DONE, SKIPPED, BLOCKED, or NOT_APPLICABLE", session.ID, state)))
 			continue
 		}
 		reportPath := filepath.Join(workspace, session.Directory, "report.md")
@@ -162,16 +167,25 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 		id := strings.TrimSpace(finding.ID)
 		if id == "" {
 			issues = append(issues, gateIssue("error", "finding_id_missing", refPath, "finding id is required"))
+		} else if !findingIDPattern.MatchString(id) {
+			issues = append(issues, gateIssue("error", "finding_id_invalid", refPath, fmt.Sprintf("finding id %q must look like VULN-001 or CTRL-001", id)))
 		} else if _, ok := seen[id]; ok {
 			issues = append(issues, gateIssue("error", "finding_id_duplicate", refPath, fmt.Sprintf("duplicate finding id %s", id)))
 		} else {
 			seen[id] = struct{}{}
+		}
+		if strings.TrimSpace(finding.Kind) == "" {
+			issues = append(issues, gateIssue("error", "finding_kind_missing", refPath, "finding kind is required (vulnerability or missing_control)"))
+		} else if !validFindingKind(finding.Kind) {
+			issues = append(issues, gateIssue("error", "finding_kind_invalid", refPath, fmt.Sprintf("finding kind %q must be vulnerability or missing_control", finding.Kind)))
 		}
 		if strings.TrimSpace(finding.Title) == "" {
 			issues = append(issues, gateIssue("error", "finding_title_missing", refPath, "finding title is required"))
 		}
 		if strings.TrimSpace(finding.Category) == "" {
 			issues = append(issues, gateIssue("error", "finding_category_missing", refPath, "finding category is required"))
+		} else if !validFindingCategory(finding.Category) {
+			issues = append(issues, gateIssue("error", "finding_category_invalid", refPath, fmt.Sprintf("finding category %q is invalid", finding.Category)))
 		}
 		if strings.TrimSpace(finding.Status) == "" {
 			issues = append(issues, gateIssue("error", "finding_status_missing", refPath, "finding status is required"))
@@ -209,8 +223,13 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 			if severity == "info" || severity == "informational" || severity == "none" || severity == "not_applicable" {
 				issues = append(issues, gateIssue("error", "finding_vulnerability_severity_invalid", refPath, "confirmed and likely findings require critical, high, medium, or low severity"))
 			}
-			if !strings.HasPrefix(strings.TrimSpace(finding.CVSSV4), "CVSS:4.0/") {
-				issues = append(issues, gateIssue("error", "finding_cvss_v4_missing", refPath, "confirmed and likely findings require a CVSS v4.0 vector"))
+		}
+		if cvss := strings.TrimSpace(finding.CVSSV4); cvss != "" {
+			if !strings.HasPrefix(cvss, "CVSS:4.0/") {
+				issues = append(issues, gateIssue("error", "finding_cvss_v4_invalid", refPath, "cvss_v4 must be a CVSS:4.0/ vector when present"))
+			}
+			if strings.TrimSpace(finding.Kind) == "missing_control" {
+				issues = append(issues, gateIssue("warning", "finding_cvss_on_missing_control", refPath, "cvss_v4 is only meaningful for kind: vulnerability"))
 			}
 		}
 		if reportableFindingStatus(finding.Status) {
@@ -412,16 +431,38 @@ func validEvidenceCategory(value string) bool {
 		"ensphere_measurement",
 		"source_review",
 		"manual_observation",
-		"human_authorization",
-		"human_execution",
-		"agent_execution",
-		"agent_judgment",
-		"impact_validation_attempt",
-		"impact_validation_result":
+		"agent_judgment":
 		return true
 	default:
 		return false
 	}
+}
+
+func validFindingKind(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "vulnerability", "missing_control":
+		return true
+	default:
+		return false
+	}
+}
+
+func validFindingCategory(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "injection", "authentication", "authorization", "xss", "ssrf", "cloud", "api", "abuse_and_cost", "configuration", "secrets", "other":
+		return true
+	default:
+		return false
+	}
+}
+
+func containsRegistryValue(values []string, want string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) == want {
+			return true
+		}
+	}
+	return false
 }
 
 func displayFindingID(id string) string {
@@ -526,7 +567,6 @@ func validateReportableFindingFields(refPath string, finding FindingSummary) []R
 	requireList("finding_observed_facts_missing", "observed_facts", finding.ObservedFacts)
 	requireText("finding_root_cause_missing", "root_cause", finding.RootCause)
 	requireText("finding_security_impact_missing", "security_impact", finding.SecurityImpact)
-	requireText("finding_business_impact_missing", "business_impact", finding.BusinessImpact)
 	requireText("finding_remediation_missing", "remediation", finding.Remediation)
 	requireList("finding_validation_criteria_missing", "validation_criteria", finding.ValidationCriteria)
 	return issues
@@ -538,47 +578,11 @@ func validateSession09Artifacts(workspace string) []ReportGateIssue {
 	appendixPath := filepath.Join(workspace, "09-report", "evidence-appendix.md")
 	if !fileExists(reportPath) || isEmptyFile(reportPath) {
 		issues = append(issues, gateIssue("error", "final_report_missing", reportPath, "a non-empty Session 09 report.md is required when the finding registry exists"))
-	} else {
-		raw, err := os.ReadFile(reportPath)
-		if err != nil {
-			issues = append(issues, gateIssue("error", "final_report_read_failed", reportPath, err.Error()))
-		} else {
-			required := []string{
-				"authorization", "executive summary", "scope and methodology", "coverage",
-				"finding summary", "detailed findings", "tested defenses",
-				"unresolved and not-tested areas", "attack paths and risk scenarios",
-				"remediation roadmap", "contextual compliance mapping",
-			}
-			for _, section := range required {
-				if !hasMarkdownHeading(raw, section) {
-					issues = append(issues, gateIssue("error", "final_report_section_missing", reportPath, fmt.Sprintf("required report section %q is missing", section)))
-				}
-			}
-		}
 	}
 	if !fileExists(appendixPath) || isEmptyFile(appendixPath) {
 		issues = append(issues, gateIssue("error", "evidence_appendix_missing", appendixPath, "a non-empty Session 09 evidence-appendix.md is required when the finding registry exists"))
 	}
 	return issues
-}
-
-func hasMarkdownHeading(raw []byte, required string) bool {
-	required = normalizeReportHeading(required)
-	for _, line := range strings.Split(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "#") {
-			continue
-		}
-		heading := normalizeReportHeading(strings.TrimLeft(line, "#"))
-		if heading == required || strings.Contains(heading, required) {
-			return true
-		}
-	}
-	return false
-}
-
-func normalizeReportHeading(value string) string {
-	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(value))), " ")
 }
 
 func safeWorkspaceRelativePath(value string) bool {
@@ -607,12 +611,10 @@ func cleanCitationPath(value string) string {
 	return strings.TrimSpace(value)
 }
 
+// workspaceRootForArtifact returns the workspace directory for a registry
+// stored at <workspace>/09-report/finding-registry.yaml.
 func workspaceRootForArtifact(path string) string {
-	dir := filepath.Dir(path)
-	if filepath.Base(dir) == "09-report" || filepath.Base(dir) == "11-final-report" {
-		return filepath.Dir(dir)
-	}
-	return filepath.Dir(dir)
+	return filepath.Dir(filepath.Dir(path))
 }
 
 func reportGatePath(workspace string) string {

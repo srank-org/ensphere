@@ -10,12 +10,8 @@ var (
 	wsURL       string
 	wsTechnique string
 	wsPayload   string
-	wsHeaders   []string
-	wsInScope   []string
-	wsMaxRisk   int
-	wsThrottle  int
-	wsTimeout   int
-	wsEvidence  string
+	wsTLSVerify bool
+	wsProbe     probeFlags
 )
 
 var verifyWebSocketCmd = &cobra.Command{
@@ -38,35 +34,24 @@ func init() {
 	verifyWebSocketCmd.Flags().StringVar(&wsURL, "url", "", "Target WebSocket URL (required)")
 	verifyWebSocketCmd.Flags().StringVar(&wsTechnique, "technique", "", "Technique: ws_injection, ws_hijack, ws_origin_check (required)")
 	verifyWebSocketCmd.Flags().StringVar(&wsPayload, "payload", "", "Payload to send as WebSocket text frame")
-	verifyWebSocketCmd.Flags().StringSliceVar(&wsHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyWebSocketCmd.Flags().StringSliceVar(&wsInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyWebSocketCmd.Flags().IntVar(&wsMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyWebSocketCmd.Flags().IntVar(&wsThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyWebSocketCmd.Flags().IntVar(&wsTimeout, "timeout", 10, "Request timeout in seconds")
-	verifyWebSocketCmd.Flags().StringVar(&wsEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
+	verifyWebSocketCmd.Flags().BoolVar(&wsTLSVerify, "tls-verify", true, "Verify the server TLS certificate")
 
 	_ = verifyWebSocketCmd.MarkFlagRequired("url")
 	_ = verifyWebSocketCmd.MarkFlagRequired("technique")
-	_ = verifyWebSocketCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyWebSocketCmd, &wsProbe)
 
 	verifyCmd.AddCommand(verifyWebSocketCmd)
 }
 
 func runVerifyWebSocket(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(wsHeaders)
 
 	cfg := verify.WebSocketConfig{
-		URL:       wsURL,
-		Technique: wsTechnique,
-		Payload:   wsPayload,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    wsInScope,
-			MaxRisk:    wsMaxRisk,
-			ThrottleMs: wsThrottle,
-			TimeoutSec: wsTimeout,
-			Headers:    headers,
-			Evidence:   wsEvidence,
-		},
+		URL:         wsURL,
+		Technique:   wsTechnique,
+		Payload:     wsPayload,
+		TLSVerify:   wsTLSVerify,
+		ProbeConfig: buildProbeConfig(&wsProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

@@ -131,27 +131,7 @@ func TestCLICvssJSONContract(t *testing.T) {
 	}
 }
 
-func TestCLITemplateChecklistComplianceJSONContracts(t *testing.T) {
-	templateResult := runCLISplit(t, "template", "--list")
-	if templateResult.code != 0 {
-		t.Fatalf("template --list exit %d stderr=%s", templateResult.code, templateResult.stderr)
-	}
-	var templates []map[string]any
-	decodeJSON(t, templateResult.stdout, &templates)
-	if len(templates) == 0 || templates[0]["name"] == "" {
-		t.Fatalf("unexpected template list: %+v", templates)
-	}
-
-	checklistResult := runCLISplit(t, "checklist", "--list")
-	if checklistResult.code != 0 {
-		t.Fatalf("checklist --list exit %d stderr=%s", checklistResult.code, checklistResult.stderr)
-	}
-	var checklists []map[string]any
-	decodeJSON(t, checklistResult.stdout, &checklists)
-	if len(checklists) == 0 || checklists[0]["name"] == "" || checklists[0]["item_count"] == nil {
-		t.Fatalf("unexpected checklist list: %+v", checklists)
-	}
-
+func TestCLIComplianceJSONContract(t *testing.T) {
 	complianceResult := runCLISplit(t, "compliance", "--list")
 	if complianceResult.code != 0 {
 		t.Fatalf("compliance --list exit %d stderr=%s", complianceResult.code, complianceResult.stderr)

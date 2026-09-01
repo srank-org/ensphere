@@ -11,12 +11,7 @@ var (
 	ldapParam     string
 	ldapTechnique string
 	ldapMethod    string
-	ldapHeaders   []string
-	ldapInScope   []string
-	ldapMaxRisk   int
-	ldapThrottle  int
-	ldapTimeout   int
-	ldapEvidence  string
+	ldapProbe     probeFlags
 )
 
 var verifyLDAPCmd = &cobra.Command{
@@ -41,36 +36,23 @@ func init() {
 	verifyLDAPCmd.Flags().StringVar(&ldapParam, "param", "", "Parameter/field name (required)")
 	verifyLDAPCmd.Flags().StringVar(&ldapTechnique, "technique", "ldap_filter_injection", "Technique: ldap_filter_injection, ldap_blind_boolean, ldap_blind_error")
 	verifyLDAPCmd.Flags().StringVar(&ldapMethod, "method", "GET", "HTTP method")
-	verifyLDAPCmd.Flags().StringSliceVar(&ldapHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyLDAPCmd.Flags().StringSliceVar(&ldapInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyLDAPCmd.Flags().IntVar(&ldapMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyLDAPCmd.Flags().IntVar(&ldapThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyLDAPCmd.Flags().IntVar(&ldapTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyLDAPCmd.Flags().StringVar(&ldapEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyLDAPCmd.MarkFlagRequired("url")
 	_ = verifyLDAPCmd.MarkFlagRequired("param")
-	_ = verifyLDAPCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyLDAPCmd, &ldapProbe)
 
 	verifyCmd.AddCommand(verifyLDAPCmd)
 }
 
 func runVerifyLDAP(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(ldapHeaders)
 
 	cfg := verify.LDAPConfig{
-		URL:       ldapURL,
-		Param:     ldapParam,
-		Technique: ldapTechnique,
-		Method:    ldapMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    ldapInScope,
-			MaxRisk:    ldapMaxRisk,
-			ThrottleMs: ldapThrottle,
-			TimeoutSec: ldapTimeout,
-			Headers:    headers,
-			Evidence:   ldapEvidence,
-		},
+		URL:         ldapURL,
+		Param:       ldapParam,
+		Technique:   ldapTechnique,
+		Method:      ldapMethod,
+		ProbeConfig: buildProbeConfig(&ldapProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

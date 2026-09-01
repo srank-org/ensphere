@@ -303,12 +303,11 @@ func TestIntegration_IDOR(t *testing.T) {
 	}))
 
 	cfg := IDORConfig{
-		URL:            ts.URL + "/api/resource/{id}",
-		ID:             "123",
-		Token:          "attacker-token",
-		ExpectedStatus: 403,
-		Method:         "GET",
-		ProbeConfig:    baseProbeConfig(),
+		URL:         ts.URL + "/api/resource/{id}",
+		ID:          "123",
+		Token:       "attacker-token",
+		Method:      "GET",
+		ProbeConfig: baseProbeConfig(),
 	}
 
 	result, err := VerifyIDOR(cfg)
@@ -405,10 +404,10 @@ func TestIntegration_Auth_RedirectPreservation(t *testing.T) {
 		fmt.Fprint(w, "authed")
 	}))
 	result, err := VerifyAuth(AuthConfig{
-		URL:       ts.URL + "/protected",
-		Method:    "GET",
-		Token:     "valid-token",
-		Technique: "no_token",
+		URL:         ts.URL + "/protected",
+		Method:      "GET",
+		Token:       "valid-token",
+		Technique:   "no_token",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err != nil {

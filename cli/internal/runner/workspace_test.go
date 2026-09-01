@@ -1,14 +1,10 @@
 package runner
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/srank/ensphere/internal/evidence"
 )
 
 func TestInitWorkspaceWritesCoreArtifacts(t *testing.T) {
@@ -16,7 +12,7 @@ func TestInitWorkspaceWritesCoreArtifacts(t *testing.T) {
 	status, err := InitWorkspace(InitConfig{
 		Workspace:  workspace,
 		TargetURL:  "https://staging.example.com",
-		SourceCode: "yes",
+		SourcePath: ".",
 		TargetType: "api_backend",
 		Cloud:      "none",
 		InScope:    "staging.example.com",
@@ -33,7 +29,7 @@ func TestInitWorkspaceWritesCoreArtifacts(t *testing.T) {
 		filepath.Join(workspace, "next-action.md"),
 		filepath.Join(workspace, "agent-prompt.md"),
 		filepath.Join(workspace, "01.5-session-plan"),
-		filepath.Join(workspace, "10-impact-validation"),
+		filepath.Join(workspace, "08.5-abuse"),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected artifact %s: %v", path, err)
@@ -74,164 +70,11 @@ func TestInitWorkspaceRefusesExistingWorkspace(t *testing.T) {
 	}
 }
 
-func TestWriteNextActionSkipsOptionalImpactValidationWhenDisabled(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	progress := `# Assessment Progress
-
-| Session | Category | Status | Findings |
-|---------|----------|--------|----------|
-| 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
-| 02 | Injection | DONE | |
-| 03 | Authentication | DONE | |
-| 04 | Authorization | DONE | |
-| 05 | Cross-Site Scripting | DONE | |
-| 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud Security | DONE | |
-| 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | DONE | |
-| 10 | Optional Human-Authorized Impact Validation | PENDING | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
-`
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write progress: %v", err)
-	}
-	action, err := WriteNextAction(workspace)
-	if err != nil {
-		t.Fatalf("write next action: %v", err)
-	}
-	if action.Session != nil {
-		t.Fatalf("expected no next session when impact validation disabled, got %+v", action.Session)
-	}
-}
-
-func TestWriteNextActionRequiresSelectedFindingsForSession10(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	progress := `# Assessment Progress
-
-| Session | Category | Status | Findings |
-|---------|----------|--------|----------|
-| 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
-| 02 | Injection | DONE | |
-| 03 | Authentication | DONE | |
-| 04 | Authorization | DONE | |
-| 05 | Cross-Site Scripting | DONE | |
-| 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud Security | DONE | |
-| 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | DONE | |
-| 10 | Optional Human-Authorized Impact Validation | PENDING | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
-`
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write progress: %v", err)
-	}
-	action, err := WriteNextAction(workspace)
-	if err != nil {
-		t.Fatalf("write next action without selected findings: %v", err)
-	}
-	if action.Session != nil {
-		t.Fatalf("expected no Session 10 until findings are selected, got %+v", action.Session)
-	}
-
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeReportGatePrerequisites(t, workspace)
-	if _, err := PrepareImpactValidation(workspace, []string{"VULN-001"}); err != nil {
-		t.Fatalf("prepare impact validation: %v", err)
-	}
-	status, err := WorkspaceStatus(workspace)
-	if err != nil {
-		t.Fatalf("status: %v", err)
-	}
-	if status.NextSession == nil || status.NextSession.ID != "10" {
-		t.Fatalf("expected Session 10 after selected findings, got %+v", status.NextSession)
-	}
-}
-
-func TestWriteNextActionBlocksSession10WhenAssessmentPlanInvalid(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeSession09DoneProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	if err := os.WriteFile(filepath.Join(workspace, "assessment-plan.yaml"), []byte("draft: false\n"), 0644); err != nil {
-		t.Fatalf("write invalid plan: %v", err)
-	}
-	action, err := WriteNextAction(workspace)
-	if err != nil {
-		t.Fatalf("write next action: %v", err)
-	}
-	if action.Session != nil {
-		t.Fatalf("expected invalid assessment plan to block Session 10, got %+v", action.Session)
-	}
-}
-
-func TestWriteNextActionNeverStartsSession11Automatically(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeSession09DoneProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	if _, err := PrepareImpactValidation(workspace, []string{"VULN-001"}); err != nil {
-		t.Fatalf("prepare impact validation: %v", err)
-	}
-	progress := `# Assessment Progress
-
-| Session | Category | Status | Findings |
-|---------|----------|--------|----------|
-| 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
-| 02 | Injection | DONE | |
-| 03 | Authentication | DONE | |
-| 04 | Authorization | DONE | |
-| 05 | Cross-Site Scripting | DONE | |
-| 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud Security | DONE | |
-| 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | DONE | |
-| 10 | Optional Human-Authorized Impact Validation | SKIPPED | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
-`
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write skipped progress: %v", err)
-	}
-	action, err := WriteNextAction(workspace)
-	if err != nil {
-		t.Fatalf("write next action after skipped Session 10: %v", err)
-	}
-	if action.Session != nil {
-		t.Fatalf("expected no Session 11 when Session 10 is skipped, got %+v", action.Session)
-	}
-
-	progress = strings.Replace(progress, "| 10 | Optional Human-Authorized Impact Validation | SKIPPED | |", "| 10 | Optional Human-Authorized Impact Validation | DONE | |", 1)
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write done progress: %v", err)
-	}
-	action, err = WriteNextAction(workspace)
-	if err != nil {
-		t.Fatalf("write next action after done Session 10: %v", err)
-	}
-	if action.Session != nil {
-		t.Fatalf("expected Session 11 to require explicit run final invocation, got %+v", action.Session)
-	}
-}
-
 func TestRunPlanWritesDraftAndStatusSummary(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
 	if _, err := InitWorkspace(InitConfig{
 		Workspace:  workspace,
 		TargetURL:  "https://api.example.com",
-		SourceCode: "no",
 		TargetType: "api_backend",
 		Cloud:      "aws",
 		InScope:    "api.example.com, aws://123456789012",
@@ -246,8 +89,14 @@ func TestRunPlanWritesDraftAndStatusSummary(t *testing.T) {
 	if !out.Written || !out.Valid {
 		t.Fatalf("expected written valid plan, got written=%v valid=%v validation=%v", out.Written, out.Valid, out.Validation)
 	}
-	if out.Plan.Target.Type != "api_backend" || out.Plan.Target.SourceMode != "black_box" {
+	if out.Plan.Target.Type != "api_backend" || out.Plan.Target.CoverageLabel != coverageFull {
 		t.Fatalf("unexpected target summary: %+v", out.Plan.Target)
+	}
+	if out.Plan.Target.Environment != "sandbox" {
+		t.Fatalf("expected sandbox environment for an init with a target, got %q", out.Plan.Target.Environment)
+	}
+	if out.Plan.Sessions["08.7-chains"].Decision != decisionBlocked {
+		t.Fatalf("expected chains blocked without a recon profile, got %+v", out.Plan.Sessions["08.7-chains"])
 	}
 	if out.Plan.Sessions["05-xss"].Decision != decisionSkip {
 		t.Fatalf("expected API backend XSS skip, got %+v", out.Plan.Sessions["05-xss"])
@@ -356,7 +205,7 @@ func TestRunPlanUsesReconTargetProfileForClientOnlyTarget(t *testing.T) {
 	}
 	profile := `target:
   type: mobile_client_offline
-  source_mode: source_only
+  environment: sandbox
   coverage_label: client_only
   classification_confidence: high
   rationale:
@@ -397,7 +246,7 @@ func TestRunPlanRecordsReconBackendInventory(t *testing.T) {
 	}
 	profile := `target:
   type: mobile_client_remote_backend
-  source_mode: white_box
+  environment: sandbox
   classification_confidence: high
   rationale:
     - "Session 01 extracted API base URLs from mobile source and traffic capture."
@@ -434,6 +283,117 @@ signals:
 	}
 }
 
+func TestRunPlanDraftsChainsSessionFromSandboxEnvironment(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://sandbox.example.com", TargetType: "web_app"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	profile := `target:
+  type: web_app
+  environment: sandbox
+  classification_confidence: high
+  rationale:
+    - "Session 01 confirmed a disposable sandbox copy of the application."
+  evidence_refs:
+    - "01-recon/report.md#environment"
+`
+	if err := os.WriteFile(filepath.Join(workspace, "01-recon", "target-profile.yaml"), []byte(profile), 0644); err != nil {
+		t.Fatalf("write target profile: %v", err)
+	}
+	out, err := RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	if !out.Valid {
+		t.Fatalf("expected valid plan, validation=%v", out.Validation)
+	}
+	if out.Plan.Target.Environment != "sandbox" {
+		t.Fatalf("expected sandbox environment from the recon profile, got %q", out.Plan.Target.Environment)
+	}
+	chains := out.Plan.Sessions["08.7-chains"]
+	if chains.Decision != decisionRun || chains.Applicability != applicabilityApplicable {
+		t.Fatalf("expected chains run for a sandbox environment, got %+v", chains)
+	}
+}
+
+func TestRunPlanBlocksChainsForStagingEnvironment(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://staging.example.com", TargetType: "web_app", Environment: "staging"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	profile := `target:
+  type: web_app
+  environment: staging
+  classification_confidence: high
+  rationale:
+    - "Session 01 confirmed a shared staging deployment, not a disposable copy."
+  evidence_refs:
+    - "01-recon/report.md#environment"
+`
+	if err := os.WriteFile(filepath.Join(workspace, "01-recon", "target-profile.yaml"), []byte(profile), 0644); err != nil {
+		t.Fatalf("write target profile: %v", err)
+	}
+	out, err := RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	if !out.Valid {
+		t.Fatalf("expected valid plan, validation=%v", out.Validation)
+	}
+	chains := out.Plan.Sessions["08.7-chains"]
+	if chains.Decision != decisionBlocked || chains.CoverageLabel != coverageBlocked {
+		t.Fatalf("expected chains blocked outside a sandbox, got %+v", chains)
+	}
+	if len(chains.RequiredInput) != 1 || chains.RequiredInput[0] != "environment: sandbox in 01-recon/target-profile.yaml" {
+		t.Fatalf("unexpected chains required input: %+v", chains.RequiredInput)
+	}
+}
+
+func TestValidateAssessmentPlanChecksEnvironmentAgainstTargetURL(t *testing.T) {
+	base := func() *AssessmentPlan {
+		return &AssessmentPlan{
+			Target: PlanTarget{
+				Type:          "web_app",
+				URL:           "https://sandbox.example.com",
+				Environment:   "sandbox",
+				CoverageLabel: coverageFull,
+			},
+		}
+	}
+	cases := []struct {
+		name        string
+		url         string
+		environment string
+		coverage    string
+		want        string
+	}{
+		{name: "sandbox with url", url: "https://sandbox.example.com", environment: "sandbox", coverage: coverageFull},
+		{name: "invalid value", url: "https://sandbox.example.com", environment: "production", coverage: coverageFull, want: `target.environment "production" is invalid`},
+		{name: "missing with url", url: "https://sandbox.example.com", environment: "", coverage: coverageFull, want: "target.environment is required when target.url is set"},
+		{name: "none with url", url: "https://sandbox.example.com", environment: "none", coverage: coverageFull, want: "target.environment none is only valid when target.url is empty"},
+		{name: "staging without url", url: "", environment: "staging", coverage: coverageSourceOnly, want: "target.environment staging requires a non-empty target.url"},
+		{name: "none without url", url: "", environment: "none", coverage: coverageSourceOnly},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			plan := base()
+			plan.Target.URL = tc.url
+			plan.Target.Environment = tc.environment
+			plan.Target.CoverageLabel = tc.coverage
+			problems := strings.Join(ValidateAssessmentPlan(plan), "\n")
+			if tc.want == "" {
+				if strings.Contains(problems, "target.environment") {
+					t.Fatalf("expected no environment problem, got:\n%s", problems)
+				}
+				return
+			}
+			if !strings.Contains(problems, tc.want) {
+				t.Fatalf("expected %q, got:\n%s", tc.want, problems)
+			}
+		})
+	}
+}
+
 func TestRunPlanSurfacesInvalidReconTargetProfile(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
 	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", TargetType: "auto"}); err != nil {
@@ -441,7 +401,6 @@ func TestRunPlanSurfacesInvalidReconTargetProfile(t *testing.T) {
 	}
 	profile := `target:
   type: not_a_target
-  source_mode: white_box
   classification_confidence: impossible
 `
 	if err := os.WriteFile(filepath.Join(workspace, "01-recon", "target-profile.yaml"), []byte(profile), 0644); err != nil {
@@ -469,17 +428,17 @@ func TestWriteNextActionIncludesPlanDecision(t *testing.T) {
 | Session | Category | Status | Findings |
 |---------|----------|--------|----------|
 | 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
+| 01.5 | Plan | DONE | |
 | 02 | Injection | PENDING | |
 | 03 | Authentication | PENDING | |
 | 04 | Authorization | PENDING | |
 | 05 | Cross-Site Scripting | PENDING | |
 | 06 | Server-Side Request Forgery | PENDING | |
-| 07 | Cloud Security | PENDING | |
+| 07 | Cloud and Platform | PENDING | |
 | 08 | API Security | PENDING | |
-| 09 | Evidence-Based Assessment Report | PENDING | |
-| 10 | Optional Human-Authorized Impact Validation | PENDING | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
+| 08.5 | Abuse and Cost Controls | PENDING | |
+| 08.7 | Chains and Workflows | PENDING | |
+| 09 | Report | PENDING | |
 `
 	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
 		t.Fatalf("write progress: %v", err)
@@ -569,6 +528,7 @@ func TestRunReportRejectsUncitedFindingRegistry(t *testing.T) {
 	registry := `generated_from: Session 09
 findings:
   - id: VULN-001
+    kind: vulnerability
     title: Missing citation
     category: injection
     status: confirmed
@@ -607,6 +567,7 @@ findings:
 	registry = `generated_from: Session 09
 findings:
   - id: VULN-001
+    kind: vulnerability
     title: Cited finding
     category: injection
     status: confirmed
@@ -654,6 +615,7 @@ func TestRunReportRejectsInvalidFindingRegistryEnums(t *testing.T) {
 	registry := `generated_from: Session 09
 findings:
   - id: VULN-001
+    kind: vulnerability
     title: Bad enum values
     category: injection
     status: impossible
@@ -725,15 +687,234 @@ func TestRunReportRequiresStructuredFinalArtifacts(t *testing.T) {
 	}
 	writeReportReadyWorkspace(t, workspace)
 	writeValidFindingRegistry(t, workspace, "VULN-001")
-	if err := os.WriteFile(filepath.Join(workspace, "09-report", "report.md"), []byte("# Security Assessment Report\n\n## Executive Summary\nIncomplete.\n"), 0644); err != nil {
-		t.Fatalf("write incomplete report: %v", err)
+	if err := os.WriteFile(filepath.Join(workspace, "09-report", "report.md"), []byte("   \n"), 0644); err != nil {
+		t.Fatalf("write empty report: %v", err)
+	}
+	if err := os.Remove(filepath.Join(workspace, "09-report", "evidence-appendix.md")); err != nil {
+		t.Fatalf("remove appendix: %v", err)
 	}
 	gate, err := RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report: %v", err)
 	}
-	if gate.Ready || !hasIssue(gate.Issues, "final_report_section_missing") {
-		t.Fatalf("expected report structure rejection, ready=%v issues=%+v", gate.Ready, gate.Issues)
+	if gate.Ready || !hasIssue(gate.Issues, "final_report_missing") || !hasIssue(gate.Issues, "evidence_appendix_missing") {
+		t.Fatalf("expected missing report artifacts rejection, ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+}
+
+func TestRunReportAcceptsMissingControlWithoutCVSS(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	if _, err := RunPlan(workspace, false); err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	writeReportReadyWorkspace(t, workspace)
+	registry := `generated_from: Sessions 01-08.5
+findings:
+  - id: CTRL-001
+    kind: missing_control
+    title: No rate limit on OTP send
+    category: abuse_and_cost
+    status: confirmed
+    confidence: high
+    evidence_strength: corroborated
+    severity: medium
+    priority: P1
+    affected_assets: [test.example.invalid]
+    affected_locations: [POST /api/auth/otp]
+    observed_facts: [Handler has no limiter middleware, Approved burst returned 20x 200]
+    root_cause: Edge function does no counting
+    security_impact: Unbounded SMS sends at the owner's cost
+    remediation: Add a shared-store limiter keyed on phone number and IP
+    validation_criteria: [Sixth request in 60s returns 429]
+    coverage_label: partial
+    evidence_categories:
+      - source_review
+      - ensphere_measurement
+      - agent_judgment
+    evidence_ids:
+      - EVID-088
+`
+	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report gate: %v", err)
+	}
+	if !gate.Ready || gate.FindingRegistryState != "valid" {
+		t.Fatalf("expected missing_control registry to pass without cvss, state=%s issues=%+v", gate.FindingRegistryState, gate.Issues)
+	}
+
+	registry = strings.Replace(registry, "kind: missing_control", "kind: exploit", 1)
+	registry = strings.Replace(registry, "id: CTRL-001", "id: FINDING-1", 1)
+	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	gate, err = RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report gate: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "finding_kind_invalid") || !hasIssue(gate.Issues, "finding_id_invalid") {
+		t.Fatalf("expected kind and id rejection, ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+}
+
+func TestRunPlanRecordsStackAndPlansAbuseSession(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://app.example.com", TargetType: "web_app", Username: "user"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	profile := `target:
+  type: web_app
+  environment: sandbox
+  classification_confidence: high
+  rationale:
+    - "Next.js app with a Supabase backend."
+  evidence_refs:
+    - "01-recon/report.md#deployable-components"
+stack:
+  languages: [typescript]
+  frameworks: [nextjs]
+  data_layers: [supabase_postgres, prisma]
+  hosting: [vercel]
+  storage: [cloudflare_r2]
+  billing_exposed_services: [supabase_edge_functions, openai]
+  evidence_refs:
+    - "01-recon/report.md#stack"
+signals:
+  api_surface: true
+  authentication: true
+  billing_exposed_surface: true
+  storage_surface: true
+`
+	if err := os.WriteFile(filepath.Join(workspace, "01-recon", "target-profile.yaml"), []byte(profile), 0644); err != nil {
+		t.Fatalf("write target profile: %v", err)
+	}
+	out, err := RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	if !out.Valid {
+		t.Fatalf("expected valid plan, validation=%v", out.Validation)
+	}
+	if out.Plan.Target.Stack == nil || len(out.Plan.Target.Stack.BillingExposedServices) != 2 {
+		t.Fatalf("stack not carried into plan: %+v", out.Plan.Target.Stack)
+	}
+	if out.Plan.Sessions["08.5-abuse"].Decision != decisionRun {
+		t.Fatalf("expected abuse session run, got %+v", out.Plan.Sessions["08.5-abuse"])
+	}
+	if out.Plan.Checklists == nil || out.Plan.UncoveredStack == nil {
+		t.Fatalf("draft must emit empty checklists and uncovered_stack lists: %+v", out.Plan)
+	}
+
+	// The analyst plan assigns checklists; the runner validates their names and surfaces them.
+	raw, err := os.ReadFile(filepath.Join(workspace, "assessment-plan.yaml"))
+	if err != nil {
+		t.Fatalf("read plan: %v", err)
+	}
+	edited := strings.Replace(string(raw), "checklists: []", "checklists: [abuse-and-cost, nextjs-app-router, supabase-rls]", 1)
+	edited = strings.Replace(edited, "uncovered_stack: []", "uncovered_stack: [openai]", 1)
+	if err := os.WriteFile(filepath.Join(workspace, "assessment-plan.yaml"), []byte(edited), 0644); err != nil {
+		t.Fatalf("write edited plan: %v", err)
+	}
+	out, err = RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("validate edited plan: %v", err)
+	}
+	if !out.Valid || len(out.Plan.Checklists) != 3 {
+		t.Fatalf("expected valid plan with three checklists, valid=%v validation=%v checklists=%v", out.Valid, out.Validation, out.Plan.Checklists)
+	}
+	status, err := WorkspaceStatus(workspace)
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if len(status.AssessmentPlan.Checklists) != 3 {
+		t.Fatalf("status missing checklists: %+v", status.AssessmentPlan)
+	}
+
+	edited = strings.Replace(edited, "checklists: [abuse-and-cost, nextjs-app-router, supabase-rls]", "checklists: [\"Next JS.md\"]", 1)
+	if err := os.WriteFile(filepath.Join(workspace, "assessment-plan.yaml"), []byte(edited), 0644); err != nil {
+		t.Fatalf("write invalid plan: %v", err)
+	}
+	out, err = RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("validate invalid plan: %v", err)
+	}
+	if out.Valid {
+		t.Fatalf("expected invalid checklist name to fail validation: %+v", out.Plan.Checklists)
+	}
+}
+
+func TestRunPlanRejectsStackWithoutEvidence(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://app.example.com", TargetType: "web_app"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	profile := `target:
+  type: web_app
+  environment: sandbox
+  classification_confidence: high
+  rationale: ["Observed"]
+  evidence_refs: ["01-recon/report.md#target"]
+stack:
+  frameworks: [Next.js]
+`
+	if err := os.WriteFile(filepath.Join(workspace, "01-recon", "target-profile.yaml"), []byte(profile), 0644); err != nil {
+		t.Fatalf("write target profile: %v", err)
+	}
+	out, err := RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	if out.Valid {
+		t.Fatal("expected stack validation errors")
+	}
+	joined := strings.Join(out.Validation, "\n")
+	if !strings.Contains(joined, "evidence_refs is required") || !strings.Contains(joined, "lowercase identifier") {
+		t.Fatalf("unexpected validation output:\n%s", joined)
+	}
+}
+
+func TestNextActionListsSessionChecklists(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://api.example.com", TargetType: "api_backend"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	if _, err := RunPlan(workspace, false); err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	raw, err := os.ReadFile(filepath.Join(workspace, "assessment-plan.yaml"))
+	if err != nil {
+		t.Fatalf("read plan: %v", err)
+	}
+	edited := strings.Replace(string(raw), "    02-injection:\n", "    02-injection:\n        checklists: [prisma-drizzle]\n", 1)
+	if edited == string(raw) {
+		t.Fatalf("could not locate 02-injection block in plan:\n%s", raw)
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "assessment-plan.yaml"), []byte(edited), 0644); err != nil {
+		t.Fatalf("write plan: %v", err)
+	}
+	progress := strings.Replace(renderProgress(workspace), "| 01 | Recon | PENDING | |", "| 01 | Recon | DONE | |", 1)
+	progress = strings.Replace(progress, "| 01.5 | Plan | PENDING | |", "| 01.5 | Plan | DONE | |", 1)
+	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
+		t.Fatalf("write progress: %v", err)
+	}
+	action, err := WriteNextAction(workspace)
+	if err != nil {
+		t.Fatalf("write next action: %v", err)
+	}
+	if action.Session == nil || action.Session.ID != "02" || action.PlanDecision == nil || len(action.PlanDecision.Checklists) != 1 {
+		t.Fatalf("expected session 02 with one checklist, got session=%+v decision=%+v", action.Session, action.PlanDecision)
+	}
+	rendered, err := os.ReadFile(action.ActionPath)
+	if err != nil {
+		t.Fatalf("read next action: %v", err)
+	}
+	if !strings.Contains(string(rendered), "skills/checklists/prisma-drizzle.md") {
+		t.Fatalf("next-action does not list the checklist:\n%s", rendered)
 	}
 }
 
@@ -749,6 +930,7 @@ func TestRunReportRejectsEmptyCitationPlaceholders(t *testing.T) {
 	registry := `generated_from: Session 09
 findings:
   - id: VULN-001
+    kind: vulnerability
     title: Blank citation placeholder
     category: injection
     status: not_supported
@@ -786,6 +968,7 @@ func TestRunReportRejectsUnsafeFindingRegistryPaths(t *testing.T) {
 	registry := `generated_from: Session 09
 findings:
   - id: VULN-001
+    kind: vulnerability
     title: Unsafe citation paths
     category: injection
     status: not_supported
@@ -801,7 +984,7 @@ findings:
     artifact_paths:
       - ../outside.txt
     cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
+      - 08.5-abuse/cleanup.md#VULN-001
 `
 	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
 		t.Fatalf("write registry: %v", err)
@@ -815,569 +998,6 @@ findings:
 	}
 }
 
-func TestPrepareImpactValidationWritesSelectionAndPrompt(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeSession09DoneProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001", "VULN-004")
-	selection, err := PrepareImpactValidation(workspace, []string{"VULN-001", "VULN-004"})
-	if err != nil {
-		t.Fatalf("prepare impact validation: %v", err)
-	}
-	raw, err := os.ReadFile(selection.SelectionPath)
-	if err != nil {
-		t.Fatalf("read selected findings: %v", err)
-	}
-	text := string(raw)
-	if !strings.Contains(text, `"VULN-001"`) ||
-		!strings.Contains(text, "finding_registry_path:") ||
-		!strings.Contains(text, "max_risk: 3") ||
-		!strings.Contains(text, "human_authorization_required: true") ||
-		!strings.Contains(text, "authorization_record_required: true") ||
-		!strings.Contains(text, "permitted_executors:") ||
-		!strings.Contains(text, `evidence_jsonl: "10-impact-validation/evidence.jsonl"`) ||
-		!strings.Contains(text, `authorization_dir: "10-impact-validation/authorizations"`) ||
-		!strings.Contains(text, "cleanup_evidence_required: true") {
-		t.Fatalf("unexpected selected findings:\n%s", text)
-	}
-	if selection.MaxRisk != 3 || len(selection.AllowedActions) == 0 || len(selection.ForbiddenActions) == 0 {
-		t.Fatalf("selection response missing impact-validation policy: %+v", selection)
-	}
-	if !selection.HumanAuthorizationRequired || !selection.AuthorizationRecordRequired || !selection.EnvironmentAcknowledgementRequired || !selection.ValidationPlanRequired || len(selection.PermittedExecutors) != 2 {
-		t.Fatalf("selection response does not enforce human-authorized execution: %+v", selection)
-	}
-	prompt, err := os.ReadFile(filepath.Join(workspace, "agent-prompt.md"))
-	if err != nil {
-		t.Fatalf("read prompt: %v", err)
-	}
-	if !strings.Contains(string(prompt), "ensphere 10") || !strings.Contains(string(prompt), "run impact-ready returns ready: true") {
-		t.Fatalf("expected session 10 prompt, got:\n%s", prompt)
-	}
-}
-
-func TestSession10ReadinessRejectsUnknownExecutor(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeSession09DoneProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	path := filepath.Join(workspace, "10-impact-validation", "selected-findings.yaml")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read handoff: %v", err)
-	}
-	raw = []byte(strings.Replace(string(raw), `  - "agent"`, `  - "robot"`, 1))
-	if err := os.WriteFile(path, raw, 0644); err != nil {
-		t.Fatalf("write handoff: %v", err)
-	}
-	status, err := WorkspaceStatus(workspace)
-	if err != nil {
-		t.Fatalf("status: %v", err)
-	}
-	if status.NextSession != nil {
-		t.Fatalf("expected invalid Session 10 handoff to block Session 10, got %+v", status.NextSession)
-	}
-}
-
-func TestSession10ReadinessRejectsAuthorizationTimestampInFuture(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeSession09DoneProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	authorizationPath := "10-impact-validation/authorizations/VULN-001-agent.yaml"
-	path := filepath.Join(workspace, filepath.FromSlash(authorizationPath))
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read authorization: %v", err)
-	}
-	raw = []byte(strings.Replace(string(raw), "authorized_at: 2026-07-18T10:00:00Z", "authorized_at: 2999-07-18T10:00:00Z", 1))
-	if err := os.WriteFile(path, raw, 0644); err != nil {
-		t.Fatalf("write authorization: %v", err)
-	}
-	readiness, err := CheckImpactValidationReady(workspace, "VULN-001", authorizationPath)
-	if err != nil {
-		t.Fatalf("check impact readiness: %v", err)
-	}
-	if readiness.Ready || !hasIssue(readiness.Issues, "readiness_precedes_authorization") {
-		t.Fatalf("expected future authorization timestamp to block readiness: %+v", readiness)
-	}
-}
-
-func TestFinalGateRejectsReadinessBeforeAuthorization(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	readinessPath := filepath.Join(workspace, "10-impact-validation", "readiness", "VULN-001-agent.yaml")
-	raw, err := os.ReadFile(readinessPath)
-	if err != nil {
-		t.Fatalf("read readiness attestation: %v", err)
-	}
-	raw = []byte(strings.Replace(string(raw), "checked_at: 2026-07-18T10:00:30Z", "checked_at: 2026-07-18T09:59:59Z", 1))
-	if err := os.WriteFile(readinessPath, raw, 0644); err != nil {
-		t.Fatalf("write readiness attestation: %v", err)
-	}
-	authorizationRaw, err := os.ReadFile(filepath.Join(workspace, "10-impact-validation", "authorizations", "VULN-001-agent.yaml"))
-	if err != nil {
-		t.Fatalf("read authorization: %v", err)
-	}
-	var auth Session10Authorization
-	if err := decodeStrictYAML(authorizationRaw, &auth); err != nil {
-		t.Fatalf("decode authorization: %v", err)
-	}
-	outcome := ImpactValidationOutcome{
-		ID:                "VULN-001",
-		Executor:          "agent",
-		AuthorizationPath: "10-impact-validation/authorizations/VULN-001-agent.yaml",
-		ReadinessPath:     "10-impact-validation/readiness/VULN-001-agent.yaml",
-		Execution:         Session10Execution{StartedAt: "2099-07-18T10:01:00Z"},
-	}
-	issues := validateImpactReadinessAttestation(workspace, readinessPath, outcome, &auth)
-	if !hasIssue(issues, "readiness_precedes_authorization") {
-		t.Fatalf("expected readiness ordering issue: %+v", issues)
-	}
-}
-
-func TestPrepareImpactValidationRequiresEnabledWorkspace(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := PrepareImpactValidation(workspace, []string{"VULN-001"}); err == nil {
-		t.Fatal("expected uninitialized workspace error")
-	}
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	if _, err := PrepareImpactValidation(workspace, []string{"VULN-001"}); err == nil {
-		t.Fatal("expected impact validation disabled error")
-	}
-}
-
-func TestPrepareImpactValidationRequiresSession09Done(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	_, err := PrepareImpactValidation(workspace, []string{"VULN-001"})
-	if err == nil || !strings.Contains(err.Error(), "Session 09") {
-		t.Fatalf("expected Session 09 completion error, got %v", err)
-	}
-}
-
-func TestPrepareImpactValidationRequiresFindingRegistry(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	_, err := PrepareImpactValidation(workspace, []string{"VULN-001"})
-	if err == nil || !strings.Contains(err.Error(), "finding registry is required") {
-		t.Fatalf("expected missing registry error, got %v", err)
-	}
-}
-
-func TestPrepareImpactValidationRejectsUnknownFinding(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	_, err := PrepareImpactValidation(workspace, []string{"VULN-999"})
-	if err == nil || !strings.Contains(err.Error(), "not found") {
-		t.Fatalf("expected unknown finding error, got %v", err)
-	}
-}
-
-func TestRunFinalReportWritesDerivedRegistryWithoutMutatingSession09(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001", "VULN-002")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: objective_achieved
-    outcome_reason: Read-only impact proof achieved.
-    executor: agent
-    authorization_path: 10-impact-validation/authorizations/VULN-001-agent.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-agent.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    evidence_ids:
-      - EVID-010
-    transcripts:
-      - 10-impact-validation/transcripts/VULN-001.md
-    artifact_paths:
-      - 10-impact-validation/artifacts/VULN-001-response.txt
-    cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
-    cleanup_status: verified
-    evidence_categories:
-      - human_authorization
-      - agent_execution
-      - impact_validation_attempt
-      - impact_validation_result
-`
-	if err := os.WriteFile(filepath.Join(workspace, "10-impact-validation", "impact-validation-outcomes.yaml"), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	originalRaw, err := os.ReadFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"))
-	if err != nil {
-		t.Fatalf("read original registry: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	if !out.Ready || len(out.UpdatedFindings) != 1 || len(out.PreservedFindings) != 1 {
-		t.Fatalf("unexpected final output: %+v", out)
-	}
-	finalRaw, err := os.ReadFile(out.FinalRegistryPath)
-	if err != nil {
-		t.Fatalf("read final registry: %v", err)
-	}
-	finalText := string(finalRaw)
-	for _, expected := range []string{"status: confirmed", "impact_validation_outcome_status: objective_achieved", "impact_validation_executor: agent", "EVID-010", "10-impact-validation/transcripts/VULN-001.md"} {
-		if !strings.Contains(finalText, expected) {
-			t.Fatalf("final registry missing %q:\n%s", expected, finalText)
-		}
-	}
-	afterRaw, err := os.ReadFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"))
-	if err != nil {
-		t.Fatalf("read original registry after final: %v", err)
-	}
-	if string(afterRaw) != string(originalRaw) {
-		t.Fatalf("Session 09 registry was mutated:\nbefore:\n%s\nafter:\n%s", originalRaw, afterRaw)
-	}
-}
-
-func TestRunFinalReportRejectsPlanChangedAfterAuthorization(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	planPath := filepath.Join(workspace, "10-impact-validation", "plans", "VULN-001-agent.yaml")
-	plan, err := os.ReadFile(planPath)
-	if err != nil {
-		t.Fatalf("read plan: %v", err)
-	}
-	if err := os.WriteFile(planPath, append(plan, []byte("\nUnapproved material change.\n")...), 0644); err != nil {
-		t.Fatalf("change plan: %v", err)
-	}
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: objective_achieved
-    outcome_reason: Changed-plan rejection fixture.
-    executor: agent
-    authorization_path: 10-impact-validation/authorizations/VULN-001-agent.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-agent.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    evidence_ids: [EVID-010]
-    cleanup_evidence: [10-impact-validation/cleanup.md#VULN-001]
-    cleanup_status: verified
-    evidence_categories: [human_authorization, agent_execution, impact_validation_attempt, impact_validation_result]
-`
-	if err := os.WriteFile(impactValidationOutcomesPath(workspace), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	if out.Ready || !hasIssue(out.Issues, "authorization_plan_sha256_mismatch") {
-		t.Fatalf("expected changed plan to invalidate authorization, ready=%v issues=%+v", out.Ready, out.Issues)
-	}
-}
-
-func TestSession10EvidenceCitationMustResolveToChainedFindingEvidence(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	handoff, err := readSelectedFindingsHandoff(workspace)
-	if err != nil {
-		t.Fatalf("read handoff: %v", err)
-	}
-	issues := validateSession10EvidenceIDs(workspace, "outcome", ImpactValidationOutcome{
-		ID:          "VULN-001",
-		EvidenceIDs: []string{"EVID-999"},
-	}, handoff)
-	if !hasIssue(issues, "impact_validation_evidence_id_missing") {
-		t.Fatalf("expected unresolved Session 10 evidence ID rejection, issues=%+v", issues)
-	}
-}
-
-func TestRunFinalReportRejectsUnsafeOutcomePath(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: objective_achieved
-    outcome_reason: Unsafe transcript path fixture.
-    executor: human
-    authorization_path: 10-impact-validation/authorizations/VULN-001-human.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-human.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    evidence_ids:
-      - EVID-010
-    transcripts:
-      - ../outside.md
-    cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
-    cleanup_status: verified
-    evidence_categories:
-      - human_authorization
-      - human_execution
-      - impact_validation_attempt
-      - impact_validation_result
-`
-	if err := os.WriteFile(filepath.Join(workspace, "10-impact-validation", "impact-validation-outcomes.yaml"), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	if out.Ready || !hasIssue(out.Issues, "finding_path_unsafe") {
-		t.Fatalf("expected unsafe outcome path issue, ready=%v issues=%+v", out.Ready, out.Issues)
-	}
-}
-
-func TestRunFinalReportRejectsMissingOutcomeArtifact(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: objective_achieved
-    outcome_reason: Missing transcript fixture.
-    executor: human
-    authorization_path: 10-impact-validation/authorizations/VULN-001-human.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-human.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    transcripts:
-      - 10-impact-validation/transcripts/missing.md
-    cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
-    cleanup_status: verified
-    evidence_categories:
-      - human_authorization
-      - human_execution
-      - impact_validation_attempt
-      - impact_validation_result
-`
-	if err := os.WriteFile(impactValidationOutcomesPath(workspace), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	if out.Ready || !hasIssue(out.Issues, "finding_path_missing") {
-		t.Fatalf("expected missing artifact rejection, ready=%v issues=%+v", out.Ready, out.Issues)
-	}
-}
-
-func TestRunFinalReportRequiresOutcomeForEverySelectedFinding(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001", "VULN-002")
-	writeSelectedFindings(t, workspace, "VULN-001", "VULN-002")
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: blocked_by_control
-    outcome_reason: The bounded action was blocked by the target control.
-    executor: human
-    authorization_path: 10-impact-validation/authorizations/VULN-001-human.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-human.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    evidence_ids:
-      - EVID-010
-    cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
-    cleanup_status: not_needed
-    evidence_categories:
-      - human_authorization
-      - human_execution
-      - impact_validation_attempt
-      - impact_validation_result
-`
-	if err := os.WriteFile(filepath.Join(workspace, "10-impact-validation", "impact-validation-outcomes.yaml"), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	if out.Ready || !hasIssue(out.Issues, "impact_validation_outcome_missing_selected") {
-		t.Fatalf("expected missing selected outcome issue, ready=%v issues=%+v", out.Ready, out.Issues)
-	}
-}
-
-func TestRunFinalReportRequiresCleanupStatusAndProofForAchievedObjective(t *testing.T) {
-	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
-	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com", ImpactValidationEnabled: true}); err != nil {
-		t.Fatalf("init workspace: %v", err)
-	}
-	writeFinalReadyProgress(t, workspace)
-	writeValidFindingRegistry(t, workspace, "VULN-001")
-	writeSelectedFindings(t, workspace, "VULN-001")
-	outcomes := `generated_from: Session 10
-outcomes:
-  - id: VULN-001
-    status: objective_achieved
-    outcome_reason: Narrative-only proof fixture.
-    executor: agent
-    authorization_path: 10-impact-validation/authorizations/VULN-001-agent.yaml
-    readiness_path: 10-impact-validation/readiness/VULN-001-agent.yaml
-    execution:
-      started_at: 2099-07-18T10:01:00Z
-      completed_at: 2099-07-18T10:02:00Z
-      environment: local-test
-      performed_actions:
-        - id: action-1
-          target: https://example.com/canary
-          operation: GET /canary
-          identity: test-identity
-          role: test-role
-          started_at: 2099-07-18T10:01:10Z
-          completed_at: 2099-07-18T10:01:50Z
-          exit_status: completed
-          result_summary: Controlled test observation recorded.
-          transcript_path: 10-impact-validation/transcripts/VULN-001.md
-      action_count: 1
-      stop_condition_triggered: false
-      rollback_status: not_needed
-    cleanup_evidence:
-      - 10-impact-validation/cleanup.md#VULN-001
-    evidence_categories:
-      - human_authorization
-      - agent_execution
-      - impact_validation_attempt
-      - impact_validation_result
-    notes: "Narrative only is not proof."
-`
-	if err := os.WriteFile(filepath.Join(workspace, "10-impact-validation", "impact-validation-outcomes.yaml"), []byte(outcomes), 0644); err != nil {
-		t.Fatalf("write outcomes: %v", err)
-	}
-	out, err := RunFinalReport(workspace)
-	if err != nil {
-		t.Fatalf("run final: %v", err)
-	}
-	for _, code := range []string{"impact_validation_proof_missing", "impact_validation_cleanup_status_missing"} {
-		if !hasIssue(out.Issues, code) {
-			t.Fatalf("expected %s issue, ready=%v issues=%+v", code, out.Ready, out.Issues)
-		}
-	}
-}
-
 func writeReportReadyWorkspace(t *testing.T, workspace string) {
 	t.Helper()
 	progress := `# Assessment Progress
@@ -1385,17 +1005,17 @@ func writeReportReadyWorkspace(t *testing.T, workspace string) {
 | Session | Category | Status | Findings |
 |---------|----------|--------|----------|
 | 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
+| 01.5 | Plan | DONE | |
 | 02 | Injection | DONE | |
 | 03 | Authentication | SKIPPED | No authentication mechanism |
 | 04 | Authorization | BLOCKED | Missing second account |
 | 05 | Cross-Site Scripting | NOT_APPLICABLE | API only |
 | 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud Security | SKIPPED | No cloud scope |
+| 07 | Cloud and Platform | SKIPPED | No cloud scope |
 | 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | PENDING | |
-| 10 | Optional Human-Authorized Impact Validation | PENDING | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
+| 08.5 | Abuse and Cost Controls | DONE | |
+| 08.7 | Chains and Workflows | BLOCKED | No sandbox environment |
+| 09 | Report | PENDING | |
 `
 	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
 		t.Fatalf("write progress: %v", err)
@@ -1412,193 +1032,6 @@ func writeReportReadyWorkspace(t *testing.T, workspace string) {
 	writeSession09Artifacts(t, workspace)
 }
 
-func writeFinalReadyProgress(t *testing.T, workspace string) {
-	t.Helper()
-	progress := `# Assessment Progress
-
-| Session | Category | Status | Findings |
-|---------|----------|--------|----------|
-| 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
-| 02 | Injection | DONE | |
-| 03 | Authentication | SKIPPED | No authentication mechanism |
-| 04 | Authorization | BLOCKED | Missing second account |
-| 05 | Cross-Site Scripting | NOT_APPLICABLE | API only |
-| 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud Security | SKIPPED | No cloud scope |
-| 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | DONE | |
-| 10 | Optional Human-Authorized Impact Validation | DONE | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
-`
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write progress: %v", err)
-	}
-	writeReportGatePrerequisites(t, workspace)
-}
-
-func writeSession09DoneProgress(t *testing.T, workspace string) {
-	t.Helper()
-	progress := `# Assessment Progress
-
-| Session | Category | Status | Findings |
-|---------|----------|--------|----------|
-| 01 | Recon | DONE | |
-| 01.5 | Session Applicability Plan | DONE | |
-| 02 | Injection | DONE | |
-| 03 | Authentication | SKIPPED | |
-| 04 | Authorization | SKIPPED | |
-| 05 | Cross-Site Scripting | SKIPPED | |
-| 06 | Server-Side Request Forgery | SKIPPED | |
-| 07 | Cloud Security | SKIPPED | |
-| 08 | API Security | DONE | |
-| 09 | Evidence-Based Assessment Report | DONE | |
-| 10 | Optional Human-Authorized Impact Validation | PENDING | |
-| 11 | Optional Validation-Aware Final Report | PENDING | |
-`
-	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
-		t.Fatalf("write progress: %v", err)
-	}
-	writeReportGatePrerequisites(t, workspace)
-}
-
-func writeReportGatePrerequisites(t *testing.T, workspace string) {
-	t.Helper()
-	if _, err := RunPlan(workspace, false); err != nil {
-		t.Fatalf("write assessment plan fixture: %v", err)
-	}
-	for _, session := range reportRequiredSessions {
-		path := filepath.Join(workspace, session.Directory, "report.md")
-		if err := os.WriteFile(path, []byte("# Session report\n\nFixture coverage and limitations.\n"), 0644); err != nil {
-			t.Fatalf("write Session %s report fixture: %v", session.ID, err)
-		}
-	}
-}
-
-func writeSelectedFindings(t *testing.T, workspace string, ids ...string) {
-	t.Helper()
-	dir := filepath.Join(workspace, "10-impact-validation")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatalf("mkdir selected findings dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "selected-findings.yaml"), []byte(renderSelectedFindings(ids, findingRegistryPath(workspace), defaultImpactValidationPolicy(true))), 0644); err != nil {
-		t.Fatalf("write selected findings: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "report.md"), []byte("# Session 10: Human-Authorized Impact Validation\n\nAuthorization and outcome summary.\n"), 0644); err != nil {
-		t.Fatalf("write Session 10 report: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "transcripts"), 0755); err != nil {
-		t.Fatalf("mkdir transcripts: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "artifacts"), 0755); err != nil {
-		t.Fatalf("mkdir artifacts: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "plans"), 0755); err != nil {
-		t.Fatalf("mkdir plans: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "authorizations"), 0755); err != nil {
-		t.Fatalf("mkdir authorizations: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(dir, "readiness"), 0755); err != nil {
-		t.Fatalf("mkdir readiness: %v", err)
-	}
-	for _, id := range ids {
-		for _, executor := range []string{"human", "agent"} {
-			plan := []byte(fmt.Sprintf(`finding_id: %s
-objective: Observe the bounded canary result.
-session09_evidence_ids: [EVID-001]
-executor: %s
-environment: local-test
-identity: test-identity
-role: test-role
-actions:
-  - id: action-1
-    action_type: non_sensitive_canary_read
-    target: https://example.com/canary
-    operation: GET /canary
-    risk: 2
-    expected_observations: [status code, response hash]
-max_actions: 1
-max_duration_minutes: 5
-max_risk: 2
-stop_conditions: [unexpected state change]
-rollback_steps: [no state change expected]
-cleanup_verification: [verify canary state unchanged]
-transcript_path: 10-impact-validation/transcripts/%s.md
-artifact_directory: 10-impact-validation/artifacts
-cleanup_evidence_path: 10-impact-validation/cleanup.md#%s
-`, id, executor, id, id))
-			planPath := "10-impact-validation/plans/" + id + "-" + executor + ".yaml"
-			if err := os.WriteFile(filepath.Join(workspace, filepath.FromSlash(planPath)), plan, 0644); err != nil {
-				t.Fatalf("write impact-validation plan: %v", err)
-			}
-			planHash := sha256.Sum256(plan)
-			authorization := fmt.Sprintf(`finding_id: %s
-plan_path: %s
-plan_revision: rev-1
-plan_sha256: sha256:%x
-authorized_by: test-human
-authorized_at: 2026-07-18T10:00:00Z
-executor: %s
-environment: local-test
-environment_acknowledged: true
-authorized_action_ids: [action-1]
-max_actions: 1
-max_duration_minutes: 5
-max_risk: 2
-`, id, planPath, planHash, executor)
-			if err := os.WriteFile(filepath.Join(dir, "authorizations", id+"-"+executor+".yaml"), []byte(authorization), 0644); err != nil {
-				t.Fatalf("write authorization record: %v", err)
-			}
-			authorizationHash := sha256.Sum256([]byte(authorization))
-			attestation := fmt.Sprintf(`finding_id: %s
-authorization_path: 10-impact-validation/authorizations/%s-%s.yaml
-authorization_sha256: sha256:%x
-plan_path: %s
-plan_sha256: sha256:%x
-executor: %s
-checked_at: 2026-07-18T10:00:30Z
-ready: true
-`, id, id, executor, authorizationHash, planPath, planHash, executor)
-			if err := os.WriteFile(filepath.Join(dir, "readiness", id+"-"+executor+".yaml"), []byte(attestation), 0644); err != nil {
-				t.Fatalf("write readiness attestation: %v", err)
-			}
-		}
-		if err := os.WriteFile(filepath.Join(dir, "transcripts", id+".md"), []byte("# Execution transcript\n"), 0644); err != nil {
-			t.Fatalf("write transcript: %v", err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "artifacts", id+"-response.txt"), []byte("controlled result\n"), 0644); err != nil {
-			t.Fatalf("write artifact: %v", err)
-		}
-	}
-	if err := os.WriteFile(filepath.Join(dir, "cleanup.md"), []byte("# Cleanup\n\n## VULN-001\n\nVerified.\n"), 0644); err != nil {
-		t.Fatalf("write cleanup: %v", err)
-	}
-	writer, err := evidence.NewWriter(filepath.Join(dir, "evidence.jsonl"))
-	if err != nil {
-		t.Fatalf("create Session 10 evidence writer: %v", err)
-	}
-	entry := evidence.Entry{
-		ID:            "EVID-010",
-		SessionNumber: 10,
-		FindingRef:    ids[0],
-		Timestamp:     "2099-07-18T10:01:30Z",
-		ProbeType:     "impact_validation",
-		Technique:     "authorized_action",
-		URL:           "https://example.com/canary",
-		StatusCode:    200,
-		Duration:      "40s",
-		Result:        evidence.ResultProbe,
-	}
-	if err := writer.Write(entry); err != nil {
-		_ = writer.Close()
-		t.Fatalf("write Session 10 evidence: %v", err)
-	}
-	if err := writer.Close(); err != nil {
-		t.Fatalf("close Session 10 evidence: %v", err)
-	}
-}
-
 func writeValidFindingRegistry(t *testing.T, workspace string, ids ...string) {
 	t.Helper()
 	if len(ids) == 0 {
@@ -1613,6 +1046,7 @@ func writeValidFindingRegistry(t *testing.T, workspace string, ids ...string) {
 	b.WriteString("findings:\n")
 	for _, id := range ids {
 		b.WriteString("  - id: " + id + "\n")
+		b.WriteString("    kind: vulnerability\n")
 		b.WriteString("    title: Registry finding " + id + "\n")
 		b.WriteString("    category: injection\n")
 		b.WriteString("    status: confirmed\n")
@@ -1648,31 +1082,7 @@ func writeSession09Artifacts(t *testing.T, workspace string) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		t.Fatalf("mkdir Session 09 dir: %v", err)
 	}
-	report := `# Security Assessment Report
-
-## Authorization
-Authorized test.
-## Executive Summary
-Summary.
-## Scope and Methodology
-Scope.
-## Coverage
-Coverage.
-## Finding Summary
-Summary.
-## Detailed Findings
-Details.
-## Tested Defenses
-Controls.
-## Unresolved and Not-Tested Areas
-Limitations.
-## Attack Paths and Risk Scenarios
-None.
-## Remediation Roadmap
-Roadmap.
-## Contextual Compliance Mapping
-Context only.
-`
+	report := "# Assessment Report\n\n## Summary\nWhat was assessed and what to fix first.\n\n## Checks executed\nSee coverage matrices.\n"
 	if err := os.WriteFile(filepath.Join(dir, "report.md"), []byte(report), 0644); err != nil {
 		t.Fatalf("write Session 09 report: %v", err)
 	}
@@ -1688,4 +1098,41 @@ func hasIssue(issues []ReportGateIssue, code string) bool {
 		}
 	}
 	return false
+}
+
+func TestRunPlanWithoutLiveTargetIsSourceOnly(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{
+		Workspace:  workspace,
+		SourcePath: ".",
+		TargetType: "web_app",
+		InScope:    "example.invalid",
+	}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	out, err := RunPlan(workspace, false)
+	if err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	if !out.Written || !out.Valid {
+		t.Fatalf("expected written valid source-only plan, got written=%v valid=%v validation=%v", out.Written, out.Valid, out.Validation)
+	}
+	if out.Plan.Target.URL != "" || out.Plan.Target.CoverageLabel != coverageSourceOnly {
+		t.Fatalf("expected empty url and source_only coverage, got %+v", out.Plan.Target)
+	}
+	if out.Plan.Target.Environment != "none" {
+		t.Fatalf("expected none environment without a live target, got %q", out.Plan.Target.Environment)
+	}
+	plan := *out.Plan
+	plan.Target.CoverageLabel = coverageFull
+	problems := ValidateAssessmentPlan(&plan)
+	found := false
+	for _, problem := range problems {
+		if strings.Contains(problem, "target.url is required") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected target.url validation error for full coverage without a URL, got %v", problems)
+	}
 }

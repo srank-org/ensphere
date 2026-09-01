@@ -357,36 +357,6 @@ func TestIntegration_NoSQL(t *testing.T) {
 	}
 }
 
-func TestIntegration_Deserialization(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-
-	ts := newTestServer(t, delayHandler(150*time.Millisecond))
-
-	cfg := DeserializationConfig{
-		URL:         ts.URL + "/api",
-		Runtime:     "python",
-		Method:      "POST",
-		Technique:   "time_based",
-		ProbeConfig: baseProbeConfig(),
-	}
-	cfg.TimeoutSec = 10
-
-	result, err := VerifyDeserialization(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	m, ok := result.Measurements.(DeserializationMeasurements)
-	if !ok {
-		t.Fatalf("expected DeserializationMeasurements, got %T", result.Measurements)
-	}
-	if m.PayloadAvgMs <= m.BaselineAvgMs {
-		t.Fatalf("expected PayloadAvgMs > BaselineAvgMs, got %d <= %d", m.PayloadAvgMs, m.BaselineAvgMs)
-	}
-}
-
 func TestIntegration_CSVInjection(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")

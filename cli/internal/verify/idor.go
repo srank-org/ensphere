@@ -10,11 +10,11 @@ import (
 
 // IDORConfig holds configuration for IDOR verification.
 type IDORConfig struct {
-	URL            string // URL with {id} placeholder
-	ID             string // Resource ID to access
-	Token          string // Attacker's auth token
-	ExpectedStatus int    // Expected denial status (default 403)
-	Method         string // HTTP method (default GET)
+	URL        string // URL with {id} placeholder
+	ID         string // Resource ID to access
+	Token      string // Attacker's auth token
+	OwnerToken string // optional: owner's auth token for the baseline round
+	Method     string // HTTP method (default GET)
 	ProbeConfig
 }
 
@@ -54,7 +54,37 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Send probe
+	// Optional baseline: the same object read with the owner's token. This is
+	// the control that separates "the object exists and is readable by its
+	// owner" from "the attacker token was accepted".
+	var ownerRound *RoundResult
+	var hashesMatch, statusMatch *bool
+	if cfg.OwnerToken != "" {
+		ownerHeaders := make(map[string]string)
+		for k, v := range cfg.Headers {
+			ownerHeaders[k] = v
+		}
+		ownerHeaders["Authorization"] = "Bearer " + cfg.OwnerToken
+		throttle.Wait()
+		probeCount++
+		ownerResp := HTTPProbeNoRedirect(cfg.Method, targetURL, "", ownerHeaders, cfg.TimeoutSec, cfg.InScope)
+		if ownerResp.Error != nil {
+			return nil, fmt.Errorf("idor owner baseline: %w", ownerResp.Error)
+		}
+		fmt.Fprintf(os.Stderr, "[OWNER] status=%d len=%d\n", ownerResp.StatusCode, len(ownerResp.Body))
+		writeEvidence(ew, "idor", "idor_uuid", cfg.URL, cfg.ID, ownerResp.StatusCode,
+			fmt.Sprintf("%dms", ownerResp.ElapsedMs), "owner",
+			fmt.Sprintf("method=%s resource_id=%s identity=owner", cfg.Method, cfg.ID))
+		or := RoundResult{
+			StatusCode: ownerResp.StatusCode,
+			ElapsedMs:  ownerResp.ElapsedMs,
+			BodyHash:   ownerResp.BodyHash,
+			BodyLength: len(ownerResp.Body),
+		}
+		ownerRound = &or
+	}
+
+	// Probe: the same object read with the attacker's token.
 	throttle.Wait()
 	probeCount++
 	resp := HTTPProbeNoRedirect(cfg.Method, targetURL, "", headers, cfg.TimeoutSec, cfg.InScope)
@@ -65,7 +95,7 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d len=%d\n", resp.StatusCode, len(resp.Body))
 	writeEvidence(ew, "idor", "idor_uuid", cfg.URL, cfg.ID, resp.StatusCode,
 		fmt.Sprintf("%dms", resp.ElapsedMs), "probe",
-		fmt.Sprintf("method=%s resource_id=%s", cfg.Method, cfg.ID))
+		fmt.Sprintf("method=%s resource_id=%s identity=other", cfg.Method, cfg.ID))
 
 	probeRound := RoundResult{
 		StatusCode: resp.StatusCode,
@@ -73,6 +103,13 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 		BodyHash:   resp.BodyHash,
 		BodyLength: len(resp.Body),
 	}
+	if ownerRound != nil {
+		hm := ownerRound.BodyHash == probeRound.BodyHash
+		sm := ownerRound.StatusCode == probeRound.StatusCode
+		hashesMatch = &hm
+		statusMatch = &sm
+	}
+
 	snippet := resp.Body
 	if len(snippet) > 500 {
 		snippet = snippet[:500]
@@ -86,7 +123,9 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 		Duration:   timer.Elapsed(),
 		Measurements: IDORMeasurements{
 			ProbeRound:      probeRound,
-			ExpectedStatus:  cfg.ExpectedStatus,
+			OwnerRound:      ownerRound,
+			HashesMatch:     hashesMatch,
+			StatusMatch:     statusMatch,
 			ResourceID:      cfg.ID,
 			ResponseSnippet: snippet,
 		},

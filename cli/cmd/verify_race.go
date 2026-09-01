@@ -12,12 +12,7 @@ var (
 	raceBody        string
 	raceToken       string
 	raceConcurrency int
-	raceHeaders     []string
-	raceInScope     []string
-	raceMaxRisk     int
-	raceThrottle    int
-	raceTimeout     int
-	raceEvidence    string
+	raceProbe       probeFlags
 )
 
 var verifyRaceCmd = &cobra.Command{
@@ -39,21 +34,15 @@ func init() {
 	verifyRaceCmd.Flags().StringVar(&raceBody, "body", "", "Request body")
 	verifyRaceCmd.Flags().StringVar(&raceToken, "token", "", "Auth token")
 	verifyRaceCmd.Flags().IntVar(&raceConcurrency, "concurrency", 10, "Number of concurrent requests")
-	verifyRaceCmd.Flags().StringSliceVar(&raceHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyRaceCmd.Flags().StringSliceVar(&raceInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyRaceCmd.Flags().IntVar(&raceMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyRaceCmd.Flags().IntVar(&raceThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyRaceCmd.Flags().IntVar(&raceTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyRaceCmd.Flags().StringVar(&raceEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyRaceCmd.MarkFlagRequired("url")
-	_ = verifyRaceCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyRaceCmd, &raceProbe)
 
 	verifyCmd.AddCommand(verifyRaceCmd)
 }
 
 func runVerifyRace(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(raceHeaders)
 
 	cfg := verify.RaceConfig{
 		URL:         raceURL,
@@ -61,14 +50,7 @@ func runVerifyRace(cmd *cobra.Command, args []string) error {
 		Body:        raceBody,
 		Token:       raceToken,
 		Concurrency: raceConcurrency,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    raceInScope,
-			MaxRisk:    raceMaxRisk,
-			ThrottleMs: raceThrottle,
-			TimeoutSec: raceTimeout,
-			Headers:    headers,
-			Evidence:   raceEvidence,
-		},
+		ProbeConfig: buildProbeConfig(&raceProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

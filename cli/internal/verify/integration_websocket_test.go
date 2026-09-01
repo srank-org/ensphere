@@ -100,9 +100,9 @@ func TestWebSocket_Injection(t *testing.T) {
 	wsURL := strings.Replace(ts.URL, "http://", "ws://", 1) + "/ws"
 
 	result, err := VerifyWebSocket(WebSocketConfig{
-		URL:       wsURL,
-		Technique: "ws_injection",
-		Payload:   "hello",
+		URL:         wsURL,
+		Technique:   "ws_injection",
+		Payload:     "hello",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err != nil {
@@ -138,8 +138,8 @@ func TestWebSocket_OriginCheck(t *testing.T) {
 	wsURL := strings.Replace(ts.URL, "http://", "ws://", 1) + "/ws"
 
 	result, err := VerifyWebSocket(WebSocketConfig{
-		URL:       wsURL,
-		Technique: "ws_origin_check",
+		URL:         wsURL,
+		Technique:   "ws_origin_check",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err != nil {
@@ -165,8 +165,8 @@ func TestWebSocket_Hijack(t *testing.T) {
 	wsURL := strings.Replace(ts.URL, "http://", "ws://", 1) + "/ws"
 
 	result, err := VerifyWebSocket(WebSocketConfig{
-		URL:       wsURL,
-		Technique: "ws_hijack",
+		URL:         wsURL,
+		Technique:   "ws_hijack",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err != nil {
@@ -215,7 +215,7 @@ func TestWSHandshake_RawTCP(t *testing.T) {
 	}()
 
 	addr := listener.Addr().String()
-	conn, statusCode, elapsed, err := wsHandshake("ws://"+addr+"/ws", "http://localhost", nil, 5)
+	conn, statusCode, elapsed, err := wsHandshake("ws://"+addr+"/ws", "http://localhost", nil, 5, false)
 	if err != nil {
 		t.Fatalf("handshake error: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestIntegration_WebSocket_Malformed101Rejected(t *testing.T) {
 	}()
 
 	addr := ln.Addr().String()
-	conn, statusCode, _, hsErr := wsHandshake("ws://"+addr+"/ws", "http://localhost", nil, 5)
+	conn, statusCode, _, hsErr := wsHandshake("ws://"+addr+"/ws", "http://localhost", nil, 5, false)
 	if conn != nil {
 		conn.Close()
 	}
@@ -310,9 +310,9 @@ func TestIntegration_WebSocket_Malformed101_UpgradeSuccessFalse(t *testing.T) {
 	addr := ln.Addr().String()
 
 	result, err := VerifyWebSocket(WebSocketConfig{
-		URL:       "ws://" + addr + "/ws",
-		Technique: "ws_injection",
-		Payload:   "test",
+		URL:         "ws://" + addr + "/ws",
+		Technique:   "ws_injection",
+		Payload:     "test",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err != nil {

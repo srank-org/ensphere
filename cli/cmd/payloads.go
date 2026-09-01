@@ -29,7 +29,7 @@ var payloadsCmd = &cobra.Command{
 	Short: "Query the curated payload database",
 	Long: `Query curated security testing payloads by vulnerability type and context filters.
 
-Supported vuln_types: auth_bypass, cache_poisoning, cmdi, cors, csrf, csv_injection, deserialization, file_upload, graphql, header_injection, idor, jwt, ldap, lfi, nosql, prototype_pollution, race_condition, redirect, request_smuggling, sqli, ssrf, ssti, xpath, xss, xxe
+Supported vuln_types: auth_bypass, cache_poisoning, cmdi, cors, csrf, csv_injection, file_upload, graphql, header_injection, idor, jwt, ldap, lfi, nosql, prototype_pollution, race_condition, redirect, sqli, ssrf, ssti, xpath, xss, xxe
 
 Note: clickjacking is a verify-only type with no payloads (detection is header-based).
 
@@ -62,13 +62,11 @@ func runPayloads(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	conn, cleanup, err := payloads.Open()
+	store, err := payloads.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		fmt.Fprintf(os.Stderr, "Hint: Run 'make seeds' to build the payload database, then 'make build'.\n")
 		return err
 	}
-	defer cleanup()
 
 	filter := payloads.PayloadFilter{
 		VulnType:    args[0],
@@ -84,10 +82,7 @@ func runPayloads(cmd *cobra.Command, args []string) error {
 		Limit:       payloadLimit,
 	}
 
-	output, err := payloads.QueryPayloads(conn, filter)
-	if err != nil {
-		return fmt.Errorf("query failed: %w", err)
-	}
+	output := store.Query(filter)
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")

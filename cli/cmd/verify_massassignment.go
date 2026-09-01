@@ -12,12 +12,7 @@ var (
 	maBody        string
 	maWatchFields []string
 	maToken       string
-	maHeaders     []string
-	maInScope     []string
-	maMaxRisk     int
-	maThrottle    int
-	maTimeout     int
-	maEvidence    string
+	maProbe       probeFlags
 )
 
 var verifyMassAssignmentCmd = &cobra.Command{
@@ -57,24 +52,18 @@ func init() {
 	verifyMassAssignmentCmd.Flags().StringVar(&maBody, "body", "", "Base JSON body (required)")
 	verifyMassAssignmentCmd.Flags().StringSliceVar(&maWatchFields, "watch-fields", nil, "Fields to inject (required, comma-separated)")
 	verifyMassAssignmentCmd.Flags().StringVar(&maToken, "token", "", "Auth token for requests (required)")
-	verifyMassAssignmentCmd.Flags().StringSliceVar(&maHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyMassAssignmentCmd.Flags().StringSliceVar(&maInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyMassAssignmentCmd.Flags().IntVar(&maMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyMassAssignmentCmd.Flags().IntVar(&maThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyMassAssignmentCmd.Flags().IntVar(&maTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyMassAssignmentCmd.Flags().StringVar(&maEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyMassAssignmentCmd.MarkFlagRequired("url")
 	_ = verifyMassAssignmentCmd.MarkFlagRequired("body")
 	_ = verifyMassAssignmentCmd.MarkFlagRequired("watch-fields")
 	_ = verifyMassAssignmentCmd.MarkFlagRequired("token")
-	_ = verifyMassAssignmentCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyMassAssignmentCmd, &maProbe)
 
 	verifyCmd.AddCommand(verifyMassAssignmentCmd)
 }
 
 func runVerifyMassAssignment(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(maHeaders)
 
 	cfg := verify.MassAssignmentConfig{
 		URL:         maURL,
@@ -82,14 +71,7 @@ func runVerifyMassAssignment(cmd *cobra.Command, args []string) error {
 		Body:        maBody,
 		WatchFields: maWatchFields,
 		Token:       maToken,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    maInScope,
-			MaxRisk:    maMaxRisk,
-			ThrottleMs: maThrottle,
-			TimeoutSec: maTimeout,
-			Headers:    headers,
-			Evidence:   maEvidence,
-		},
+		ProbeConfig: buildProbeConfig(&maProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

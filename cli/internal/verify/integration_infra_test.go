@@ -12,8 +12,7 @@ func TestIntegration_SSRF(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,signatureHandler("latest/meta-data ami-id"))
-
+	ts := newTestServer(t, signatureHandler("latest/meta-data ami-id"))
 
 	cfg := SSRFConfig{
 		URL:         ts.URL + "/api",
@@ -41,7 +40,7 @@ func TestIntegration_Redirect(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextParam := r.URL.Query().Get("next")
 		if nextParam != "" {
 			w.Header().Set("Location", nextParam)
@@ -51,7 +50,6 @@ func TestIntegration_Redirect(t *testing.T) {
 		w.WriteHeader(200)
 		fmt.Fprint(w, "home")
 	}))
-
 
 	cfg := RedirectConfig{
 		URL:         ts.URL + "/redirect",
@@ -82,8 +80,7 @@ func TestIntegration_ProtoPollution(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,echoHandler())
-
+	ts := newTestServer(t, echoHandler())
 
 	cfg := ProtoPollutionConfig{
 		URL:         ts.URL + "/api",
@@ -117,12 +114,11 @@ func TestIntegration_GraphQL(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		fmt.Fprint(w, `{"data":{"__schema":{"types":[{"name":"Query"},{"name":"Mutation"}]}}}`)
 	}))
-
 
 	cfg := GraphQLConfig{
 		URL:         ts.URL + "/graphql",
@@ -238,8 +234,7 @@ func TestIntegration_CachePoisoning(t *testing.T) {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	ts := newTestServer(t,echoHandler())
-
+	ts := newTestServer(t, echoHandler())
 
 	cfg := CachePoisoningConfig{
 		URL:         ts.URL + "/page",
@@ -275,14 +270,14 @@ func TestIntegration_FileUpload_VerifyURLScope(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 	_, err := VerifyFileUpload(FileUploadConfig{
-		URL:       ts.URL + "/upload",
-		FieldName: "file",
-		Filename:  "test.txt",
-		Content:   "test",
-		MIMEType:  "text/plain",
-		Technique: "extension_bypass",
-		VerifyURL: "http://evil.com/uploaded.txt",
-		Method:    "POST",
+		URL:         ts.URL + "/upload",
+		FieldName:   "file",
+		Filename:    "test.txt",
+		Content:     "test",
+		MIMEType:    "text/plain",
+		Technique:   "extension_bypass",
+		VerifyURL:   "http://evil.com/uploaded.txt",
+		Method:      "POST",
 		ProbeConfig: baseProbeConfig(),
 	})
 	if err == nil {

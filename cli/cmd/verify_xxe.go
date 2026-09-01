@@ -10,12 +10,7 @@ var (
 	xxeURL       string
 	xxeTechnique string
 	xxeMethod    string
-	xxeHeaders   []string
-	xxeInScope   []string
-	xxeMaxRisk   int
-	xxeThrottle  int
-	xxeTimeout   int
-	xxeEvidence  string
+	xxeProbe     probeFlags
 )
 
 var verifyXXECmd = &cobra.Command{
@@ -23,7 +18,12 @@ var verifyXXECmd = &cobra.Command{
 	Short: "Verify XML external entity injection",
 	Long: `Verify XXE by sending crafted XML with external entity references.
 
-Techniques: file_read, ssrf, oob
+Techniques: file_read, ssrf
+
+Out-of-band (OOB) XXE cannot be observed in the in-band response, so this probe
+does not attempt it. Detect OOB effects manually: start a listener with
+'ensphere callback', send a parameter-entity payload that references it, and
+watch for the hit.
 
 Examples:
   ensphere verify xxe --url "http://target/api/xml" --technique file_read --in-scope "*.target.com"
@@ -33,36 +33,23 @@ Examples:
 
 func init() {
 	verifyXXECmd.Flags().StringVar(&xxeURL, "url", "", "Target URL (required)")
-	verifyXXECmd.Flags().StringVar(&xxeTechnique, "technique", "file_read", "Technique: file_read, ssrf, oob")
+	verifyXXECmd.Flags().StringVar(&xxeTechnique, "technique", "file_read", "Technique: file_read, ssrf")
 	verifyXXECmd.Flags().StringVar(&xxeMethod, "method", "POST", "HTTP method")
-	verifyXXECmd.Flags().StringSliceVar(&xxeHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyXXECmd.Flags().StringSliceVar(&xxeInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyXXECmd.Flags().IntVar(&xxeMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyXXECmd.Flags().IntVar(&xxeThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyXXECmd.Flags().IntVar(&xxeTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyXXECmd.Flags().StringVar(&xxeEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyXXECmd.MarkFlagRequired("url")
-	_ = verifyXXECmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyXXECmd, &xxeProbe)
 
 	verifyCmd.AddCommand(verifyXXECmd)
 }
 
 func runVerifyXXE(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(xxeHeaders)
 
 	cfg := verify.XXEConfig{
-		URL:       xxeURL,
-		Method:    xxeMethod,
-		Technique: xxeTechnique,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    xxeInScope,
-			MaxRisk:    xxeMaxRisk,
-			ThrottleMs: xxeThrottle,
-			TimeoutSec: xxeTimeout,
-			Headers:    headers,
-			Evidence:   xxeEvidence,
-		},
+		URL:         xxeURL,
+		Method:      xxeMethod,
+		Technique:   xxeTechnique,
+		ProbeConfig: buildProbeConfig(&xxeProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

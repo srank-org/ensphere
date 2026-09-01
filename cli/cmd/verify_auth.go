@@ -11,12 +11,7 @@ var (
 	authMethod    string
 	authToken     string
 	authTechnique string
-	authHeaders   []string
-	authInScope   []string
-	authMaxRisk   int
-	authThrottle  int
-	authTimeout   int
-	authEvidence  string
+	authProbe     probeFlags
 )
 
 var verifyAuthCmd = &cobra.Command{
@@ -41,37 +36,24 @@ func init() {
 	verifyAuthCmd.Flags().StringVar(&authMethod, "method", "GET", "HTTP method")
 	verifyAuthCmd.Flags().StringVar(&authToken, "token", "", "Valid auth token for baseline (required)")
 	verifyAuthCmd.Flags().StringVar(&authTechnique, "technique", "", "Technique: no_token, expired_token, alg_none, method_override (required)")
-	verifyAuthCmd.Flags().StringSliceVar(&authHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyAuthCmd.Flags().StringSliceVar(&authInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
-	verifyAuthCmd.Flags().IntVar(&authMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyAuthCmd.Flags().IntVar(&authThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyAuthCmd.Flags().IntVar(&authTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyAuthCmd.Flags().StringVar(&authEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyAuthCmd.MarkFlagRequired("url")
 	_ = verifyAuthCmd.MarkFlagRequired("token")
 	_ = verifyAuthCmd.MarkFlagRequired("technique")
-	_ = verifyAuthCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyAuthCmd, &authProbe)
 
 	verifyCmd.AddCommand(verifyAuthCmd)
 }
 
 func runVerifyAuth(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(authHeaders)
 
 	cfg := verify.AuthConfig{
-		URL:       authURL,
-		Method:    authMethod,
-		Token:     authToken,
-		Technique: authTechnique,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    authInScope,
-			MaxRisk:    authMaxRisk,
-			ThrottleMs: authThrottle,
-			TimeoutSec: authTimeout,
-			Headers:    headers,
-			Evidence:   authEvidence,
-		},
+		URL:         authURL,
+		Method:      authMethod,
+		Token:       authToken,
+		Technique:   authTechnique,
+		ProbeConfig: buildProbeConfig(&authProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

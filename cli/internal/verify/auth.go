@@ -68,7 +68,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("baseline probe: %w", baselineResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[BASELINE] status=%d len=%d\n", baselineResp.StatusCode, len(baselineResp.Body))
-	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
+	writeEvidence(ew, "auth", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "valid token")
 
 	if baselineResp.StatusCode < 200 || baselineResp.StatusCode >= 300 {
@@ -112,7 +112,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("auth probe: %w", probeResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d len=%d technique=%s\n", probeResp.StatusCode, len(probeResp.Body), cfg.Technique)
-	writeEvidence(ew, "auth_bypass", cfg.Technique, cfg.URL, "", probeResp.StatusCode,
+	writeEvidence(ew, "auth", cfg.Technique, cfg.URL, "", probeResp.StatusCode,
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("technique=%s", cfg.Technique))
 
 	baselineRound := RoundResult{
@@ -129,7 +129,7 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 	}
 
 	return &ProbeResult{
-		VulnType:   "auth_bypass",
+		VulnType:   "auth",
 		Technique:  cfg.Technique,
 		StartedAt:  timer.StartedAt(),
 		ProbeCount: probeCount,

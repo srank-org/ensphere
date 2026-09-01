@@ -7,16 +7,11 @@ import (
 )
 
 var (
-	sstiURL      string
-	sstiParam    string
-	sstiEngine   string
-	sstiMethod   string
-	sstiHeaders  []string
-	sstiInScope  []string
-	sstiMaxRisk  int
-	sstiThrottle int
-	sstiTimeout  int
-	sstiEvidence string
+	sstiURL    string
+	sstiParam  string
+	sstiEngine string
+	sstiMethod string
+	sstiProbe  probeFlags
 )
 
 var verifySSTICmd = &cobra.Command{
@@ -37,36 +32,23 @@ func init() {
 	verifySSTICmd.Flags().StringVar(&sstiParam, "param", "", "Parameter name to inject (required)")
 	verifySSTICmd.Flags().StringVar(&sstiEngine, "engine", "auto", "Template engine: auto, jinja2, twig, freemarker, erb")
 	verifySSTICmd.Flags().StringVar(&sstiMethod, "method", "GET", "HTTP method")
-	verifySSTICmd.Flags().StringSliceVar(&sstiHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifySSTICmd.Flags().StringSliceVar(&sstiInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifySSTICmd.Flags().IntVar(&sstiMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifySSTICmd.Flags().IntVar(&sstiThrottle, "throttle", 500, "Milliseconds between probes")
-	verifySSTICmd.Flags().IntVar(&sstiTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifySSTICmd.Flags().StringVar(&sstiEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifySSTICmd.MarkFlagRequired("url")
 	_ = verifySSTICmd.MarkFlagRequired("param")
-	_ = verifySSTICmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifySSTICmd, &sstiProbe)
 
 	verifyCmd.AddCommand(verifySSTICmd)
 }
 
 func runVerifySSTI(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(sstiHeaders)
 
 	cfg := verify.SSTIConfig{
-		URL:    sstiURL,
-		Param:  sstiParam,
-		Engine: sstiEngine,
-		Method: sstiMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    sstiInScope,
-			MaxRisk:    sstiMaxRisk,
-			ThrottleMs: sstiThrottle,
-			TimeoutSec: sstiTimeout,
-			Headers:    headers,
-			Evidence:   sstiEvidence,
-		},
+		URL:         sstiURL,
+		Param:       sstiParam,
+		Engine:      sstiEngine,
+		Method:      sstiMethod,
+		ProbeConfig: buildProbeConfig(&sstiProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

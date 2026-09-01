@@ -7,16 +7,11 @@ import (
 )
 
 var (
-	xssURL      string
-	xssParam    string
-	xssPayload  string
-	xssMethod   string
-	xssHeaders  []string
-	xssInScope  []string
-	xssMaxRisk  int
-	xssThrottle int
-	xssTimeout  int
-	xssEvidence string
+	xssURL     string
+	xssParam   string
+	xssPayload string
+	xssMethod  string
+	xssProbe   probeFlags
 )
 
 var verifyXSSCmd = &cobra.Command{
@@ -35,42 +30,24 @@ func init() {
 	verifyXSSCmd.Flags().StringVar(&xssParam, "param", "", "Parameter name to inject (required)")
 	verifyXSSCmd.Flags().StringVar(&xssPayload, "payload", "", "XSS payload string (required)")
 	verifyXSSCmd.Flags().StringVar(&xssMethod, "method", "GET", "HTTP method: GET or POST")
-	verifyXSSCmd.Flags().StringSliceVar(&xssHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyXSSCmd.Flags().StringSliceVar(&xssInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
-	verifyXSSCmd.Flags().IntVar(&xssMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyXSSCmd.Flags().IntVar(&xssThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyXSSCmd.Flags().IntVar(&xssTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyXSSCmd.Flags().StringVar(&xssEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyXSSCmd.MarkFlagRequired("url")
 	_ = verifyXSSCmd.MarkFlagRequired("param")
 	_ = verifyXSSCmd.MarkFlagRequired("payload")
-	_ = verifyXSSCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyXSSCmd, &xssProbe)
 
 	verifyCmd.AddCommand(verifyXSSCmd)
 }
 
 func runVerifyXSS(cmd *cobra.Command, args []string) error {
-	headers, err := parseHeaders(xssHeaders)
-	if err != nil {
-		writeVerifyError(err)
-		osExit(exitForVerifyError(err))
-		return nil
-	}
 
 	cfg := verify.XSSConfig{
-		URL:     xssURL,
-		Param:   xssParam,
-		Payload: xssPayload,
-		Method:  xssMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    xssInScope,
-			MaxRisk:    xssMaxRisk,
-			ThrottleMs: xssThrottle,
-			TimeoutSec: xssTimeout,
-			Headers:    headers,
-			Evidence:   xssEvidence,
-		},
+		URL:         xssURL,
+		Param:       xssParam,
+		Payload:     xssPayload,
+		Method:      xssMethod,
+		ProbeConfig: buildProbeConfig(&xssProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

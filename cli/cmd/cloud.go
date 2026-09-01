@@ -13,9 +13,7 @@ Available subcommands:
   network         Verify cloud network security (security groups, firewalls)
   compute         Verify cloud compute security (Lambda, Cloud Functions, Azure Functions)
   logging         Verify cloud logging configuration (CloudTrail, GCP sinks, Azure diagnostics)
-  secrets         Verify cloud secrets management (Secrets Manager, Secret Manager, Key Vault)
-  parse-prowler   Parse Prowler JSON-OCSF output
-  parse-trivy     Parse Trivy JSON output`,
+  secrets         Verify cloud secrets management (Secrets Manager, Secret Manager, Key Vault)`,
 }
 
 func init() {

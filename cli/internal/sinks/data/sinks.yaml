@@ -452,6 +452,122 @@ categories:
     - name: k8s_automount_sa
       pattern: 'automountServiceAccountToken:\s*true'
       extensions: [.yaml, .yml]
+  expensive_operation:
+    # Calls that do costly work per request (compute, media, AI, messaging,
+    # storage writes, unbounded raw queries). A match is a lead for Session
+    # 08.5: check whether a limiter, quota, or size cap guards the caller.
+    - name: sharp_image_transform
+      pattern: 'sharp\s*\('
+      extensions: [.js, .ts]
+    - name: puppeteer_headless_browser
+      pattern: 'puppeteer'
+      extensions: [.js, .ts]
+    - name: playwright_headless_browser
+      pattern: 'playwright'
+      extensions: [.js, .ts, .py]
+    - name: pdfkit_pdf_generation
+      pattern: 'pdfkit'
+      extensions: [.js, .ts, .py]
+    - name: wkhtmltopdf_pdf_generation
+      pattern: 'wkhtmltopdf'
+      extensions: [.js, .ts, .py, .rb, .php]
+    - name: ffmpeg_media_transform
+      pattern: 'ffmpeg'
+      extensions: [.js, .ts, .py, .rb, .php, .go, .java]
+    - name: openai_api_call
+      pattern: 'openai'
+      extensions: [.js, .ts, .py, .go, .rb, .java]
+    - name: anthropic_sdk_call
+      pattern: '@anthropic-ai/sdk'
+      extensions: [.js, .ts]
+    - name: anthropic_api_call
+      pattern: 'anthropic'
+      extensions: [.py, .ts, .js, .go]
+    - name: nodemailer_email_send
+      pattern: 'nodemailer'
+      extensions: [.js, .ts]
+    - name: sendgrid_email_send
+      pattern: 'sendgrid'
+      extensions: [.js, .ts, .py, .rb]
+    - name: resend_email_send
+      pattern: 'resend'
+      extensions: [.js, .ts]
+    - name: postmark_email_send
+      pattern: 'postmark'
+      extensions: [.js, .ts, .rb]
+    - name: twilio_sms_send
+      pattern: 'twilio'
+      extensions: [.js, .ts, .py, .rb, .java, .go]
+    - name: sns_publish
+      pattern: '[sS]ns\.publish'
+      extensions: [.js, .ts, .py]
+    - name: r2_object_put
+      pattern: '\.put\s*\('
+      extensions: [.js, .ts]
+    - name: s3_put_object
+      pattern: 'PutObjectCommand'
+      extensions: [.js, .ts, .py, .go, .java]
+    - name: presigned_url_get
+      pattern: 'getSignedUrl'
+      extensions: [.js, .ts]
+    - name: presigned_post_create
+      pattern: 'createPresignedPost'
+      extensions: [.js, .ts, .py]
+    - name: prisma_query_raw_unsafe
+      pattern: '\$queryRawUnsafe'
+      extensions: [.js, .ts]
+    - name: prisma_execute_raw_unsafe
+      pattern: '\$executeRawUnsafe'
+      extensions: [.js, .ts]
+    - name: drizzle_sql_raw
+      pattern: 'sql\.raw\s*\('
+      extensions: [.js, .ts]
+  rate_limiter:
+    # Presence patterns: this category is an inventory of limiters that ALREADY
+    # exist in the source, so Session 08.5 knows which endpoints are guarded. A
+    # match documents an existing control; it is not itself a weakness.
+    - name: express_rate_limit_present
+      pattern: 'express-rate-limit'
+      extensions: [.js, .ts]
+    - name: rate_limiter_flexible_present
+      pattern: 'rate-limiter-flexible'
+      extensions: [.js, .ts]
+    - name: upstash_ratelimit_present
+      pattern: '@upstash/ratelimit'
+      extensions: [.js, .ts]
+    - name: hono_rate_limiter_present
+      pattern: 'hono-rate-limiter'
+      extensions: [.js, .ts]
+    - name: go_time_rate_present
+      pattern: 'golang\.org/x/time/rate'
+      extensions: [.go]
+    - name: ulule_limiter_present
+      pattern: 'ulule/limiter'
+      extensions: [.go]
+    - name: django_ratelimit_present
+      pattern: 'django[_-]ratelimit'
+      extensions: [.py]
+    - name: laravel_throttle_present
+      pattern: 'throttle:'
+      extensions: [.php]
+    - name: laravel_rate_limiter_present
+      pattern: 'RateLimiter::for'
+      extensions: [.php]
+    - name: rack_attack_present
+      pattern: 'rack-attack|Rack::Attack'
+      extensions: [.rb]
+    - name: slowapi_present
+      pattern: 'slowapi'
+      extensions: [.py]
+    - name: bucket4j_present
+      pattern: 'Bucket4j'
+      extensions: [.java]
+    - name: resilience4j_present
+      pattern: 'resilience4j'
+      extensions: [.java]
+    - name: rate_limiter_present
+      pattern: 'RateLimiter'
+      extensions: [.java, .go, .js, .ts]
 absence_rules:
   iac_terraform:
     - name: s3_missing_encryption

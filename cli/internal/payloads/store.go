@@ -1,47 +1,208 @@
 package payloads
 
 import (
-	"database/sql"
+	"crypto/sha256"
 	"embed"
 	"fmt"
-	"os"
-	"path/filepath"
+	"io/fs"
+	"path"
+	"sort"
+	"sync"
 
-	_ "modernc.org/sqlite"
+	"gopkg.in/yaml.v3"
+
+	"github.com/srank/ensphere/internal/enums"
 )
 
-//go:embed payloads.sqlite
-var embeddedDB embed.FS
+// seedFS holds the payload seed YAML embedded at build time. The files are a
+// copy of assets/seeds/*.yaml placed here by `make copy-seeds` (Go embed cannot
+// reach files outside the module), and they are the single source consumed at
+// runtime — there is no generated SQLite database.
+//
+//go:embed data/*.yaml
+var seedFS embed.FS
 
-// Open extracts the embedded SQLite database to a temp file and opens it read-only.
-// The caller must call the returned cleanup function when done.
-func Open() (*sql.DB, func(), error) {
-	data, err := embeddedDB.ReadFile("payloads.sqlite")
+// Store is an in-memory, immutable view of every parsed seed payload. It is
+// safe for concurrent reads.
+type Store struct {
+	payloads []Payload
+}
+
+var (
+	loadOnce     sync.Once
+	defaultStore *Store
+	defaultErr   error
+)
+
+// Load parses the embedded seed YAML once and returns the shared Store. All
+// callers get the same instance; parsing (including enum validation) happens
+// exactly once.
+func Load() (*Store, error) {
+	loadOnce.Do(func() {
+		defaultStore, defaultErr = loadFromFS(seedFS, "data")
+	})
+	return defaultStore, defaultErr
+}
+
+// seedFile mirrors the on-disk YAML shape: a defaults block plus payload rows.
+type seedFile struct {
+	Defaults seedDefaults  `yaml:"defaults"`
+	Payloads []seedPayload `yaml:"payloads"`
+}
+
+type seedDefaults struct {
+	VulnType    string `yaml:"vuln_type"`
+	DBEngine    string `yaml:"db_engine"`
+	Runtime     string `yaml:"runtime"`
+	ContentType string `yaml:"content_type"`
+	Encoding    string `yaml:"encoding"`
+	Source      string `yaml:"source"`
+}
+
+type seedPayload struct {
+	VulnType         string   `yaml:"vuln_type"`
+	DBEngine         string   `yaml:"db_engine"`
+	Runtime          string   `yaml:"runtime"`
+	Technique        string   `yaml:"technique"`
+	InjectionSurface string   `yaml:"injection_surface"`
+	ContentType      string   `yaml:"content_type"`
+	Encoding         string   `yaml:"encoding"`
+	StringBoundary   string   `yaml:"string_boundary"`
+	EvidenceType     string   `yaml:"evidence_type"`
+	Risk             int      `yaml:"risk"`
+	Payload          string   `yaml:"payload"`
+	Placeholders     []string `yaml:"placeholders"`
+	Notes            string   `yaml:"notes"`
+	Source           string   `yaml:"source"`
+	Tags             []string `yaml:"tags"`
+}
+
+// loadFromFS reads every *.yaml file under dir in the given filesystem, applies
+// each file's defaults block, validates required and enum fields, generates the
+// stable content ID, and returns the resolved payloads. Files are processed in
+// sorted order so IDs and duplicate detection are deterministic.
+func loadFromFS(fsys fs.FS, dir string) (*Store, error) {
+	entries, err := fs.Glob(fsys, path.Join(dir, "*.yaml"))
 	if err != nil {
-		return nil, nil, fmt.Errorf("read embedded db: %w", err)
+		return nil, fmt.Errorf("glob seeds: %w", err)
+	}
+	sort.Strings(entries)
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("no .yaml seed files found in %s", dir)
 	}
 
-	tmpDir, err := os.MkdirTemp("", "ensphere-db-*")
-	if err != nil {
-		return nil, nil, fmt.Errorf("create temp dir: %w", err)
+	var out []Payload
+	seenIDs := make(map[string]string)
+
+	for _, file := range entries {
+		data, err := fs.ReadFile(fsys, file)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", file, err)
+		}
+
+		var seed seedFile
+		if err := yaml.Unmarshal(data, &seed); err != nil {
+			return nil, fmt.Errorf("parse %s: %w", file, err)
+		}
+
+		base := path.Base(file)
+		for i, p := range seed.Payloads {
+			ref := fmt.Sprintf("%s: payload %d", base, i)
+
+			vulnType := coalesce(p.VulnType, seed.Defaults.VulnType)
+			dbEngine := coalesce(p.DBEngine, seed.Defaults.DBEngine)
+			runtime := coalesce(p.Runtime, seed.Defaults.Runtime)
+			contentType := coalesce(p.ContentType, seed.Defaults.ContentType)
+			encoding := coalesce(p.Encoding, seed.Defaults.Encoding)
+			source := coalesce(p.Source, seed.Defaults.Source)
+
+			if vulnType == "" {
+				return nil, fmt.Errorf("%s: vuln_type required", ref)
+			}
+			if p.Technique == "" {
+				return nil, fmt.Errorf("%s: technique required", ref)
+			}
+			if p.InjectionSurface == "" {
+				return nil, fmt.Errorf("%s: injection_surface required", ref)
+			}
+			if p.EvidenceType == "" {
+				return nil, fmt.Errorf("%s: evidence_type required", ref)
+			}
+			if p.Risk < 1 || p.Risk > 5 {
+				return nil, fmt.Errorf("%s: risk must be 1-5, got %d", ref, p.Risk)
+			}
+			if p.Payload == "" {
+				return nil, fmt.Errorf("%s: payload required", ref)
+			}
+			if encoding == "" {
+				encoding = "raw"
+			}
+
+			if err := enums.ValidateSeedPayload(vulnType, dbEngine, runtime, p.Technique, p.InjectionSurface, encoding, p.StringBoundary, p.EvidenceType, base, i); err != nil {
+				return nil, err
+			}
+
+			id := generateID(vulnType, p.Technique, p.InjectionSurface, p.Payload)
+			if prev, ok := seenIDs[id]; ok {
+				return nil, fmt.Errorf("%s: duplicate payload ID %s already generated by %s", ref, id, prev)
+			}
+			seenIDs[id] = ref
+
+			placeholders := p.Placeholders
+			if placeholders == nil {
+				placeholders = []string{}
+			}
+			tags := append([]string(nil), p.Tags...)
+			sort.Strings(tags) // match the SQLite loader's ORDER BY tag
+			if tags == nil {
+				tags = []string{}
+			}
+
+			out = append(out, Payload{
+				ID:               id,
+				VulnType:         vulnType,
+				DBEngine:         nullable(dbEngine),
+				Runtime:          nullable(runtime),
+				Technique:        p.Technique,
+				InjectionSurface: p.InjectionSurface,
+				ContentType:      nullable(contentType),
+				Encoding:         encoding,
+				StringBoundary:   nullable(p.StringBoundary),
+				EvidenceType:     p.EvidenceType,
+				Risk:             p.Risk,
+				Payload:          p.Payload,
+				Placeholders:     placeholders,
+				Notes:            p.Notes,
+				Source:           source,
+				Tags:             tags,
+			})
+		}
 	}
 
-	dbPath := filepath.Join(tmpDir, "payloads.sqlite")
-	if err := os.WriteFile(dbPath, data, 0400); err != nil {
-		os.RemoveAll(tmpDir)
-		return nil, nil, fmt.Errorf("write temp db: %w", err)
-	}
+	return &Store{payloads: out}, nil
+}
 
-	conn, err := sql.Open("sqlite", dbPath+"?mode=ro&_journal_mode=OFF")
-	if err != nil {
-		os.RemoveAll(tmpDir)
-		return nil, nil, fmt.Errorf("open sqlite: %w", err)
-	}
+// generateID reproduces the seed compiler's content hash so payload IDs are
+// stable across the SQLite-to-YAML migration.
+func generateID(vulnType, technique, surface, payload string) string {
+	h := sha256.Sum256([]byte(vulnType + "|" + technique + "|" + surface + "|" + payload))
+	return fmt.Sprintf("%x", h[:8])
+}
 
-	cleanup := func() {
-		conn.Close()
-		os.RemoveAll(tmpDir)
+func coalesce(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
 	}
+	return ""
+}
 
-	return conn, cleanup, nil
+// nullable maps an empty string to a nil pointer so engine-agnostic columns
+// serialize as absent, matching the SQLite NULL semantics.
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

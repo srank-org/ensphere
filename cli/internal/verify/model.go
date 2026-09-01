@@ -24,10 +24,11 @@ type ProbeResult struct {
 
 // RoundResult captures raw measurements from a single HTTP round-trip.
 type RoundResult struct {
-	StatusCode int    `json:"status_code"`
-	ElapsedMs  int64  `json:"elapsed_ms"`
-	BodyHash   string `json:"body_hash"`
-	BodyLength int    `json:"body_length"`
+	StatusCode int               `json:"status_code"`
+	ElapsedMs  int64             `json:"elapsed_ms"`
+	BodyHash   string            `json:"body_hash"`
+	BodyLength int               `json:"body_length"`
+	Headers    map[string]string `json:"headers,omitempty"`
 }
 
 // SQLiTimeMeasurements holds blind-time SQLi probe measurements.
@@ -76,10 +77,12 @@ type XSSMeasurements struct {
 
 // IDORMeasurements holds IDOR probe measurements.
 type IDORMeasurements struct {
-	ProbeRound      RoundResult `json:"probe_round"`
-	ExpectedStatus  int         `json:"expected_status"`
-	ResourceID      string      `json:"resource_id"`
-	ResponseSnippet string      `json:"response_snippet,omitempty"`
+	ProbeRound      RoundResult  `json:"probe_round"`
+	OwnerRound      *RoundResult `json:"owner_round,omitempty"`
+	HashesMatch     *bool        `json:"hashes_match,omitempty"`
+	StatusMatch     *bool        `json:"status_match,omitempty"`
+	ResourceID      string       `json:"resource_id"`
+	ResponseSnippet string       `json:"response_snippet,omitempty"`
 }
 
 // SSRFMeasurements holds SSRF probe measurements.
@@ -158,17 +161,6 @@ type XXEMeasurements struct {
 	ResponseSnippet   string      `json:"response_snippet,omitempty"`
 }
 
-// DeserializationMeasurements holds insecure deserialization probe measurements.
-type DeserializationMeasurements struct {
-	Runtime        string        `json:"runtime"`
-	BaselineRounds []RoundResult `json:"baseline_rounds"`
-	PayloadRounds  []RoundResult `json:"payload_rounds"`
-	BaselineAvgMs  int64         `json:"baseline_avg_ms"`
-	PayloadAvgMs   int64         `json:"payload_avg_ms"`
-	DeltaMs        int64         `json:"delta_ms"`
-	PayloadUsed    string        `json:"payload_used"`
-}
-
 // CSRFMeasurements holds CSRF probe measurements.
 type CSRFMeasurements struct {
 	NoOrigin        RoundResult `json:"no_origin"`
@@ -231,6 +223,7 @@ type ProtoPollutionMeasurements struct {
 	InjectionProbe  RoundResult `json:"injection_probe"`
 	VerifyProbe     RoundResult `json:"verify_probe"`
 	HashesMatch     bool        `json:"hashes_match"`
+	MarkerReflected bool        `json:"marker_reflected"`
 	PayloadUsed     string      `json:"payload_used"`
 	ResponseSnippet string      `json:"response_snippet,omitempty"`
 }
@@ -258,17 +251,6 @@ type RaceMeasurements struct {
 	MaxMs        int64         `json:"max_ms"`
 	AvgMs        int64         `json:"avg_ms"`
 	PayloadUsed  string        `json:"payload_used"`
-}
-
-// SmugglingMeasurements holds request smuggling probe measurements.
-type SmugglingMeasurements struct {
-	Technique   string        `json:"technique"`
-	Baseline    RoundResult   `json:"baseline"`
-	ProbeRounds []RoundResult `json:"probe_rounds"`
-	BaselineMs  int64         `json:"baseline_ms"`
-	ProbeAvgMs  int64         `json:"probe_avg_ms"`
-	DeltaMs     int64         `json:"delta_ms"`
-	PayloadUsed string        `json:"payload_used"`
 }
 
 // CachePoisoningMeasurements holds cache poisoning probe measurements.
@@ -377,6 +359,13 @@ type WatchFieldResult struct {
 }
 
 // RateLimitMeasurements holds rate limit probe measurements.
+// RateLimitMeasurementSet groups one or two per-identity bursts. identity_b is
+// present only when a second token was supplied.
+type RateLimitMeasurementSet struct {
+	IdentityA RateLimitMeasurements  `json:"identity_a"`
+	IdentityB *RateLimitMeasurements `json:"identity_b,omitempty"`
+}
+
 type RateLimitMeasurements struct {
 	BurstCount      int           `json:"burst_count"`
 	WindowSec       int           `json:"window_sec"`
@@ -434,6 +423,7 @@ type XPathMeasurements struct {
 // FileUploadMeasurements holds file upload vulnerability probe measurements.
 type FileUploadMeasurements struct {
 	Technique          string       `json:"technique"`
+	Construction       string       `json:"construction"`
 	UploadProbe        RoundResult  `json:"upload_probe"`
 	FilenameInResponse bool         `json:"filename_in_response"`
 	UploadAccepted     bool         `json:"upload_accepted"`
@@ -453,7 +443,6 @@ type MassAssignmentMeasurements struct {
 	BaselineFields []string                `json:"baseline_fields"`
 	FollowUpFields []string                `json:"followup_fields"`
 	InjectedFields []MassAssignFieldResult `json:"injected_fields"`
-	BodyChanged    bool                    `json:"body_changed"`
 	HashesMatch    bool                    `json:"hashes_match"`
 	PayloadUsed    string                  `json:"payload_used"`
 }

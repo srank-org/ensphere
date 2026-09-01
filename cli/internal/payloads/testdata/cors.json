@@ -1,0 +1,227 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "cors"
+  },
+  "count": 12,
+  "results": [
+    {
+      "id": "2582f3f039180bb8",
+      "payload": "Origin: https://preflight-bypass.evil.com",
+      "technique": "origin_reflection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Pre-flight bypass via simple request. Send as GET/POST with Content-Type: text/plain to avoid OPTIONS pre-flight check.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "preflight",
+        "simple_request"
+      ]
+    },
+    {
+      "id": "2e5ccbc573fd1017",
+      "payload": "Origin: https://COLLAB_DOMAIN",
+      "technique": "origin_reflection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Reflected Origin using collaborator domain. Confirms the server reflects arbitrary origins.",
+      "source": "ensphere",
+      "tags": [
+        "collaborator",
+        "origin",
+        "reflection"
+      ]
+    },
+    {
+      "id": "36c6e3a2344fdde4",
+      "payload": "Origin: http://evil.com",
+      "technique": "origin_reflection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "HTTP origin reflection. Tests if server accepts non-HTTPS origins, downgrading transport security.",
+      "source": "ensphere",
+      "tags": [
+        "downgrade",
+        "http",
+        "origin",
+        "reflection"
+      ]
+    },
+    {
+      "id": "5cb8ac3a6dcb21b7",
+      "payload": "Origin: https://TARGET_DOMAINXevil.com",
+      "technique": "subdomain_wildcard",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_DOMAIN"
+      ],
+      "notes": "Regex dot escape bypass. If server uses /target.com$/ without escaping dot, targetXcom matches.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dot_escape",
+        "regex",
+        "subdomain"
+      ]
+    },
+    {
+      "id": "794590f1b5363559",
+      "payload": "Origin: https://TARGET_DOMAIN%60.evil.com",
+      "technique": "subdomain_wildcard",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_DOMAIN"
+      ],
+      "notes": "URL-encoded backtick in Origin. Some parsers mishandle special characters in domain extraction.",
+      "source": "ensphere",
+      "tags": [
+        "backtick",
+        "bypass",
+        "encoding",
+        "subdomain"
+      ]
+    },
+    {
+      "id": "8d698a25ae4147ec",
+      "payload": "Origin: https://evil.TARGET_DOMAIN",
+      "technique": "subdomain_wildcard",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_DOMAIN"
+      ],
+      "notes": "Subdomain trust bypass. If the server allows *.target.com, an attacker controlling any subdomain can read cross-origin responses.",
+      "source": "ensphere",
+      "tags": [
+        "subdomain",
+        "trust",
+        "wildcard"
+      ]
+    },
+    {
+      "id": "9dbca18ffdba8cbf",
+      "payload": "Origin: null",
+      "technique": "null_origin",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Null origin via sandboxed iframe. Browsers send Origin: null from sandboxed iframes and data: URIs. Exploitable via \u003ciframe sandbox='allow-scripts'\u003e.",
+      "source": "ensphere",
+      "tags": [
+        "iframe",
+        "sandbox"
+      ]
+    },
+    {
+      "id": "a4afd723ab6c8828",
+      "payload": "Origin: https://evil.com",
+      "technique": "origin_reflection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Reflected Origin test. If the response contains Access-Control-Allow-Origin: https://evil.com, the server blindly reflects the Origin header.",
+      "source": "ensphere",
+      "tags": [
+        "basic",
+        "origin",
+        "reflection"
+      ]
+    },
+    {
+      "id": "b9afbe77b725a7d9",
+      "payload": "Origin: https://expose-headers-test.evil.com",
+      "technique": "credential_leak",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Check Access-Control-Expose-Headers for sensitive headers like Authorization, X-API-Key, or Set-Cookie.",
+      "source": "ensphere",
+      "tags": [
+        "expose_headers",
+        "token_leak"
+      ]
+    },
+    {
+      "id": "d6b14f14cc5c9fac",
+      "payload": "Origin: https://TARGET_DOMAIN.evil.com",
+      "technique": "subdomain_wildcard",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_DOMAIN"
+      ],
+      "notes": "Suffix matching bypass. If CORS check only verifies Origin ends with target domain, this attacker domain passes.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "subdomain",
+        "suffix"
+      ]
+    },
+    {
+      "id": "e54cfbc9f6f1bc0a",
+      "payload": "Origin: https://attacker-controlled.com",
+      "technique": "origin_reflection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Reflected Origin with arbitrary domain. Check if any external origin is reflected in ACAO header.",
+      "source": "ensphere",
+      "tags": [
+        "arbitrary",
+        "origin",
+        "reflection"
+      ]
+    },
+    {
+      "id": "fa4d3e72a0b786b2",
+      "payload": "Origin: https://notTARGET_DOMAIN",
+      "technique": "subdomain_wildcard",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "header_match",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_DOMAIN"
+      ],
+      "notes": "Prefix check bypass. Tests if server only checks if Origin contains target domain as substring.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "prefix",
+        "subdomain"
+      ]
+    }
+  ]
+}

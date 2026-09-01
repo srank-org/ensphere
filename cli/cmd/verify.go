@@ -7,7 +7,9 @@ import (
 var verifyCmd = &cobra.Command{
 	Use:   "verify",
 	Short: "Verify vulnerabilities with targeted probes",
-	Long: `Run targeted verification probes against specific vulnerability types.
+	Long: `Run scoped measurement probes for one vulnerability category. Output is raw
+measurements (status, timing, hashes, headers, counts); it never contains a
+verdict. Every subcommand requires --in-scope.
 
 Available subcommands:
   sqli            Verify SQL injection (blind_time, blind_boolean, error_based)
@@ -18,9 +20,9 @@ Available subcommands:
   rls             Verify Supabase RLS tenant isolation
   cmdi            Verify command injection
   lfi             Verify local file inclusion
+  limits          Measure size and volume limits
   ssti            Verify server-side template injection
   xxe             Verify XML external entity injection
-  deserialization Verify insecure deserialization
   csrf            Verify cross-site request forgery
   nosql           Verify NoSQL injection
   jwt             Verify JWT manipulation
@@ -28,7 +30,6 @@ Available subcommands:
   protopollution  Verify prototype pollution
   graphql         Verify GraphQL abuse
   race            Verify race condition
-  smuggling       Verify request smuggling
   cachepoisoning  Verify cache poisoning
   redirect        Verify open redirect
   csvinjection    Verify CSV injection

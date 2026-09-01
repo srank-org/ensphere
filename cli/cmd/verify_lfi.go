@@ -7,16 +7,11 @@ import (
 )
 
 var (
-	lfiURL      string
-	lfiParam    string
-	lfiOS       string
-	lfiMethod   string
-	lfiHeaders  []string
-	lfiInScope  []string
-	lfiMaxRisk  int
-	lfiThrottle int
-	lfiTimeout  int
-	lfiEvidence string
+	lfiURL    string
+	lfiParam  string
+	lfiOS     string
+	lfiMethod string
+	lfiProbe  probeFlags
 )
 
 var verifyLFICmd = &cobra.Command{
@@ -35,36 +30,23 @@ func init() {
 	verifyLFICmd.Flags().StringVar(&lfiParam, "param", "", "Parameter name to inject (required)")
 	verifyLFICmd.Flags().StringVar(&lfiOS, "os", "linux", "Target OS: linux, windows")
 	verifyLFICmd.Flags().StringVar(&lfiMethod, "method", "GET", "HTTP method")
-	verifyLFICmd.Flags().StringSliceVar(&lfiHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyLFICmd.Flags().StringSliceVar(&lfiInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyLFICmd.Flags().IntVar(&lfiMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyLFICmd.Flags().IntVar(&lfiThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyLFICmd.Flags().IntVar(&lfiTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyLFICmd.Flags().StringVar(&lfiEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyLFICmd.MarkFlagRequired("url")
 	_ = verifyLFICmd.MarkFlagRequired("param")
-	_ = verifyLFICmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyLFICmd, &lfiProbe)
 
 	verifyCmd.AddCommand(verifyLFICmd)
 }
 
 func runVerifyLFI(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(lfiHeaders)
 
 	cfg := verify.LFIConfig{
-		URL:    lfiURL,
-		Param:  lfiParam,
-		OS:     lfiOS,
-		Method: lfiMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    lfiInScope,
-			MaxRisk:    lfiMaxRisk,
-			ThrottleMs: lfiThrottle,
-			TimeoutSec: lfiTimeout,
-			Headers:    headers,
-			Evidence:   lfiEvidence,
-		},
+		URL:         lfiURL,
+		Param:       lfiParam,
+		OS:          lfiOS,
+		Method:      lfiMethod,
+		ProbeConfig: buildProbeConfig(&lfiProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

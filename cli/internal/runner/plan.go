@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -23,13 +24,12 @@ const (
 	applicabilityUncertain     = "uncertain"
 	applicabilityNotApplicable = "not_applicable"
 
-	coverageFull         = "full"
-	coveragePartial      = "partial"
-	coverageBlocked      = "blocked"
-	coverageSourceOnly   = "source_only"
-	coverageBlackBoxOnly = "black_box_only"
-	coverageClientOnly   = "client_only"
-	coverageCloudOnly    = "cloud_only"
+	coverageFull       = "full"
+	coveragePartial    = "partial"
+	coverageBlocked    = "blocked"
+	coverageSourceOnly = "source_only"
+	coverageClientOnly = "client_only"
+	coverageCloudOnly  = "cloud_only"
 )
 
 var planSessionKeys = []string{
@@ -40,7 +40,12 @@ var planSessionKeys = []string{
 	"06-ssrf",
 	"07-cloud",
 	"08-api",
+	"08.5-abuse",
+	"08.7-chains",
 }
+
+var checklistNamePattern = regexp.MustCompile(`^[a-z0-9-]+$`)
+var stackValuePattern = regexp.MustCompile(`^[a-z0-9_]+$`)
 
 func RunPlan(workspace string, force bool) (*PlanOutput, error) {
 	if workspace == "" {
@@ -117,13 +122,13 @@ func RunPlan(workspace string, force bool) (*PlanOutput, error) {
 func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	profile, _ := readReconTargetProfile(reconTargetProfilePath(workspace))
 	targetType := normalizeTargetType(cfg.TargetType)
-	sourceMode := sourceModeFromConfig(cfg.SourceCode)
+	liveTarget := strings.TrimSpace(cfg.TargetURL) != ""
 	cloud := parseList(cfg.Cloud)
 	scope := parseList(cfg.InScope)
 	if len(scope) == 0 {
 		scope = []string{cfg.InScope}
 	}
-	coverage := targetCoverageLabel(targetType, sourceMode)
+	coverage := targetCoverageLabel(targetType, liveTarget)
 	if cfg.InScope == "" {
 		scope = []string{"All network-reachable endpoints of the target application"}
 	}
@@ -136,12 +141,10 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	var backendInventory []BackendInventoryEntry
 	var clientExposureReview []string
 	var signals *TargetSignals
+	var stack *StackProfile
 	if profile != nil && validTargetType(profile.Target.Type) {
 		targetType = normalizeTargetType(profile.Target.Type)
-		if validSourceMode(profile.Target.SourceMode) {
-			sourceMode = profile.Target.SourceMode
-		}
-		coverage = targetCoverageLabel(targetType, sourceMode)
+		coverage = targetCoverageLabel(targetType, liveTarget)
 		if validCoverageLabel(profile.Target.CoverageLabel) {
 			coverage = profile.Target.CoverageLabel
 		}
@@ -155,9 +158,22 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 			rationale = []string{"Session 01 target profile supplied target classification without rationale."}
 		}
 		backendInventory = profile.BackendInventory
-		clientExposureReview = cleanFindings(profile.ClientExposureReview)
+		clientExposureReview = cleanStrings(profile.ClientExposureReview)
 		signalsCopy := profile.Signals
 		signals = &signalsCopy
+		if profile.Stack != nil {
+			stackCopy := *profile.Stack
+			stack = &stackCopy
+		}
+	}
+
+	environment := strings.TrimSpace(cfg.Environment)
+	profileEnvironment := ""
+	if profile != nil {
+		profileEnvironment = strings.TrimSpace(profile.Target.Environment)
+	}
+	if validEnvironment(profileEnvironment) {
+		environment = profileEnvironment
 	}
 
 	hasCredentials := strings.TrimSpace(cfg.Username) != "" || strings.TrimSpace(cfg.Password) != "" || strings.TrimSpace(cfg.LoginURL) != ""
@@ -166,7 +182,7 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 		Target: PlanTarget{
 			Type:                     targetType,
 			URL:                      cfg.TargetURL,
-			SourceMode:               sourceMode,
+			Environment:              environment,
 			CoverageLabel:            coverage,
 			ClassificationSource:     classificationSource,
 			ClassificationConfidence: classificationConfidence,
@@ -177,27 +193,74 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 			BackendInventory:         backendInventory,
 			ClientExposureReview:     clientExposureReview,
 			Signals:                  signals,
+			Stack:                    stack,
 		},
+		Checklists:     []string{},
+		UncoveredStack: []string{},
 		Sessions:       make(map[string]PlanSession, len(planSessionKeys)),
 		HumanOverrides: []string{},
-		ImpactValidation: PlanImpactValidation{
-			Enabled:                 cfg.ImpactValidationEnabled,
-			SelectedFindings:        []string{},
-			MaxRisk:                 3,
-			AllowedActions:          []string{"non_sensitive_canary_read", "benign_browser_execution"},
-			ForbiddenActions:        []string{"sensitive_data_access", "data_deletion", "persistence", "credential_dumping"},
-			CleanupRequired:         true,
-			CleanupEvidenceRequired: true,
-		},
-		CreatedBy: "Ensphere runner deterministic draft",
-		CreatedAt: time.Now().UTC().Format(time.RFC3339),
+		CreatedBy:      "Ensphere runner deterministic draft",
+		CreatedAt:      time.Now().UTC().Format(time.RFC3339),
 	}
 
 	for _, key := range planSessionKeys {
-		plan.Sessions[key] = draftSessionDecision(key, targetType, sourceMode, cloud, hasCredentials)
+		plan.Sessions[key] = draftSessionDecision(key, targetType, profileEnvironment, liveTarget, cloud, hasCredentials)
 	}
 	applyReconProfileDecisions(plan, profile, hasCredentials, cloud)
 	return plan
+}
+
+func validateChecklistNames(field string, names []string) []string {
+	var problems []string
+	for _, name := range names {
+		if !checklistNamePattern.MatchString(strings.TrimSpace(name)) {
+			problems = append(problems, fmt.Sprintf("%s entry %q must be a lowercase checklist file name without the .md suffix", field, name))
+		}
+	}
+	return problems
+}
+
+func validateStackProfile(field string, stack *StackProfile) []string {
+	if stack == nil {
+		return nil
+	}
+	var problems []string
+	lists := map[string][]string{
+		"languages":                stack.Languages,
+		"frameworks":               stack.Frameworks,
+		"data_layers":              stack.DataLayers,
+		"auth_providers":           stack.AuthProviders,
+		"hosting":                  stack.Hosting,
+		"storage":                  stack.Storage,
+		"edge":                     stack.Edge,
+		"billing_exposed_services": stack.BillingExposedServices,
+		"clients":                  stack.Clients,
+	}
+	populated := false
+	for name, values := range lists {
+		for _, value := range values {
+			populated = true
+			if !stackValuePattern.MatchString(strings.TrimSpace(value)) {
+				problems = append(problems, fmt.Sprintf("%s.%s value %q must be a lowercase identifier (letters, digits, underscore)", field, name, value))
+			}
+		}
+	}
+	if populated && len(stack.EvidenceRefs) == 0 {
+		problems = append(problems, field+".evidence_refs is required when any stack value is recorded")
+	}
+	problems = append(problems, validateWorkspaceRelativeRefs(field+".evidence_refs", stack.EvidenceRefs)...)
+	return problems
+}
+
+func stackValues(stack *StackProfile) []string {
+	if stack == nil {
+		return nil
+	}
+	var values []string
+	for _, list := range [][]string{stack.Languages, stack.Frameworks, stack.DataLayers, stack.AuthProviders, stack.Hosting, stack.Storage, stack.Edge, stack.BillingExposedServices, stack.Clients} {
+		values = append(values, list...)
+	}
+	return cleanStrings(values)
 }
 
 func ReadAssessmentPlan(path string) (*AssessmentPlan, error) {
@@ -220,15 +283,13 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 	if !validTargetType(plan.Target.Type) {
 		problems = append(problems, fmt.Sprintf("target.type %q is invalid", plan.Target.Type))
 	}
-	if plan.Target.URL == "" {
-		problems = append(problems, "target.url is required")
-	}
-	if !validSourceMode(plan.Target.SourceMode) {
-		problems = append(problems, fmt.Sprintf("target.source_mode %q is invalid", plan.Target.SourceMode))
+	if plan.Target.URL == "" && !coverageAllowsNoLiveTarget(plan.Target.CoverageLabel) {
+		problems = append(problems, "target.url is required unless target.coverage_label is source_only, client_only, or cloud_only")
 	}
 	if !validCoverageLabel(plan.Target.CoverageLabel) {
 		problems = append(problems, fmt.Sprintf("target.coverage_label %q is invalid", plan.Target.CoverageLabel))
 	}
+	problems = append(problems, validatePlanEnvironment(plan.Target.Environment, plan.Target.URL)...)
 	if plan.Target.ClassificationConfidence != "" && !validClassificationConfidence(plan.Target.ClassificationConfidence) {
 		problems = append(problems, fmt.Sprintf("target.classification_confidence %q is invalid", plan.Target.ClassificationConfidence))
 	}
@@ -250,6 +311,13 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 			problems = append(problems, ref+".evidence_refs is required")
 		}
 		problems = append(problems, validateWorkspaceRelativeRefs(ref+".evidence_refs", backend.EvidenceRefs)...)
+	}
+	problems = append(problems, validateStackProfile("target.stack", plan.Target.Stack)...)
+	problems = append(problems, validateChecklistNames("checklists", plan.Checklists)...)
+	for _, value := range plan.UncoveredStack {
+		if !stackValuePattern.MatchString(strings.TrimSpace(value)) {
+			problems = append(problems, fmt.Sprintf("uncovered_stack value %q must be a lowercase identifier", value))
+		}
 	}
 	for _, key := range planSessionKeys {
 		session, ok := plan.Sessions[key]
@@ -273,18 +341,7 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 			problems = append(problems, fmt.Sprintf("sessions.%s.evidence_refs is required", key))
 		}
 		problems = append(problems, validateWorkspaceRelativeRefs(fmt.Sprintf("sessions.%s.evidence_refs", key), session.EvidenceRefs)...)
-	}
-	if plan.ImpactValidation.Enabled && plan.ImpactValidation.MaxRisk < 1 {
-		problems = append(problems, "impact_validation.max_risk must be set when impact validation is enabled")
-	}
-	if plan.ImpactValidation.Enabled && !plan.ImpactValidation.CleanupRequired {
-		problems = append(problems, "impact_validation.cleanup_required must be true when impact validation is enabled")
-	}
-	if plan.ImpactValidation.Enabled && !plan.ImpactValidation.CleanupEvidenceRequired {
-		problems = append(problems, "impact_validation.cleanup_evidence_required must be true when impact validation is enabled")
-	}
-	if plan.ImpactValidation.MaxRisk > 5 {
-		problems = append(problems, "impact_validation.max_risk must be 5 or lower")
+		problems = append(problems, validateChecklistNames(fmt.Sprintf("sessions.%s.checklists", key), session.Checklists)...)
 	}
 	sort.Strings(problems)
 	return problems
@@ -322,10 +379,11 @@ func ValidateReconTargetProfile(profile *ReconTargetProfile) []string {
 	if !validTargetType(profile.Target.Type) {
 		problems = append(problems, fmt.Sprintf("recon target profile target.type %q is invalid", profile.Target.Type))
 	}
-	if strings.TrimSpace(profile.Target.SourceMode) == "" {
-		problems = append(problems, "recon target profile target.source_mode is required")
-	} else if !validSourceMode(profile.Target.SourceMode) {
-		problems = append(problems, fmt.Sprintf("recon target profile target.source_mode %q is invalid", profile.Target.SourceMode))
+	environment := strings.TrimSpace(profile.Target.Environment)
+	if environment == "" {
+		problems = append(problems, "recon target profile target.environment is required")
+	} else if !validEnvironment(environment) {
+		problems = append(problems, fmt.Sprintf("recon target profile target.environment %q is invalid", profile.Target.Environment))
 	}
 	if profile.Target.CoverageLabel != "" && !validCoverageLabel(profile.Target.CoverageLabel) {
 		problems = append(problems, fmt.Sprintf("recon target profile target.coverage_label %q is invalid", profile.Target.CoverageLabel))
@@ -345,6 +403,7 @@ func ValidateReconTargetProfile(profile *ReconTargetProfile) []string {
 		problems = append(problems, "recon target profile target.evidence_refs is required")
 	}
 	problems = append(problems, validateWorkspaceRelativeRefs("recon target profile target.evidence_refs", profile.Target.EvidenceRefs)...)
+	problems = append(problems, validateStackProfile("recon target profile stack", profile.Stack)...)
 	for i, backend := range profile.BackendInventory {
 		ref := fmt.Sprintf("recon target profile backend_inventory[%d]", i)
 		if strings.TrimSpace(backend.Name) == "" {
@@ -420,19 +479,19 @@ func loadPlanSummary(workspace string) *PlanSummary {
 		}
 	}
 	return &PlanSummary{
-		Exists:                  true,
-		Valid:                   len(validation) == 0,
-		Validation:              validation,
-		TargetType:              plan.Target.Type,
-		SourceMode:              plan.Target.SourceMode,
-		CoverageLabel:           plan.Target.CoverageLabel,
-		ImpactValidationEnabled: plan.ImpactValidation.Enabled,
-		SessionDecisions:        decisions,
+		Exists:           true,
+		Valid:            len(validation) == 0,
+		Validation:       validation,
+		TargetType:       plan.Target.Type,
+		Environment:      plan.Target.Environment,
+		CoverageLabel:    plan.Target.CoverageLabel,
+		Checklists:       plan.Checklists,
+		SessionDecisions: decisions,
 	}
 }
 
 func planDecisionForSession(workspace string, session *Session) (*PlanDecisionView, []string) {
-	if session == nil || session.ID == "01" || session.ID == "01.5" || session.ID == "09" || session.ID == "10" || session.ID == "11" {
+	if session == nil || session.ID == "01" || session.ID == "01.5" || session.ID == "09" {
 		return nil, nil
 	}
 	plan, err := ReadAssessmentPlan(assessmentPlanPath(workspace))
@@ -454,6 +513,7 @@ func planDecisionForSession(workspace string, session *Session) (*PlanDecisionVi
 		CoverageLabel: entry.CoverageLabel,
 		Reason:        entry.Reason,
 		RequiredInput: entry.RequiredInput,
+		Checklists:    entry.Checklists,
 	}, validation
 }
 
@@ -467,9 +527,10 @@ func readConfig(workspace string) (InitConfig, error) {
 	if cfg.TargetType == "" {
 		cfg.TargetType = "auto"
 	}
-	if cfg.SourceCode == "" {
-		cfg.SourceCode = "yes"
+	if cfg.SourcePath == "" {
+		cfg.SourcePath = "."
 	}
+	cfg.Environment = defaultEnvironment(cfg.Environment, cfg.TargetURL)
 	if cfg.Cloud == "" {
 		cfg.Cloud = "none"
 	}
@@ -479,10 +540,19 @@ func readConfig(workspace string) (InitConfig, error) {
 	if cfg.OutOfScope == "" {
 		cfg.OutOfScope = "Third-party services, production systems"
 	}
-	if cfg.TargetURL == "" {
-		return InitConfig{}, fmt.Errorf("config target URL is required")
-	}
 	return cfg, nil
+}
+
+// defaultEnvironment fills in the environment tier the same way run init does:
+// sandbox when a live target URL is configured, none when it is not.
+func defaultEnvironment(environment, targetURL string) string {
+	if strings.TrimSpace(environment) != "" {
+		return strings.TrimSpace(environment)
+	}
+	if strings.TrimSpace(targetURL) != "" {
+		return "sandbox"
+	}
+	return "none"
 }
 
 func parseConfigMarkdown(text string) InitConfig {
@@ -508,10 +578,12 @@ func parseConfigMarkdown(text string) InitConfig {
 			switch key {
 			case "url":
 				cfg.TargetURL = value
-			case "source code":
-				cfg.SourceCode = value
+			case "source path":
+				cfg.SourcePath = value
 			case "target type":
 				cfg.TargetType = value
+			case "environment":
+				cfg.Environment = value
 			case "cloud":
 				cfg.Cloud = value
 			}
@@ -530,26 +602,35 @@ func parseConfigMarkdown(text string) InitConfig {
 				cfg.InScope = value
 			case "out of scope":
 				cfg.OutOfScope = value
-			}
-		case "Impact Validation":
-			if key == "enabled" {
-				cfg.ImpactValidationEnabled = parseBool(value)
+			case "approved rate-limit bursts":
+				cfg.ApprovedBursts = value
+			case "approved upload sizes":
+				cfg.ApprovedUploadSizes = value
 			}
 		}
 	}
 	return cfg
 }
 
-func draftSessionDecision(key, targetType, sourceMode string, cloud []string, hasCredentials bool) PlanSession {
-	baseCoverage := targetCoverageLabel(targetType, sourceMode)
+// draftSessionDecision drafts one session decision. profileEnvironment is the
+// environment tier recorded by Session 01 in the recon target profile, which is
+// empty until that file exists.
+func draftSessionDecision(key, targetType, profileEnvironment string, liveTarget bool, cloud []string, hasCredentials bool) PlanSession {
+	baseCoverage := targetCoverageLabel(targetType, liveTarget)
+	if key == "08.7-chains" {
+		return draftChainsDecision(profileEnvironment, baseCoverage)
+	}
 	switch targetType {
 	case "cloud_only":
 		if key == "07-cloud" {
 			return planSession(decisionRun, applicabilityApplicable, coverageCloudOnly, "Cloud-only target; cloud/Kubernetes/IaC checks are the primary workflow.", nil)
 		}
+		if key == "08.5-abuse" {
+			return planSession(decisionLimited, applicabilityApplicable, coverageCloudOnly, "Cloud-only target; check platform-side rate, quota, and spend controls only.", nil)
+		}
 		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageCloudOnly, "Cloud-only target has no app HTTP surface in config. Session 01.5 should revise if Recon discovers one.", nil)
 	case "mobile_client_offline", "desktop_or_extension_client", "library_or_cli":
-		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Configured target type is client/library/CLI-only; normal network pentest sessions are not applicable unless a backend is added to scope.", nil)
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Configured target type is client/library/CLI-only; server-side sessions are not applicable unless a backend is added to scope.", nil)
 	case "static_site":
 		return draftStaticSiteDecision(key, baseCoverage, cloud)
 	case "mobile_client_remote_backend":
@@ -576,7 +657,7 @@ func applyReconProfileDecisions(plan *AssessmentPlan, profile *ReconTargetProfil
 		return
 	}
 	if targetType == "mobile_client_remote_backend" && (len(profile.BackendInventory) == 0 || boolPtrIsFalse(signals.APISurface)) {
-		for _, key := range []string{"02-injection", "03-auth", "04-authz", "06-ssrf", "08-api"} {
+		for _, key := range []string{"02-injection", "03-auth", "04-authz", "06-ssrf", "08-api", "08.5-abuse"} {
 			plan.Sessions[key] = planSession(decisionBlocked, applicabilityApplicable, coverageBlocked, "Mobile client target references a remote-backend workflow, but Recon did not provide a backend/API inventory.", []string{"Backend/API base URL inventory with source and evidence references."})
 		}
 	}
@@ -596,12 +677,30 @@ func applyReconProfileDecisions(plan *AssessmentPlan, profile *ReconTargetProfil
 	if boolPtrValue(signals.CloudSurface) && len(cloud) == 0 {
 		plan.Sessions["07-cloud"] = planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Recon target profile found cloud/IaC surface, but cloud scope or credentials were not configured.", []string{"Confirm cloud assets and provide authorized provider credentials or IaC paths."})
 	}
+	if boolPtrValue(signals.BillingExposedSurface) || boolPtrValue(signals.StorageSurface) || (profile.Stack != nil && (len(profile.Stack.BillingExposedServices) > 0 || len(profile.Stack.Storage) > 0)) {
+		plan.Sessions["08.5-abuse"] = planSession(decisionRun, applicabilityApplicable, plan.Target.CoverageLabel, "Recon target profile lists billing-exposed services or storage surface; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
+	}
+}
+
+// draftChainsDecision drafts Session 08.7. Chains are proven end to end, so the
+// draft only runs when Session 01 recorded a sandbox environment.
+func draftChainsDecision(profileEnvironment, coverage string) PlanSession {
+	if profileEnvironment == "sandbox" {
+		return planSession(decisionRun, applicabilityApplicable, coverage, "Sandbox environment recorded; chain and workflow candidates are collected from Sessions 02 to 08.5 and this decision is re-confirmed after 08.5.", []string{"At least one likely finding, unresolved chain, or workflow candidate from Sessions 02 to 08.5."})
+	}
+	return planSession(decisionBlocked, applicabilityUncertain, coverageBlocked, "Session 08.7 proves chains end to end and runs only in a sandbox environment. Record environment: sandbox in 01-recon/target-profile.yaml or report chains as risk scenarios.", []string{"environment: sandbox in 01-recon/target-profile.yaml"})
+}
+
+func abuseDecision(coverage string) PlanSession {
+	return planSession(decisionRun, applicabilityApplicable, coverage, "Every server component has endpoints that can be abused for cost or resource consumption; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
 }
 
 func draftWebAppDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
 	switch key {
 	case "02-injection", "05-xss", "06-ssrf", "08-api":
 		return planSession(decisionRun, applicabilityApplicable, coverage, "Web application target; Recon/Session 01.5 should refine exact attack surface.", []string{"01-recon/report.md"})
+	case "08.5-abuse":
+		return abuseDecision(coverage)
 	case "03-auth":
 		return planSession(decisionRun, applicabilityApplicable, coverage, "Web application target may include authentication. Measure auth surface and document if none exists.", []string{"01-recon/report.md"})
 	case "04-authz":
@@ -620,6 +719,8 @@ func draftAPIBackendDecision(key, coverage string, hasCredentials bool, cloud []
 	switch key {
 	case "02-injection", "06-ssrf", "08-api":
 		return planSession(decisionRun, applicabilityApplicable, coverage, "API backend target; server-side input and protocol surface should be measured.", []string{"01-recon/report.md"})
+	case "08.5-abuse":
+		return abuseDecision(coverage)
 	case "03-auth":
 		return planSession(decisionRun, applicabilityApplicable, coverage, "API backend may use tokens, API keys, OAuth, or session cookies. Measure identity surface and document if none exists.", []string{"01-recon/report.md"})
 	case "04-authz":
@@ -641,7 +742,9 @@ func draftStaticSiteDecision(key, coverage string, cloud []string) PlanSession {
 	case "05-xss":
 		return planSession(decisionLimited, applicabilityApplicable, coverageClientOnly, "Static/client site can still have DOM XSS or client exposure issues.", nil)
 	case "08-api":
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Static sites may call remote APIs; Session 01 should inventory backend endpoints before deciding.", []string{"Backend/API URL inventory from Recon."})
+		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Static sites may call remote APIs or forms; Session 01 should inventory backend endpoints before deciding.", []string{"Backend/API URL inventory from Recon."})
+	case "08.5-abuse":
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Static/client-only target has no server component to abuse for cost or resource consumption.", nil)
 	case "07-cloud":
 		return cloudDecision(cloud)
 	default:
@@ -653,6 +756,8 @@ func draftMobileRemoteDecision(key, coverage string, hasCredentials bool, cloud 
 	switch key {
 	case "02-injection", "03-auth", "06-ssrf", "08-api":
 		return planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Mobile client with remote backend; coverage depends on extracted backend endpoints and authorized API access.", []string{"Backend endpoint inventory from client traffic or source."})
+	case "08.5-abuse":
+		return abuseDecision(coveragePartial)
 	case "04-authz":
 		required := []string{"At least two test users or roles for backend authorization coverage."}
 		decision := decisionBlocked
@@ -674,6 +779,9 @@ func draftMobileRemoteDecision(key, coverage string, hasCredentials bool, cloud 
 func draftAutoDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
 	if key == "07-cloud" && len(cloud) > 0 {
 		return cloudDecision(cloud)
+	}
+	if key == "08.5-abuse" {
+		return abuseDecision(coverage)
 	}
 	if key == "04-authz" && !hasCredentials {
 		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Target type is auto and no auth context is configured. Session 01.5 should classify before deciding.", []string{"Target classification and account matrix."})
@@ -722,34 +830,28 @@ func normalizeTargetType(value string) string {
 	return "auto"
 }
 
-func sourceModeFromConfig(value string) string {
-	value = strings.ToLower(strings.TrimSpace(value))
-	switch value {
-	case "yes", "available", "available in current directory", "white_box", "white-box":
-		return "white_box"
-	case "source_only", "source-only":
-		return "source_only"
-	case "live_only", "live-only":
-		return "live_only"
-	default:
-		return "black_box"
-	}
-}
-
-func targetCoverageLabel(targetType, sourceMode string) string {
+// targetCoverageLabel derives the draft coverage label. Source is always
+// available to an Ensphere assessment; a live target is optional. Without one
+// the draft is source_only and every measurement row starts not_tested.
+func targetCoverageLabel(targetType string, liveTarget bool) string {
 	switch targetType {
 	case "cloud_only":
 		return coverageCloudOnly
 	case "static_site", "mobile_client_remote_backend", "mobile_client_offline", "desktop_or_extension_client", "library_or_cli":
 		return coverageClientOnly
 	}
-	switch sourceMode {
-	case "source_only":
+	if !liveTarget {
 		return coverageSourceOnly
-	case "black_box", "live_only":
-		return coverageBlackBoxOnly
+	}
+	return coverageFull
+}
+
+func coverageAllowsNoLiveTarget(label string) bool {
+	switch label {
+	case coverageSourceOnly, coverageClientOnly, coverageCloudOnly:
+		return true
 	default:
-		return coverageFull
+		return false
 	}
 }
 
@@ -773,15 +875,6 @@ func parseList(value string) []string {
 		out = append(out, value)
 	}
 	return out
-}
-
-func parseBool(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "true", "yes", "1", "enabled":
-		return true
-	default:
-		return false
-	}
 }
 
 func profilePathForPlan(workspace string, profile *ReconTargetProfile) string {
@@ -832,15 +925,6 @@ func validTargetType(value string) bool {
 	}
 }
 
-func validSourceMode(value string) bool {
-	switch value {
-	case "white_box", "black_box", "source_only", "live_only":
-		return true
-	default:
-		return false
-	}
-}
-
 func validDecision(value string) bool {
 	switch value {
 	case decisionRun, decisionSkip, "force", decisionLimited, decisionBlocked, decisionUncertain, decisionNotApplicable:
@@ -859,9 +943,47 @@ func validApplicability(value string) bool {
 	}
 }
 
+// validEnvironment reports whether value is a recognised environment tier.
+// sandbox is a disposable copy the operator may prove chains against, staging
+// is a shared non-production deployment, and none records that no live target
+// is in scope.
+func validEnvironment(value string) bool {
+	switch value {
+	case "sandbox", "staging", "none":
+		return true
+	default:
+		return false
+	}
+}
+
+// validatePlanEnvironment checks target.environment against target.url. none is
+// only recorded when there is no live target; sandbox and staging name a live
+// deployment and therefore require a URL.
+func validatePlanEnvironment(environment, url string) []string {
+	environment = strings.TrimSpace(environment)
+	url = strings.TrimSpace(url)
+	switch {
+	case environment == "":
+		if url != "" {
+			return []string{"target.environment is required when target.url is set"}
+		}
+	case !validEnvironment(environment):
+		return []string{fmt.Sprintf("target.environment %q is invalid", environment)}
+	case environment == "none":
+		if url != "" {
+			return []string{"target.environment none is only valid when target.url is empty"}
+		}
+	default:
+		if url == "" {
+			return []string{fmt.Sprintf("target.environment %s requires a non-empty target.url", environment)}
+		}
+	}
+	return nil
+}
+
 func validCoverageLabel(value string) bool {
 	switch value {
-	case coverageFull, coveragePartial, coverageBlocked, coverageSourceOnly, coverageBlackBoxOnly, coverageClientOnly, coverageCloudOnly:
+	case coverageFull, coveragePartial, coverageBlocked, coverageSourceOnly, coverageClientOnly, coverageCloudOnly:
 		return true
 	default:
 		return false

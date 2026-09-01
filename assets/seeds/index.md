@@ -2,9 +2,11 @@
 
 Last updated: 2026-06-07
 
-Payload seeds are YAML source files compiled into
-`cli/internal/payloads/payloads.sqlite` by `make seeds` or `make build`. Do not
-edit the SQLite database directly.
+Payload seeds are YAML source files embedded into the `ensphere` binary. `make
+build` mirrors these files into `cli/internal/payloads/data/` (the copy
+`go:embed` reads, since embed cannot reach files outside the Go module) and the
+payloads package parses them once on first use. Edit the sources here, never the
+copy under `cli/internal/payloads/data/`.
 
 | Category | Seed File |
 |----------|-----------|
@@ -15,7 +17,6 @@ edit the SQLite database directly.
 | CORS | [cors.yaml](cors.yaml) |
 | CSRF | [csrf.yaml](csrf.yaml) |
 | CSV injection | [csv-injection.yaml](csv-injection.yaml) |
-| Deserialization | [deserialization.yaml](deserialization.yaml) |
 | File upload | [file-upload.yaml](file-upload.yaml) |
 | GraphQL | [graphql.yaml](graphql.yaml) |
 | Header injection | [header-injection.yaml](header-injection.yaml) |
@@ -28,7 +29,6 @@ edit the SQLite database directly.
 | Prototype pollution | [prototype-pollution.yaml](prototype-pollution.yaml) |
 | Race condition | [race-condition.yaml](race-condition.yaml) |
 | Redirect | [redirect.yaml](redirect.yaml) |
-| Request smuggling | [request-smuggling.yaml](request-smuggling.yaml) |
 | SQLi MSSQL | [sqli-mssql.yaml](sqli-mssql.yaml) |
 | SQLi MySQL | [sqli-mysql.yaml](sqli-mysql.yaml) |
 | SQLi PostgreSQL | [sqli-postgres.yaml](sqli-postgres.yaml) |
@@ -44,6 +44,5 @@ edit the SQLite database directly.
 After editing seeds, run:
 
 ```bash
-make seeds
 make verify-generated
 ```

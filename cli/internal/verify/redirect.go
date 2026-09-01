@@ -57,15 +57,10 @@ func VerifyRedirect(cfg RedirectConfig) (*ProbeResult, error) {
 	params.Set(cfg.Param, evilURL)
 	parsed.RawQuery = params.Encode()
 
-	// Custom client that captures redirect chain without following
-	var redirectChain []string
-	client := &http.Client{
-		Timeout: time.Duration(cfg.TimeoutSec) * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			redirectChain = append(redirectChain, req.URL.String())
-			return http.ErrUseLastResponse
-		},
-	}
+	// Shared no-redirect scoped client: it stops at the first response so the
+	// Location header is recorded raw without following the redirect.
+	redirectChain := []string{}
+	client := scopedHTTPClient(cfg.TimeoutSec, cfg.InScope, len(cfg.InScope) > 0, false)
 
 	throttle.Wait()
 	probeCount++

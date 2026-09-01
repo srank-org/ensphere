@@ -12,13 +12,8 @@ var (
 	sqliDB        string
 	sqliTechnique string
 	sqliMethod    string
-	sqliHeaders   []string
 	sqliBoundary  string
-	sqliInScope   []string
-	sqliMaxRisk   int
-	sqliThrottle  int
-	sqliTimeout   int
-	sqliEvidence  string
+	sqliProbe     probeFlags
 )
 
 var verifySQLiCmd = &cobra.Command{
@@ -44,44 +39,24 @@ func init() {
 	verifySQLiCmd.Flags().StringVar(&sqliDB, "db", "postgres", "Database engine: postgres, mysql, mssql, sqlite")
 	verifySQLiCmd.Flags().StringVar(&sqliTechnique, "technique", "blind_time", "Technique: blind_time, blind_boolean, error_based")
 	verifySQLiCmd.Flags().StringVar(&sqliMethod, "method", "GET", "HTTP method: GET or POST")
-	verifySQLiCmd.Flags().StringSliceVar(&sqliHeaders, "header", nil, "Custom headers (key:value, repeatable)")
 	verifySQLiCmd.Flags().StringVar(&sqliBoundary, "string-boundary", "single_quote", "String boundary: single_quote, double_quote, numeric")
-	verifySQLiCmd.Flags().StringSliceVar(&sqliInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
-	verifySQLiCmd.Flags().IntVar(&sqliMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifySQLiCmd.Flags().IntVar(&sqliThrottle, "throttle", 500, "Milliseconds between probes")
-	verifySQLiCmd.Flags().IntVar(&sqliTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifySQLiCmd.Flags().StringVar(&sqliEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
+	addProbeFlags(verifySQLiCmd, &sqliProbe)
 
 	_ = verifySQLiCmd.MarkFlagRequired("url")
 	_ = verifySQLiCmd.MarkFlagRequired("param")
-	_ = verifySQLiCmd.MarkFlagRequired("in-scope")
 
 	verifyCmd.AddCommand(verifySQLiCmd)
 }
 
 func runVerifySQLi(cmd *cobra.Command, args []string) error {
-	headers, err := parseHeaders(sqliHeaders)
-	if err != nil {
-		writeVerifyError(err)
-		osExit(exitForVerifyError(err))
-		return nil
-	}
-
 	cfg := verify.SQLiConfig{
-		URL:       sqliURL,
-		Param:     sqliParam,
-		DBEngine:  sqliDB,
-		Technique: sqliTechnique,
-		Method:    sqliMethod,
-		Boundary:  sqliBoundary,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    sqliInScope,
-			MaxRisk:    sqliMaxRisk,
-			ThrottleMs: sqliThrottle,
-			TimeoutSec: sqliTimeout,
-			Headers:    headers,
-			Evidence:   sqliEvidence,
-		},
+		URL:         sqliURL,
+		Param:       sqliParam,
+		DBEngine:    sqliDB,
+		Technique:   sqliTechnique,
+		Method:      sqliMethod,
+		Boundary:    sqliBoundary,
+		ProbeConfig: buildProbeConfig(&sqliProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

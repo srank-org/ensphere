@@ -160,7 +160,6 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 		BodyLength: len(followUpResp.Body),
 	}
 
-	bodyChanged := baselineResp.BodyHash != followUpResp.BodyHash
 	hashesMatch := baselineResp.BodyHash == followUpResp.BodyHash
 
 	return &ProbeResult{
@@ -176,7 +175,6 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 			BaselineFields: baselineKeys,
 			FollowUpFields: followUpKeys,
 			InjectedFields: fieldResults,
-			BodyChanged:    bodyChanged,
 			HashesMatch:    hashesMatch,
 			PayloadUsed:    string(mutBody),
 		},

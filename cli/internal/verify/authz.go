@@ -56,7 +56,7 @@ func VerifyAuthZ(cfg AuthZConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("high-priv probe: %w", highResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[HIGH PRIV] status=%d len=%d\n", highResp.StatusCode, len(highResp.Body))
-	writeEvidence(ew, "authz", "privilege_escalation", cfg.URL, "", highResp.StatusCode,
+	writeEvidence(ew, "authz", "role_differential", cfg.URL, "", highResp.StatusCode,
 		fmt.Sprintf("%dms", highResp.ElapsedMs), "baseline", "high-privilege token")
 
 	// Low-privilege request
@@ -73,7 +73,7 @@ func VerifyAuthZ(cfg AuthZConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("low-priv probe: %w", lowResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[LOW PRIV] status=%d len=%d\n", lowResp.StatusCode, len(lowResp.Body))
-	writeEvidence(ew, "authz", "privilege_escalation", cfg.URL, "", lowResp.StatusCode,
+	writeEvidence(ew, "authz", "role_differential", cfg.URL, "", lowResp.StatusCode,
 		fmt.Sprintf("%dms", lowResp.ElapsedMs), "probe", "low-privilege token")
 
 	highRound := RoundResult{
@@ -91,7 +91,7 @@ func VerifyAuthZ(cfg AuthZConfig) (*ProbeResult, error) {
 
 	return &ProbeResult{
 		VulnType:   "authz",
-		Technique:  "privilege_escalation",
+		Technique:  "role_differential",
 		StartedAt:  timer.StartedAt(),
 		ProbeCount: probeCount,
 		Duration:   timer.Elapsed(),

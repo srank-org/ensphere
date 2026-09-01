@@ -11,12 +11,7 @@ var (
 	ssrfParam       string
 	ssrfCallbackURL string
 	ssrfMethod      string
-	ssrfHeaders     []string
-	ssrfInScope     []string
-	ssrfMaxRisk     int
-	ssrfThrottle    int
-	ssrfTimeout     int
-	ssrfEvidence    string
+	ssrfProbe       probeFlags
 )
 
 var verifySSRFCmd = &cobra.Command{
@@ -35,36 +30,23 @@ func init() {
 	verifySSRFCmd.Flags().StringVar(&ssrfParam, "param", "", "Parameter name to inject (required)")
 	verifySSRFCmd.Flags().StringVar(&ssrfCallbackURL, "callback-url", "", "External callback URL for blind SSRF")
 	verifySSRFCmd.Flags().StringVar(&ssrfMethod, "method", "GET", "HTTP method")
-	verifySSRFCmd.Flags().StringSliceVar(&ssrfHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifySSRFCmd.Flags().StringSliceVar(&ssrfInScope, "in-scope", nil, "In-scope patterns: globs (*.example.com) or CIDR (10.0.0.0/8)")
-	verifySSRFCmd.Flags().IntVar(&ssrfMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifySSRFCmd.Flags().IntVar(&ssrfThrottle, "throttle", 500, "Milliseconds between probes")
-	verifySSRFCmd.Flags().IntVar(&ssrfTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifySSRFCmd.Flags().StringVar(&ssrfEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifySSRFCmd.MarkFlagRequired("url")
 	_ = verifySSRFCmd.MarkFlagRequired("param")
-	_ = verifySSRFCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifySSRFCmd, &ssrfProbe)
 
 	verifyCmd.AddCommand(verifySSRFCmd)
 }
 
 func runVerifySSRF(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(ssrfHeaders)
 
 	cfg := verify.SSRFConfig{
 		URL:         ssrfURL,
 		Param:       ssrfParam,
 		CallbackURL: ssrfCallbackURL,
 		Method:      ssrfMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    ssrfInScope,
-			MaxRisk:    ssrfMaxRisk,
-			ThrottleMs: ssrfThrottle,
-			TimeoutSec: ssrfTimeout,
-			Headers:    headers,
-			Evidence:   ssrfEvidence,
-		},
+		ProbeConfig: buildProbeConfig(&ssrfProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

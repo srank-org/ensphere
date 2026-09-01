@@ -11,12 +11,7 @@ var (
 	gqlTechnique string
 	gqlToken     string
 	gqlMethod    string
-	gqlHeaders   []string
-	gqlInScope   []string
-	gqlMaxRisk   int
-	gqlThrottle  int
-	gqlTimeout   int
-	gqlEvidence  string
+	gqlProbe     probeFlags
 )
 
 var verifyGraphQLCmd = &cobra.Command{
@@ -40,36 +35,23 @@ func init() {
 	verifyGraphQLCmd.Flags().StringVar(&gqlTechnique, "technique", "", "Technique: introspection, batch_query, nested_query_dos (required)")
 	verifyGraphQLCmd.Flags().StringVar(&gqlToken, "token", "", "Auth token (optional)")
 	verifyGraphQLCmd.Flags().StringVar(&gqlMethod, "method", "POST", "HTTP method")
-	verifyGraphQLCmd.Flags().StringSliceVar(&gqlHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyGraphQLCmd.Flags().StringSliceVar(&gqlInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyGraphQLCmd.Flags().IntVar(&gqlMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyGraphQLCmd.Flags().IntVar(&gqlThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyGraphQLCmd.Flags().IntVar(&gqlTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyGraphQLCmd.Flags().StringVar(&gqlEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyGraphQLCmd.MarkFlagRequired("url")
 	_ = verifyGraphQLCmd.MarkFlagRequired("technique")
-	_ = verifyGraphQLCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyGraphQLCmd, &gqlProbe)
 
 	verifyCmd.AddCommand(verifyGraphQLCmd)
 }
 
 func runVerifyGraphQL(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(gqlHeaders)
 
 	cfg := verify.GraphQLConfig{
-		URL:       gqlURL,
-		Technique: gqlTechnique,
-		Token:     gqlToken,
-		Method:    gqlMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    gqlInScope,
-			MaxRisk:    gqlMaxRisk,
-			ThrottleMs: gqlThrottle,
-			TimeoutSec: gqlTimeout,
-			Headers:    headers,
-			Evidence:   gqlEvidence,
-		},
+		URL:         gqlURL,
+		Technique:   gqlTechnique,
+		Token:       gqlToken,
+		Method:      gqlMethod,
+		ProbeConfig: buildProbeConfig(&gqlProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

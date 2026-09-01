@@ -11,12 +11,7 @@ var (
 	nosqlParam     string
 	nosqlTechnique string
 	nosqlMethod    string
-	nosqlHeaders   []string
-	nosqlInScope   []string
-	nosqlMaxRisk   int
-	nosqlThrottle  int
-	nosqlTimeout   int
-	nosqlEvidence  string
+	nosqlProbe     probeFlags
 )
 
 var verifyNoSQLCmd = &cobra.Command{
@@ -39,36 +34,23 @@ func init() {
 	verifyNoSQLCmd.Flags().StringVar(&nosqlParam, "param", "", "Parameter/field name (required)")
 	verifyNoSQLCmd.Flags().StringVar(&nosqlTechnique, "technique", "operator_injection", "Technique: operator_injection, where_time")
 	verifyNoSQLCmd.Flags().StringVar(&nosqlMethod, "method", "POST", "HTTP method")
-	verifyNoSQLCmd.Flags().StringSliceVar(&nosqlHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyNoSQLCmd.Flags().StringSliceVar(&nosqlInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyNoSQLCmd.Flags().IntVar(&nosqlMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyNoSQLCmd.Flags().IntVar(&nosqlThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyNoSQLCmd.Flags().IntVar(&nosqlTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyNoSQLCmd.Flags().StringVar(&nosqlEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyNoSQLCmd.MarkFlagRequired("url")
 	_ = verifyNoSQLCmd.MarkFlagRequired("param")
-	_ = verifyNoSQLCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyNoSQLCmd, &nosqlProbe)
 
 	verifyCmd.AddCommand(verifyNoSQLCmd)
 }
 
 func runVerifyNoSQL(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(nosqlHeaders)
 
 	cfg := verify.NoSQLConfig{
-		URL:       nosqlURL,
-		Param:     nosqlParam,
-		Technique: nosqlTechnique,
-		Method:    nosqlMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    nosqlInScope,
-			MaxRisk:    nosqlMaxRisk,
-			ThrottleMs: nosqlThrottle,
-			TimeoutSec: nosqlTimeout,
-			Headers:    headers,
-			Evidence:   nosqlEvidence,
-		},
+		URL:         nosqlURL,
+		Param:       nosqlParam,
+		Technique:   nosqlTechnique,
+		Method:      nosqlMethod,
+		ProbeConfig: buildProbeConfig(&nosqlProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

@@ -79,7 +79,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	}
 	ownRows := countJSONRows(ownResp.Body)
 	fmt.Fprintf(os.Stderr, "[TENANT A OWN] %d rows, status=%d\n", ownRows, ownResp.StatusCode)
-	writeEvidence(ew, "authz", "rls_bypass", ownURL, "", ownResp.StatusCode,
+	writeEvidence(ew, "authz", "rls_isolation", ownURL, "", ownResp.StatusCode,
 		fmt.Sprintf("%dms", ownResp.ElapsedMs), "tenant_a_own", fmt.Sprintf("%d rows", ownRows))
 
 	// Step 2: Tenant B queries own data
@@ -95,7 +95,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	}
 	bOwnRows := countJSONRows(bOwnResp.Body)
 	fmt.Fprintf(os.Stderr, "[TENANT B OWN] %d rows, status=%d\n", bOwnRows, bOwnResp.StatusCode)
-	writeEvidence(ew, "authz", "rls_bypass", bOwnURL, "", bOwnResp.StatusCode,
+	writeEvidence(ew, "authz", "rls_isolation", bOwnURL, "", bOwnResp.StatusCode,
 		fmt.Sprintf("%dms", bOwnResp.ElapsedMs), "tenant_b_own", fmt.Sprintf("%d rows", bOwnRows))
 
 	// Step 3: Tenant A tries to access tenant B's data (cross-tenant)
@@ -111,7 +111,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 	}
 	crossRows := countJSONRows(crossResp.Body)
 	fmt.Fprintf(os.Stderr, "[CROSS-TENANT] %d rows, status=%d\n", crossRows, crossResp.StatusCode)
-	writeEvidence(ew, "authz", "rls_bypass", crossURL, "", crossResp.StatusCode,
+	writeEvidence(ew, "authz", "rls_isolation", crossURL, "", crossResp.StatusCode,
 		fmt.Sprintf("%dms", crossResp.ElapsedMs), "cross_tenant", fmt.Sprintf("%d rows", crossRows))
 
 	tenantAOwnRound := RoundResult{
@@ -129,7 +129,7 @@ func VerifyRLS(cfg RLSConfig) (*ProbeResult, error) {
 
 	return &ProbeResult{
 		VulnType:   "authz",
-		Technique:  "rls_bypass",
+		Technique:  "rls_isolation",
 		StartedAt:  timer.StartedAt(),
 		ProbeCount: probeCount,
 		Duration:   timer.Elapsed(),

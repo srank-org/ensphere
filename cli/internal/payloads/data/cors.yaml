@@ -1,0 +1,130 @@
+defaults:
+  vuln_type: cors
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # Origin Reflection
+  # ============================================================
+  - technique: origin_reflection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://evil.com"
+    notes: "Reflected Origin test. If the response contains Access-Control-Allow-Origin: https://evil.com, the server blindly reflects the Origin header."
+    tags: [origin, reflection, basic]
+
+  - technique: origin_reflection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://attacker-controlled.com"
+    notes: "Reflected Origin with arbitrary domain. Check if any external origin is reflected in ACAO header."
+    tags: [origin, reflection, arbitrary]
+
+  - technique: origin_reflection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "Reflected Origin using collaborator domain. Confirms the server reflects arbitrary origins."
+    tags: [origin, reflection, collaborator]
+
+  - technique: origin_reflection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: http://evil.com"
+    notes: "HTTP origin reflection. Tests if server accepts non-HTTPS origins, downgrading transport security."
+    tags: [origin, reflection, http, downgrade]
+
+  # ============================================================
+  # Null Origin
+  # ============================================================
+  - technique: null_origin
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: null"
+    notes: "Null origin via sandboxed iframe. Browsers send Origin: null from sandboxed iframes and data: URIs. Exploitable via <iframe sandbox='allow-scripts'>."
+    tags: [null, sandbox, iframe]
+
+  # ============================================================
+  # Subdomain Wildcard / Matching Bypass
+  # ============================================================
+  - technique: subdomain_wildcard
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://evil.TARGET_DOMAIN"
+    placeholders: [TARGET_DOMAIN]
+    notes: "Subdomain trust bypass. If the server allows *.target.com, an attacker controlling any subdomain can read cross-origin responses."
+    tags: [subdomain, wildcard, trust]
+
+  - technique: subdomain_wildcard
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://TARGET_DOMAIN.evil.com"
+    placeholders: [TARGET_DOMAIN]
+    notes: "Suffix matching bypass. If CORS check only verifies Origin ends with target domain, this attacker domain passes."
+    tags: [subdomain, suffix, bypass]
+
+  - technique: subdomain_wildcard
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://TARGET_DOMAINXevil.com"
+    placeholders: [TARGET_DOMAIN]
+    notes: "Regex dot escape bypass. If server uses /target.com$/ without escaping dot, targetXcom matches."
+    tags: [subdomain, regex, dot_escape, bypass]
+
+  - technique: subdomain_wildcard
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://notTARGET_DOMAIN"
+    placeholders: [TARGET_DOMAIN]
+    notes: "Prefix check bypass. Tests if server only checks if Origin contains target domain as substring."
+    tags: [subdomain, prefix, bypass]
+
+  - technique: subdomain_wildcard
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://TARGET_DOMAIN%60.evil.com"
+    placeholders: [TARGET_DOMAIN]
+    notes: "URL-encoded backtick in Origin. Some parsers mishandle special characters in domain extraction."
+    tags: [subdomain, encoding, backtick, bypass]
+
+  # ============================================================
+  # Credential Leak
+  # ============================================================
+  - technique: credential_leak
+    injection_surface: header
+    evidence_type: header_match
+    risk: 4
+    payload: "Origin: https://credential-leak-test.evil.com"
+    notes: "Wildcard with credentials misconfiguration. Check if ACAO: * with Allow-Credentials: true — a spec violation that may leak data."
+    tags: [wildcard, credentials, spec_violation]
+
+  - technique: credential_leak
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://expose-headers-test.evil.com"
+    notes: "Check Access-Control-Expose-Headers for sensitive headers like Authorization, X-API-Key, or Set-Cookie."
+    tags: [expose_headers, token_leak]
+
+  # ============================================================
+  # Pre-flight Bypass
+  # ============================================================
+  - technique: origin_reflection
+    injection_surface: header
+    evidence_type: header_match
+    risk: 3
+    payload: "Origin: https://preflight-bypass.evil.com"
+    notes: "Pre-flight bypass via simple request. Send as GET/POST with Content-Type: text/plain to avoid OPTIONS pre-flight check."
+    tags: [preflight, bypass, simple_request]

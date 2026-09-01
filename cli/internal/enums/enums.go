@@ -12,9 +12,9 @@ var ValidVulnTypes = map[string]bool{
 	"xxe": true, "idor": true, "authz": true, "redirect": true, "csrf": true,
 	"nosql": true, "auth_bypass": true,
 	"prototype_pollution": true, "graphql": true, "jwt": true,
-	"cors": true, "race_condition": true, "request_smuggling": true,
+	"cors": true, "race_condition": true,
 	"cache_poisoning": true,
-	"ldap": true, "xpath": true, "header_injection": true, "file_upload": true,
+	"ldap":            true, "xpath": true, "header_injection": true, "file_upload": true,
 	"clickjacking": true,
 	// Cloud security vuln types (no payloads — used for compliance mapping and evidence logging)
 	"cloud_iam": true, "cloud_storage": true, "cloud_network": true,
@@ -24,8 +24,8 @@ var ValidVulnTypes = map[string]bool{
 	"error_handling": true,
 	// OWASP API Security Top 10 2023
 	"property_authz": true, "api_inventory": true, "mass_assignment": true,
-	// Rate limiting — verification probe only (no payloads)
-	"rate_limit": true,
+	// Rate and size limits — verification probes only (no payloads)
+	"rate_limit": true, "limits": true,
 	// Transport-level — compliance mapping and verification probes (no payloads)
 	"websocket": true, "grpc": true,
 }
@@ -37,7 +37,7 @@ var ValidTechniques = map[string]bool{
 	"port_scan": true, "cross_tenant": true,
 	"formula_injection": true, "open_redirect": true, "path_traversal": true,
 	"server_action": true, "webhook_spoof": true,
-	"rls_bypass": true,
+	"rls_isolation": true,
 	// XSS techniques
 	"reflected": true, "stored": true, "dom": true, "polyglot": true,
 	// Command injection techniques
@@ -52,13 +52,13 @@ var ValidTechniques = map[string]bool{
 	"xxe_file_read": true, "xxe_ssrf": true, "xxe_oob": true, "xxe_dos": true,
 	// Redirect techniques
 	"open_redirect_param": true, "open_redirect_path": true,
-	// Deserialization techniques
-	"deserialization_rce": true, "deserialization_read": true, "time_based": true, "dns_oob": true,
+	// Timing and out-of-band techniques
+	"time_based": true, "dns_oob": true,
 	// Auth bypass techniques
 	"jwt_manipulation": true, "default_credential": true, "forced_browsing": true,
-	"auth_bypass": true, "session_fixation": true,
+	"auth_control": true, "session_fixation": true,
 	// IDOR/BOLA techniques
-	"idor_numeric": true, "idor_uuid": true, "idor_path": true, "bola": true, "privilege_escalation": true,
+	"idor_numeric": true, "idor_uuid": true, "idor_path": true, "bola": true, "role_differential": true,
 	// CSRF techniques
 	"form_auto_submit": true, "xhr_cross_origin": true, "fetch_cross_origin": true, "image_tag": true, "origin_validation": true,
 	// Prototype pollution techniques
@@ -71,8 +71,6 @@ var ValidTechniques = map[string]bool{
 	"origin_reflection": true, "null_origin": true, "subdomain_wildcard": true, "credential_leak": true,
 	// Race condition techniques
 	"toctou": true, "parallel_request": true, "double_spend": true,
-	// Request smuggling techniques
-	"cl_te": true, "te_cl": true, "te_te": true, "h2_downgrade": true,
 	// Cache poisoning techniques
 	"unkeyed_header": true, "unkeyed_cookie": true, "fat_get": true,
 	// Auth verify techniques
@@ -88,8 +86,9 @@ var ValidTechniques = map[string]bool{
 	"zip_path_traversal": true, "content_type_mismatch": true,
 	// Clickjacking technique
 	"frame_header_check": true,
-	// Rate limit bypass / account enumeration techniques
-	"rate_limit_bypass": true, "account_enumeration": true,
+	// Rate and size limit measurement techniques
+	"rate_limit_burst": true, "account_enumeration": true,
+	"pagination": true, "upload_size": true, "response_size": true,
 	// DOM clobbering (XSS variant)
 	"dom_clobbering": true,
 	// WebSocket techniques

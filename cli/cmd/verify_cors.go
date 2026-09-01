@@ -7,14 +7,9 @@ import (
 )
 
 var (
-	corsURL      string
-	corsMethod   string
-	corsHeaders  []string
-	corsInScope  []string
-	corsMaxRisk  int
-	corsThrottle int
-	corsTimeout  int
-	corsEvidence string
+	corsURL    string
+	corsMethod string
+	corsProbe  probeFlags
 )
 
 var verifyCORSCmd = &cobra.Command{
@@ -33,33 +28,20 @@ Examples:
 func init() {
 	verifyCORSCmd.Flags().StringVar(&corsURL, "url", "", "Target URL (required)")
 	verifyCORSCmd.Flags().StringVar(&corsMethod, "method", "GET", "HTTP method")
-	verifyCORSCmd.Flags().StringSliceVar(&corsHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyCORSCmd.Flags().StringSliceVar(&corsInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyCORSCmd.Flags().IntVar(&corsMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyCORSCmd.Flags().IntVar(&corsThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyCORSCmd.Flags().IntVar(&corsTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyCORSCmd.Flags().StringVar(&corsEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyCORSCmd.MarkFlagRequired("url")
-	_ = verifyCORSCmd.MarkFlagRequired("in-scope")
+
+	addProbeFlags(verifyCORSCmd, &corsProbe)
 
 	verifyCmd.AddCommand(verifyCORSCmd)
 }
 
 func runVerifyCORS(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(corsHeaders)
 
 	cfg := verify.CORSConfig{
-		URL:    corsURL,
-		Method: corsMethod,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    corsInScope,
-			MaxRisk:    corsMaxRisk,
-			ThrottleMs: corsThrottle,
-			TimeoutSec: corsTimeout,
-			Headers:    headers,
-			Evidence:   corsEvidence,
-		},
+		URL:         corsURL,
+		Method:      corsMethod,
+		ProbeConfig: buildProbeConfig(&corsProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

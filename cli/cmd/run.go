@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -11,55 +12,60 @@ import (
 )
 
 var (
-	runWorkspace                   string
-	runTarget                      string
-	runSource                      string
-	runTargetType                  string
-	runCloud                       string
-	runInScope                     string
-	runOutOfScope                  string
-	runLoginURL                    string
-	runUsername                    string
-	runPassword                    string
-	runImpactValidationEnabled     bool
-	runPlanForce                   bool
-	runImpactValidationFindingRefs []string
-	runImpactReadinessFinding      string
-	runImpactAuthorizationPath     string
+	runWorkspace           string
+	runTarget              string
+	runSourcePath          string
+	runTargetType          string
+	runEnvironment         string
+	runCloud               string
+	runInScope             string
+	runOutOfScope          string
+	runLoginURL            string
+	runUsername            string
+	runPassword            string
+	runApprovedBursts      string
+	runApprovedUploadSizes string
+	runPlanForce           bool
 )
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Orchestrate Ensphere assessment workspace files",
+	Short: "Orchestrate the Ensphere assessment workspace",
 	Long: `Create and inspect the ensphere-pentest workspace used by AI agents.
 
-The runner is conservative: it writes deterministic workspace files,
-next-action.md, and agent-prompt.md for Codex, Claude Code, or another agent.
-It does not execute AI reasoning. Session 10 is disabled by default. When a
-human explicitly enables it and selects findings, either a human or an AI agent
-may execute the exact approved plan.`,
+The runner writes deterministic workspace files, next-action.md, and
+agent-prompt.md for Claude Code, Codex, or another agent. It validates the
+assessment plan and the Session 09 report gate. It does not execute AI
+reasoning and has no exploitation command.
+
+Source code is always in scope; a live target (a sandbox or staging) is
+optional. Without --target the draft plan is source_only.`,
 }
 
 var runInitCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Create ensphere-pentest workspace",
+	Short: "Create the ensphere-pentest workspace",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if runTarget == "" {
-			fmt.Fprintln(os.Stderr, "--target is required")
-			os.Exit(2)
+		environment, err := parseRunEnvironment(runEnvironment)
+		if err != nil {
+			writeVerifyError(err)
+			osExit(exitForVerifyError(err))
+			return nil
 		}
 		out, err := runner.InitWorkspace(runner.InitConfig{
-			Workspace:               runWorkspace,
-			TargetURL:               runTarget,
-			SourceCode:              runSource,
-			TargetType:              runTargetType,
-			Cloud:                   runCloud,
-			InScope:                 runInScope,
-			OutOfScope:              runOutOfScope,
-			LoginURL:                runLoginURL,
-			Username:                runUsername,
-			Password:                runPassword,
-			ImpactValidationEnabled: runImpactValidationEnabled,
+			Workspace:           runWorkspace,
+			TargetURL:           runTarget,
+			SourcePath:          runSourcePath,
+			TargetType:          runTargetType,
+			Environment:         environment,
+			Cloud:               runCloud,
+			InScope:             runInScope,
+			OutOfScope:          runOutOfScope,
+			LoginURL:            runLoginURL,
+			Username:            runUsername,
+			Password:            runPassword,
+			ApprovedBursts:      runApprovedBursts,
+			ApprovedUploadSizes: runApprovedUploadSizes,
 		})
 		if err != nil {
 			return err
@@ -70,7 +76,7 @@ var runInitCmd = &cobra.Command{
 
 var runStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show workspace progress and next session",
+	Short: "Show workspace progress and the next session",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, err := runner.WorkspaceStatus(runWorkspace)
 		if err != nil {
@@ -82,7 +88,7 @@ var runStatusCmd = &cobra.Command{
 
 var runNextCmd = &cobra.Command{
 	Use:   "next",
-	Short: "Write gated next-action.md and agent-prompt.md",
+	Short: "Write next-action.md and agent-prompt.md",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, err := runner.WriteNextAction(runWorkspace)
 		if err != nil {
@@ -94,7 +100,7 @@ var runNextCmd = &cobra.Command{
 
 var runPlanCmd = &cobra.Command{
 	Use:   "plan",
-	Short: "Generate, mirror, or validate assessment-plan.yaml",
+	Short: "Draft, mirror, or validate assessment-plan.yaml",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, err := runner.RunPlan(runWorkspace, runPlanForce)
 		if err != nil {
@@ -116,66 +122,38 @@ var runReportCmd = &cobra.Command{
 	},
 }
 
-var runFinalCmd = &cobra.Command{
-	Use:   "final",
-	Short: "Derive a validation-aware Session 11 registry without replacing Session 09 status",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		out, err := runner.RunFinalReport(runWorkspace)
-		if err != nil {
-			return err
-		}
-		return encodeRunJSON(out)
-	},
-}
-
-var runValidateImpactCmd = &cobra.Command{
-	Use:   "validate-impact",
-	Short: "Prepare selected findings for optional human-authorized Session 10",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		out, err := runner.PrepareImpactValidation(runWorkspace, runImpactValidationFindingRefs)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(2)
-		}
-		return encodeRunJSON(out)
-	},
-}
-
-var runImpactReadyCmd = &cobra.Command{
-	Use:   "impact-ready",
-	Short: "Validate an exact Session 10 plan and human authorization before execution",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		out, err := runner.CheckImpactValidationReady(runWorkspace, runImpactReadinessFinding, runImpactAuthorizationPath)
-		if err != nil {
-			return err
-		}
-		return encodeRunJSON(out)
-	},
-}
-
 func init() {
 	runCmd.PersistentFlags().StringVar(&runWorkspace, "workspace", runner.DefaultWorkspace(), "Ensphere workspace directory")
 
-	runInitCmd.Flags().StringVar(&runTarget, "target", "", "Target URL")
-	runInitCmd.Flags().StringVar(&runSource, "source", "yes", "Source code availability: yes or no")
+	runInitCmd.Flags().StringVar(&runTarget, "target", "", "Base URL of the live target (a sandbox or staging). Omit for a source-only assessment")
+	runInitCmd.Flags().StringVar(&runSourcePath, "source-path", ".", "Path to the source tree under assessment")
 	runInitCmd.Flags().StringVar(&runTargetType, "target-type", "auto", "Target type: auto, web_app, api_backend, static_site, mobile_client_remote_backend, mobile_client_offline, desktop_or_extension_client, cloud_only, or library_or_cli")
-	runInitCmd.Flags().StringVar(&runCloud, "cloud", "none", "Cloud scope: none, aws, gcp, azure, kubernetes, or comma-separated")
+	runInitCmd.Flags().StringVar(&runEnvironment, "environment", "", "Environment tier of the live target: sandbox, staging, or none (default: sandbox when --target is set, none otherwise)")
+	runInitCmd.Flags().StringVar(&runCloud, "cloud", "none", "Platform scope: none, aws, gcp, azure, kubernetes, cloudflare, supabase, or comma-separated")
 	runInitCmd.Flags().StringVar(&runInScope, "in-scope", "", "In-scope boundary summary")
 	runInitCmd.Flags().StringVar(&runOutOfScope, "out-of-scope", "", "Out-of-scope boundary summary")
 	runInitCmd.Flags().StringVar(&runLoginURL, "login-url", "", "Login URL")
 	runInitCmd.Flags().StringVar(&runUsername, "username", "", "Test username")
 	runInitCmd.Flags().StringVar(&runPassword, "password", "", "Test password")
-	runInitCmd.Flags().BoolVar(&runImpactValidationEnabled, "impact-validation-enabled", false, "Enable optional human-authorized Session 10 planning")
+	runInitCmd.Flags().StringVar(&runApprovedBursts, "approved-bursts", "", "Operator-approved rate-limit bursts, e.g. \"POST /api/otp: 10/10s\"")
+	runInitCmd.Flags().StringVar(&runApprovedUploadSizes, "approved-upload-sizes", "", "Operator-approved upload sizes in bytes for Session 08.5")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
-	runValidateImpactCmd.Flags().StringArrayVar(&runImpactValidationFindingRefs, "finding", nil, "Finding ID to select for human-authorized Session 10; repeatable")
-	runImpactReadyCmd.Flags().StringVar(&runImpactReadinessFinding, "finding", "", "Selected Session 09 finding ID")
-	runImpactReadyCmd.Flags().StringVar(&runImpactAuthorizationPath, "authorization", "", "Workspace-relative strict human-authorization YAML path")
-	_ = runImpactReadyCmd.MarkFlagRequired("finding")
-	_ = runImpactReadyCmd.MarkFlagRequired("authorization")
 
-	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runValidateImpactCmd, runImpactReadyCmd, runFinalCmd)
+	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd)
 	rootCmd.AddCommand(runCmd)
+}
+
+// parseRunEnvironment accepts an explicit --environment value. An empty value
+// is left for the runner to default from whether a live target was supplied.
+func parseRunEnvironment(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	switch value {
+	case "", "sandbox", "staging", "none":
+		return value, nil
+	default:
+		return "", fmt.Errorf("%w: --environment %q must be sandbox, staging, or none", errUsage, value)
+	}
 }
 
 func encodeRunJSON(v any) error {

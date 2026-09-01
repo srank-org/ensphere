@@ -1,0 +1,135 @@
+defaults:
+  vuln_type: race_condition
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # TOCTOU (Time-of-Check to Time-of-Use)
+  # ============================================================
+  - technique: toctou
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"coupon_code\": \"DISCOUNT50\"}"
+    notes: "Coupon redemption TOCTOU. Send 20-50 parallel requests to redeem the same single-use coupon. If the check (coupon valid?) and the use (apply discount) are not atomic, multiple requests succeed before the coupon is marked as used."
+    tags: [coupon, discount, parallel, single_use]
+
+  - technique: toctou
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: "{\"amount\": 100, \"to_account\": \"ATTACKER_ACCOUNT\"}"
+    placeholders: [ATTACKER_ACCOUNT]
+    notes: "Balance check TOCTOU. Send parallel withdrawal requests. If the balance is checked before deduction, multiple withdrawals can succeed before the balance updates, withdrawing more than available."
+    tags: [balance, withdrawal, overdraft]
+
+  - technique: toctou
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"invite_code\": \"INVITE123\"}"
+    placeholders: [INVITE123]
+    notes: "Invite code TOCTOU. Redeem a limited-use invite code with parallel requests. If the use count is checked then incremented non-atomically, the code can be used beyond its limit."
+    tags: [invite, code, limit_bypass]
+
+  - technique: toctou
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"email\": \"user@example.com\"}"
+    notes: "Email verification TOCTOU. Send parallel requests to verify an email token. If the token validity check and invalidation are not atomic, the same token can be used multiple times."
+    tags: [email, verification, token_reuse]
+
+  # ============================================================
+  # Parallel Request (Limit Bypass)
+  # ============================================================
+  - technique: parallel_request
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"item_id\": \"ITEM_ID\", \"quantity\": 1}"
+    placeholders: [ITEM_ID]
+    notes: "Inventory oversell via parallel purchase. Send parallel buy requests for a limited-stock item. If stock check and decrement are not atomic, more units are sold than available."
+    tags: [inventory, oversell, ecommerce, stock]
+
+  - technique: parallel_request
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 2
+    payload: "{\"post_id\": \"POST_ID\"}"
+    placeholders: [POST_ID]
+    notes: "Concurrent vote/like bypass. Send parallel like requests for the same post. If the one-like-per-user check races, multiple likes are registered from a single user."
+    tags: [vote, like, duplicate, social]
+
+  - technique: parallel_request
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"points\": 100, \"reward_id\": \"REWARD_ID\"}"
+    placeholders: [REWARD_ID]
+    notes: "Points redemption race. Send parallel reward redemption requests. If points balance check and deduction are separate operations, user redeems more points than they have."
+    tags: [points, rewards, loyalty, limit_bypass]
+
+  - technique: parallel_request
+    injection_surface: form_body
+    evidence_type: response_diff
+    risk: 2
+    payload: "username=newuser&email=new@example.com&password=test123"
+    notes: "Concurrent account creation with same username/email. Send parallel registration requests. If uniqueness is checked before insertion without a DB constraint, duplicate accounts are created."
+    tags: [registration, duplicate, account, uniqueness]
+
+  - technique: parallel_request
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"action\": \"follow\", \"user_id\": \"TARGET_ID\"}"
+    placeholders: [TARGET_ID]
+    notes: "Follow/subscribe race. Send parallel follow requests. If the follow count increment is not atomic, multiple follow records are created, inflating follower counts."
+    tags: [follow, subscribe, count_inflation]
+
+  - technique: parallel_request
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"gift_card_code\": \"GIFTCARD123\"}"
+    notes: "Gift card double-spend. Send parallel requests to apply the same gift card. If balance check and deduction are non-atomic, the gift card value is applied to multiple orders."
+    tags: [gift_card, double_spend, ecommerce]
+
+  # ============================================================
+  # Double Spend
+  # ============================================================
+  - technique: double_spend
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: "{\"from\": \"WALLET_ID\", \"to\": \"RECIPIENT\", \"amount\": 1000}"
+    placeholders: [WALLET_ID, RECIPIENT]
+    notes: "Wallet transfer double-spend. Send parallel transfer requests from the same wallet. If the balance is read, checked, then decremented in separate steps, the total transferred exceeds the actual balance."
+    tags: [wallet, transfer, double_spend, financial]
+
+  - technique: double_spend
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 4
+    payload: "{\"token_id\": \"TOKEN_ID\", \"action\": \"redeem\"}"
+    placeholders: [TOKEN_ID]
+    notes: "One-time token double-spend. Send parallel requests to redeem a single-use token (password reset, MFA code, etc.). If invalidation lags behind the check, the token is used multiple times."
+    tags: [token, one_time, mfa, password_reset]
+
+  - technique: double_spend
+    injection_surface: form_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "promo_code=FREESHIP&order_id=ORDER_ID"
+    placeholders: [ORDER_ID]
+    notes: "Promo code stacking via race. Send parallel requests applying different promo codes to the same order. If exclusivity checks race, multiple supposedly exclusive promotions are applied."
+    tags: [promo, stacking, order, ecommerce]
+
+  - technique: double_spend
+    injection_surface: json_body
+    evidence_type: response_diff
+    risk: 3
+    payload: "{\"referral_code\": \"REF123\", \"new_user\": true}"
+    notes: "Referral bonus race. Send parallel referral claim requests. If the referral credit is issued before the claim is recorded, multiple bonuses are awarded for a single referral."
+    tags: [referral, bonus, credit, abuse]

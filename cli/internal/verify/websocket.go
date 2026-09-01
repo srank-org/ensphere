@@ -21,6 +21,7 @@ type WebSocketConfig struct {
 	URL       string
 	Technique string // ws_injection | ws_hijack | ws_origin_check
 	Payload   string
+	TLSVerify bool // verify the server certificate (default true)
 	ProbeConfig
 }
 
@@ -101,7 +102,7 @@ func wsInjection(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evid
 	}
 	origin := fmt.Sprintf("http://%s", parsed.Hostname())
 
-	conn, statusCode, elapsed, err := wsHandshake(cfg.URL, origin, cfg.Headers, cfg.TimeoutSec)
+	conn, statusCode, elapsed, err := wsHandshake(cfg.URL, origin, cfg.Headers, cfg.TimeoutSec, cfg.TLSVerify)
 	upgradeSuccess := statusCode == 101 && err == nil
 	fmt.Fprintf(os.Stderr, "[WS UPGRADE] status=%d %dms success=%v\n", statusCode, elapsed, upgradeSuccess)
 	writeEvidence(ew, "websocket", cfg.Technique, cfg.URL, "", statusCode,
@@ -164,7 +165,7 @@ func wsHijack(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	throttle.Wait()
 	*probeCount++
 
-	conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, "http://evil.example.com", cfg.Headers, cfg.TimeoutSec)
+	conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, "http://evil.example.com", cfg.Headers, cfg.TimeoutSec, cfg.TLSVerify)
 	if conn != nil {
 		conn.Close()
 	}
@@ -210,7 +211,7 @@ func wsOriginCheck(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *ev
 		throttle.Wait()
 		*probeCount++
 
-		conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, test.origin, cfg.Headers, cfg.TimeoutSec)
+		conn, statusCode, elapsed, hsErr := wsHandshake(cfg.URL, test.origin, cfg.Headers, cfg.TimeoutSec, cfg.TLSVerify)
 		if conn != nil {
 			conn.Close()
 		}
@@ -243,7 +244,7 @@ func wsOriginCheck(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *ev
 
 // wsHandshake performs a raw TCP WebSocket upgrade handshake.
 // origin="" means omit the Origin header entirely.
-func wsHandshake(rawURL string, origin string, extraHeaders map[string]string, timeoutSec int) (net.Conn, int, int64, error) {
+func wsHandshake(rawURL string, origin string, extraHeaders map[string]string, timeoutSec int, tlsVerify bool) (net.Conn, int, int64, error) {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("parse URL: %w", err)
@@ -271,8 +272,11 @@ func wsHandshake(rawURL string, origin string, extraHeaders map[string]string, t
 	var conn net.Conn
 	if useTLS {
 		conn, err = tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", host, &tls.Config{
-			ServerName:         parsed.Hostname(),
-			InsecureSkipVerify: true,
+			ServerName: parsed.Hostname(),
+			// Protocol probing only: the WebSocket upgrade handshake is what is
+			// being measured. --tls-verify=false allows internal or self-signed
+			// certs; the default verifies.
+			InsecureSkipVerify: !tlsVerify,
 		})
 	} else {
 		conn, err = net.DialTimeout("tcp", host, timeout)

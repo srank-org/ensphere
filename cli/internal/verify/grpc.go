@@ -20,6 +20,7 @@ import (
 type GRPCConfig struct {
 	URL       string
 	Technique string // grpc_reflection | grpc_plaintext
+	TLSVerify bool   // verify the server certificate (default true)
 	ProbeConfig
 }
 
@@ -89,7 +90,10 @@ func grpcReflection(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *eviden
 	transport := &http.Transport{
 		ForceAttemptHTTP2: true,
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+			// Protocol probing only: gRPC targets often use self-signed or
+			// internal-CA certs, so the operator can allow an unverified TLS
+			// handshake with --tls-verify=false. The default verifies.
+			InsecureSkipVerify: !cfg.TLSVerify,
 		},
 	}
 	client := scopedHTTPClientWithTransport(cfg.TimeoutSec, transport, cfg.InScope, true, true)
@@ -200,8 +204,11 @@ func grpcPlaintext(cfg GRPCConfig, timer *Timer, throttle *Throttle, ew *evidenc
 	start = time.Now()
 
 	tlsConn, err := tls.DialWithDialer(&net.Dialer{Timeout: timeout}, "tcp", host, &tls.Config{
-		ServerName:         parsed.Hostname(),
-		InsecureSkipVerify: true,
+		ServerName: parsed.Hostname(),
+		// Protocol probing only: measures whether the port speaks TLS h2 at
+		// all. --tls-verify=false lets the handshake proceed against internal
+		// certs; the default verifies.
+		InsecureSkipVerify: !cfg.TLSVerify,
 		NextProtos:         []string{"h2"},
 	})
 	tlsElapsed := time.Since(start).Milliseconds()

@@ -7,18 +7,14 @@ import (
 )
 
 var (
-	ratelimitURL        string
-	ratelimitMethod     string
-	ratelimitBody       string
-	ratelimitToken      string
-	ratelimitBurstCount int
-	ratelimitWindowSec  int
-	ratelimitHeaders    []string
-	ratelimitInScope    []string
-	ratelimitMaxRisk    int
-	ratelimitThrottle   int
-	ratelimitTimeout    int
-	ratelimitEvidence   string
+	ratelimitURL         string
+	ratelimitMethod      string
+	ratelimitBody        string
+	ratelimitToken       string
+	ratelimitSecondToken string
+	ratelimitBurstCount  int
+	ratelimitWindowSec   int
+	ratelimitProbe       probeFlags
 )
 
 var verifyRateLimitCmd = &cobra.Command{
@@ -40,40 +36,29 @@ func init() {
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitMethod, "method", "POST", "HTTP method")
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitBody, "body", "", "Request body")
 	verifyRateLimitCmd.Flags().StringVar(&ratelimitToken, "token", "", "Auth token")
+	verifyRateLimitCmd.Flags().StringVar(&ratelimitSecondToken, "second-token", "", "Optional second identity token: after the first burst and one window, repeat the burst with this token")
 	verifyRateLimitCmd.Flags().IntVar(&ratelimitBurstCount, "burst-count", 0, "Explicitly approved number of sequential requests (required)")
 	verifyRateLimitCmd.Flags().IntVar(&ratelimitWindowSec, "window-sec", 10, "Time window in seconds")
-	verifyRateLimitCmd.Flags().StringSliceVar(&ratelimitHeaders, "header", nil, "Custom headers (key:value, repeatable)")
-	verifyRateLimitCmd.Flags().StringSliceVar(&ratelimitInScope, "in-scope", nil, "In-scope patterns (required)")
-	verifyRateLimitCmd.Flags().IntVar(&ratelimitMaxRisk, "max-risk", 3, "Maximum risk level (1-5)")
-	verifyRateLimitCmd.Flags().IntVar(&ratelimitThrottle, "throttle", 500, "Milliseconds between probes")
-	verifyRateLimitCmd.Flags().IntVar(&ratelimitTimeout, "timeout", 10, "HTTP request timeout in seconds")
-	verifyRateLimitCmd.Flags().StringVar(&ratelimitEvidence, "evidence", "./evidence.jsonl", "Evidence file path")
 
 	_ = verifyRateLimitCmd.MarkFlagRequired("url")
-	_ = verifyRateLimitCmd.MarkFlagRequired("in-scope")
 	_ = verifyRateLimitCmd.MarkFlagRequired("burst-count")
+
+	addProbeFlags(verifyRateLimitCmd, &ratelimitProbe)
 
 	verifyCmd.AddCommand(verifyRateLimitCmd)
 }
 
 func runVerifyRateLimit(cmd *cobra.Command, args []string) error {
-	headers := mustParseHeaders(ratelimitHeaders)
 
 	cfg := verify.RateLimitConfig{
-		URL:        ratelimitURL,
-		Method:     ratelimitMethod,
-		Body:       ratelimitBody,
-		Token:      ratelimitToken,
-		BurstCount: ratelimitBurstCount,
-		WindowSec:  ratelimitWindowSec,
-		ProbeConfig: verify.ProbeConfig{
-			InScope:    ratelimitInScope,
-			MaxRisk:    ratelimitMaxRisk,
-			ThrottleMs: ratelimitThrottle,
-			TimeoutSec: ratelimitTimeout,
-			Headers:    headers,
-			Evidence:   ratelimitEvidence,
-		},
+		URL:         ratelimitURL,
+		Method:      ratelimitMethod,
+		Body:        ratelimitBody,
+		Token:       ratelimitToken,
+		SecondToken: ratelimitSecondToken,
+		BurstCount:  ratelimitBurstCount,
+		WindowSec:   ratelimitWindowSec,
+		ProbeConfig: buildProbeConfig(&ratelimitProbe),
 	}
 
 	return runVerify(func() (*verify.ProbeResult, error) {

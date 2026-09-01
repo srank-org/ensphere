@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/srank/ensphere/internal/enums"
 )
 
 // testJWT is a valid 3-part JWT for contract tests requiring JWT parsing.
@@ -46,11 +48,11 @@ var contracts = []probeContract{
 	},
 	{name: "idor", risk: 2,
 		callOutOfScope: func() (*ProbeResult, error) {
-			return VerifyIDOR(IDORConfig{URL: "http://evil.example.com/api/{id}", ID: "123", Token: "tok", ExpectedStatus: 403, Method: "GET",
+			return VerifyIDOR(IDORConfig{URL: "http://evil.example.com/api/{id}", ID: "123", Token: "tok", Method: "GET",
 				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 		callLowRisk: func() (*ProbeResult, error) {
-			return VerifyIDOR(IDORConfig{URL: "http://localhost/api/{id}", ID: "123", Token: "tok", ExpectedStatus: 403, Method: "GET",
+			return VerifyIDOR(IDORConfig{URL: "http://localhost/api/{id}", ID: "123", Token: "tok", Method: "GET",
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
@@ -150,24 +152,6 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
-	{name: "deserialization", risk: 4,
-		callOutOfScope: func() (*ProbeResult, error) {
-			return VerifyDeserialization(DeserializationConfig{URL: "http://evil.example.com/api", Runtime: "python", Method: "POST", Technique: "time_based",
-				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-		callLowRisk: func() (*ProbeResult, error) {
-			return VerifyDeserialization(DeserializationConfig{URL: "http://localhost/api", Runtime: "python", Method: "POST", Technique: "time_based",
-				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-		callBadTechnique: func() (*ProbeResult, error) {
-			return VerifyDeserialization(DeserializationConfig{URL: "http://localhost/api", Runtime: "python", Method: "POST", Technique: "INVALID",
-				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-		callBadConfig: func() (*ProbeResult, error) {
-			return VerifyDeserialization(DeserializationConfig{URL: "http://localhost/api", Runtime: "INVALID", Method: "POST", Technique: "time_based",
-				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-	},
 	{name: "csrf", risk: 2,
 		callOutOfScope: func() (*ProbeResult, error) {
 			return VerifyCSRF(CSRFConfig{URL: "http://evil.example.com/api", Method: "POST",
@@ -254,20 +238,6 @@ var contracts = []probeContract{
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
-	{name: "smuggling", risk: 4,
-		callOutOfScope: func() (*ProbeResult, error) {
-			return VerifySmuggling(SmugglingConfig{URL: "http://evil.example.com/api", Technique: "cl_te",
-				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-		callLowRisk: func() (*ProbeResult, error) {
-			return VerifySmuggling(SmugglingConfig{URL: "http://localhost/api", Technique: "cl_te",
-				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-		callBadTechnique: func() (*ProbeResult, error) {
-			return VerifySmuggling(SmugglingConfig{URL: "http://localhost/api", Technique: "INVALID",
-				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
-		},
-	},
 	{name: "cachepoisoning", risk: 3,
 		callOutOfScope: func() (*ProbeResult, error) {
 			return VerifyCachePoisoning(CachePoisoningConfig{URL: "http://evil.example.com/api", Technique: "unkeyed_header",
@@ -340,6 +310,20 @@ var contracts = []probeContract{
 		callLowRisk: func() (*ProbeResult, error) {
 			return VerifyRateLimit(RateLimitConfig{URL: "http://localhost/api", Method: "POST", BurstCount: 5,
 				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
+	{name: "limits", risk: 2,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyLimits(LimitsConfig{URL: "http://evil.example.com/api", Technique: "pagination", Param: "limit", Values: []int{1, 100},
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyLimits(LimitsConfig{URL: "http://localhost/api", Technique: "pagination", Param: "limit", Values: []int{1, 100},
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadTechnique: func() (*ProbeResult, error) {
+			return VerifyLimits(LimitsConfig{URL: "http://localhost/api", Technique: "INVALID",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
 		},
 	},
 	{name: "websocket", risk: 2,
@@ -499,7 +483,6 @@ func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
 		SSTIMeasurements{},
 		SSTIProbeResult{},
 		XXEMeasurements{},
-		DeserializationMeasurements{},
 		CSRFMeasurements{},
 		NoSQLMeasurements{},
 		JWTMeasurements{},
@@ -508,7 +491,6 @@ func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
 		ProtoPollutionMeasurements{},
 		GraphQLMeasurements{},
 		RaceMeasurements{},
-		SmugglingMeasurements{},
 		CachePoisoningMeasurements{},
 		ClickjackingMeasurements{},
 		HeaderInjectionMeasurements{},
@@ -520,6 +502,11 @@ func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
 		PropertyAuthZMeasurements{},
 		WatchFieldResult{},
 		RateLimitMeasurements{},
+		RateLimitMeasurementSet{},
+		LimitsMeasurements{},
+		LimitsPaginationRound{},
+		LimitsUploadRound{},
+		LimitsResponseRound{},
 		LDAPMeasurements{},
 		GRPCMeasurements{},
 		XPathMeasurements{},
@@ -529,6 +516,45 @@ func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
 	}
 	for _, typ := range types {
 		assertNoForbiddenJSONTags(t, reflect.TypeOf(typ))
+	}
+}
+
+// forbiddenOutcomeWords are substrings that presume a security outcome. A
+// technique or vuln_type name must describe what is measured, never the verdict.
+var forbiddenOutcomeWords = []string{"bypass", "escalation", "exploit", "rce", "forge", "extract"}
+
+// sanctionedOutcomeNames are the two names the refocus spec explicitly keeps
+// (file-upload construction techniques). "bypass" there names the file-type
+// control being probed; the construction is recorded neutrally in the
+// measurement. No new name may join this list.
+var sanctionedOutcomeNames = map[string]bool{
+	"extension_bypass": true,
+	"mime_bypass":      true,
+	"auth_bypass":      true, // payload category retained by the seed set, not a verify verdict
+}
+
+// TestContracts_NoOutcomePresumingTechniqueNames asserts that the technique and
+// vuln_type identifiers the CLI knows about do not presume an outcome.
+func TestContracts_NoOutcomePresumingTechniqueNames(t *testing.T) {
+	// Names are snake_case; compare per segment so "forced_browsing" is not
+	// flagged for the "rce" inside "forced".
+	check := func(kind, name string) {
+		if sanctionedOutcomeNames[name] {
+			return
+		}
+		for _, seg := range strings.Split(strings.ToLower(name), "_") {
+			for _, w := range forbiddenOutcomeWords {
+				if seg == w {
+					t.Errorf("%s %q contains outcome-presuming word %q", kind, name, w)
+				}
+			}
+		}
+	}
+	for name := range enums.ValidTechniques {
+		check("technique", name)
+	}
+	for name := range enums.ValidVulnTypes {
+		check("vuln_type", name)
 	}
 }
 

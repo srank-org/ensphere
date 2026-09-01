@@ -52,10 +52,11 @@ func TestVerifyRateLimit_SequentialBurst(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m, ok := result.Measurements.(RateLimitMeasurements)
+	set, ok := result.Measurements.(RateLimitMeasurementSet)
 	if !ok {
 		t.Fatal("unexpected measurements type")
 	}
+	m := set.IdentityA
 	if m.SuccessCount != 5 {
 		t.Errorf("expected 5 successes, got %d", m.SuccessCount)
 	}
@@ -90,10 +91,11 @@ func TestVerifyRateLimit_NoThrottling(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m, ok := result.Measurements.(RateLimitMeasurements)
+	set, ok := result.Measurements.(RateLimitMeasurementSet)
 	if !ok {
 		t.Fatal("unexpected measurements type")
 	}
+	m := set.IdentityA
 	if m.SuccessCount != 10 {
 		t.Errorf("expected 10 successes, got %d", m.SuccessCount)
 	}
@@ -129,10 +131,11 @@ func TestVerifyRateLimit_WindowExpiry(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	m, ok := result.Measurements.(RateLimitMeasurements)
+	set, ok := result.Measurements.(RateLimitMeasurementSet)
 	if !ok {
 		t.Fatal("unexpected measurements type")
 	}
+	m := set.IdentityA
 	if len(m.Rounds) >= 100 {
 		t.Errorf("expected fewer than 100 rounds due to window expiry, got %d", len(m.Rounds))
 	}

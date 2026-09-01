@@ -59,7 +59,7 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("high-priv probe: %w", highResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[HIGH PRIV] status=%d len=%d\n", highResp.StatusCode, len(highResp.Body))
-	writeEvidence(ew, "property_authz", "privilege_escalation", cfg.URL, "", highResp.StatusCode,
+	writeEvidence(ew, "property_authz", "role_differential", cfg.URL, "", highResp.StatusCode,
 		fmt.Sprintf("%dms", highResp.ElapsedMs), "baseline", "high-privilege token")
 
 	// Low-privilege request
@@ -76,7 +76,7 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("low-priv probe: %w", lowResp.Error)
 	}
 	fmt.Fprintf(os.Stderr, "[LOW PRIV] status=%d len=%d\n", lowResp.StatusCode, len(lowResp.Body))
-	writeEvidence(ew, "property_authz", "privilege_escalation", cfg.URL, "", lowResp.StatusCode,
+	writeEvidence(ew, "property_authz", "role_differential", cfg.URL, "", lowResp.StatusCode,
 		fmt.Sprintf("%dms", lowResp.ElapsedMs), "probe", "low-privilege token")
 
 	highRound := RoundResult{
@@ -114,7 +114,7 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 
 	return &ProbeResult{
 		VulnType:   "property_authz",
-		Technique:  "privilege_escalation",
+		Technique:  "role_differential",
 		StartedAt:  timer.StartedAt(),
 		ProbeCount: probeCount,
 		Duration:   timer.Elapsed(),

