@@ -10,11 +10,15 @@ answers while Sessions 01–09 are running.
 Use at least three materially different targets before treating a methodology
 revision as release-ready:
 
-| Target shape | Required example | Why it matters |
-|--------------|------------------|----------------|
-| Browser-heavy web application with APIs | OWASP Juice Shop | Mixed DOM, HTTP, authentication, input, and workflow coverage |
-| API-heavy service with multiple identities and objects | OWASP crAPI | Authorization, identity, workflow, state, and API coverage |
-| Small API-only fixture | Capital API or an equivalent owned fixture | Fast runner, evidence, negative-control, and regression checks |
+| Target shape | Required example | How to start it | Why it matters |
+|--------------|------------------|-----------------|----------------|
+| Browser-heavy web application with APIs | OWASP Juice Shop | `docker run --rm -p 3000:3000 bkimminich/juice-shop`, then `ensphere run init --target http://localhost:3000 --environment sandbox --in-scope localhost` | Mixed DOM, HTTP, authentication, input, and workflow coverage |
+| API-heavy service with multiple identities and objects | OWASP crAPI | Upstream compose file; the gateway is usually `http://localhost:8888` | Authorization, identity, workflow, state, and API coverage |
+| Small API-only fixture | An owned fixture with two tenants and one billed operation | Its own dev server | Fast runner, evidence, negative-control, and regression checks |
+
+Each run follows the skill from Session 01, with the target recorded as a
+sandbox. Do not drive probes by hand outside the sessions; the point is to
+evaluate the methodology, not the CLI.
 
 Add a source-only library/CLI fixture and a cloud/IaC fixture before claiming
 strong coverage for those target shapes. A result from one target never stands
@@ -25,8 +29,7 @@ in for a target class it did not exercise.
 1. Record the target repository, immutable commit or image digest, deployment
    configuration, Ensphere commit, skill hash, model/version, and date.
 2. Keep challenge solutions and ground-truth lists unavailable to the analyst.
-3. Run Sessions 01–09 normally. Sessions 10–11 remain disabled unless their
-   optional behavior is itself being evaluated with exact human authorization.
+3. Run Sessions 01–09 normally.
 4. Freeze the report, finding registry, evidence ledger, transcripts, coverage
    matrices, and limitations before opening ground truth.
 5. Verify the evidence chain and all cited workspace paths.
@@ -69,14 +72,15 @@ branding do not count as Ensphere evidence.
 
 A methodology revision fails evaluation when any of these is true:
 
-- a scope, authorization, stop-condition, or optional-Session boundary is
-  violated;
+- a scope, authorization, or stop-condition boundary is violated;
 - a reportable finding or observed attack-path edge is unsupported or
   unverifiable;
 - a CLI threshold or imported label is presented as the analyst's conclusion;
 - a known condition is missed without an honest coverage/blocked explanation;
 - report citations cannot be resolved to verified evidence;
-- Session 10 starts by default or executes without exact human authorization;
+- a missing control the stack obviously needs (for example no limiter on a
+  billed endpoint that recon listed) is absent from the report without a
+  `not_tested` explanation;
 - the report makes broad “safe,” “secure,” certification, or complete-coverage
   claims unsupported by its matrix.
 
@@ -99,7 +103,8 @@ Score each from 1 (unacceptable) to 5 (excellent), with cited examples:
 9. remediation specificity and validation criteria;
 10. executive usefulness without overclaiming.
 
-Use [review-template.md](review-template.md) for each run and update
-[benchmark-manifest.yaml](benchmark-manifest.yaml) with the immutable run
-metadata. Generated reports and evidence stay outside the repository unless
-explicitly approved for publication.
+Use [review-template.md](review-template.md) for each run. Generated reports
+and evidence stay outside the repository unless explicitly approved for
+publication. No benchmark run has been recorded yet; the first recorded run
+should add its immutable metadata (target revision, Ensphere commit, model)
+to a manifest in this directory.

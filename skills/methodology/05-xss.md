@@ -18,11 +18,11 @@ content. Use synthetic markers and owned test content.
 
 ## Candidate Generation
 
-White-box review traces input to the exact render context and all transformations.
+Source review traces input to the exact render context and all transformations.
 A sink-pattern match is a lead until reachability and attacker control are
 established.
 
-Black-box discovery starts with unique inert markers to locate reflection or
+Live-target discovery starts with unique inert markers to locate reflection or
 storage and determine the context. Reflection alone is not XSS.
 
 ## Controlled Validation
@@ -51,8 +51,8 @@ browser behavior.
 Classify the narrow render flow using the shared evidence model. Distinguish raw
 HTTP reflection, inert DOM text, sanitizer mutation, browser execution, and
 extension/devtool artifacts. Stop once the context is shown safe for the tested
-input or benign execution is observed; stronger impact proof belongs, if ever,
-to optional human-authorized Session 10.
+input or benign execution is observed. Do not escalate to cookie theft,
+session use, or any real-user impact for proof.
 
 ## Report
 

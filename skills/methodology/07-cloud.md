@@ -31,6 +31,16 @@ If cloud surface exists but authorized read access is absent, run only the IaC
 or supplied-artifact lane and label live coverage blocked/source-only. Missing
 credentials do not make cloud security not applicable.
 
+### Missing tooling
+
+When a provider CLI or MCP server is missing, unauthenticated, or linked to
+the wrong account, tell the operator the exact install and login command from
+the provider appendix (for example `wrangler login`, `supabase link
+--project-ref <ref>`, `gcloud auth login`). Do not install tooling or
+authenticate on the operator's behalf without permission. Record every
+affected check as `blocked` with the named prerequisite, continue with the
+source/IaC lane, and re-run the live lane once the operator confirms.
+
 ## Collection Lanes
 
 ### Provider and Kubernetes metadata
@@ -51,13 +61,12 @@ Helm output, Dockerfiles, and policy-as-code artifacts. Cite exact file/line and
 the deployed environment when known. A source misconfiguration is not proof of
 live exposure; record drift uncertainty.
 
-### Imported scanner leads
+### Operator-supplied scanner output
 
-Prowler, Trivy, and other results remain imported leads. Preserve tool/version,
-scope, rule ID, source severity/confidence, raw artifact, and parse errors.
-Deduplicate and corroborate high-value leads with read-only provider facts or
-source evidence. Never copy source severity into the Ensphere severity field
-without analyst reasoning.
+The analyst may read Prowler, Trivy, or other scanner output the operator
+supplies as leads, preserving the tool, version, rule ID, and source severity;
+no Ensphere command ingests it. Corroborate any lead with read-only provider
+facts or source evidence before it becomes a finding.
 
 ## Candidate Validation
 
@@ -90,6 +99,8 @@ Read only appendices for providers actually in scope:
 - [07b GCP](07b-gcp.md)
 - [07c Azure](07c-azure.md)
 - [07d Kubernetes](07d-k8s.md)
+- [07e Cloudflare](07e-cloudflare.md)
+- [07f Supabase](07f-supabase.md)
 
 Treat commands in those files as inventory examples, not a mandatory command
 list. Skip any example that retrieves secret/content values, changes state,
@@ -108,7 +119,7 @@ Write `07-cloud/report.md` with:
 
 1. exact provider/account/region/cluster and identity scope;
 2. coverage matrix and unavailable services/regions;
-3. evidence provenance and imported-tool inventory;
+3. evidence provenance and any operator-supplied scanner output used as leads;
 4. resolved configuration/policy findings with evidence strength and confidence;
 5. tested controls and effective-policy facts;
 6. source/live drift;

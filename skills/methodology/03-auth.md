@@ -12,6 +12,12 @@ password reset/change, MFA enrollment/challenge/recovery, OAuth/OIDC/SSO, API
 keys, session cookies, refresh/access tokens, device/session management, and
 account recovery flows.
 
+Open the checklists the plan assigned to this session first; they name the
+auth provider's specific settings (for example `supabase-rls.md` covers
+Supabase Auth configuration, `nextjs-app-router.md` covers middleware
+matchers and Server Actions). Rate limiting on login, signup, reset, and OTP
+is measured in Session 08.5; record the endpoints here and hand them over.
+
 For each flow record endpoint, identity/role, tenant, credential type, state
 transition, expected control, required test account, and coverage state. Use
 owned test accounts. If a role, MFA device, IdP tenant, mail channel, or recovery
@@ -19,12 +25,12 @@ factor is unavailable, mark the specific flow not tested or blocked.
 
 ## Candidate Generation
 
-White-box review should trace credential verification, token validation,
+Source review should trace credential verification, token validation,
 session issuance/rotation/revocation, reset-token generation/storage/use,
 OAuth state/nonce/PKCE handling, MFA enforcement, and error handling. Cite
 reachable source and configuration.
 
-Black-box candidates come from observed flow behavior, not assumptions about
+Live-target candidates come from observed flow behavior, not assumptions about
 framework defaults.
 
 Do not estimate token entropy from a small sample, infer password strength from

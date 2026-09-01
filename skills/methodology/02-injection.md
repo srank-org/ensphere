@@ -8,7 +8,11 @@ sensitive data or escalating impact.
 
 ## Preflight and Coverage
 
-- Read the recon input/sink inventory and Session 01.5 decision.
+- Read the recon input/sink inventory, the Session 01.5 decision, and the
+  checklists the plan assigned to this session (for example
+  `prisma-drizzle.md` names the ORM's raw-query sinks; `go-net-http.md` names
+  `database/sql` and `os/exec` idioms). Checklist items are the candidates
+  for this stack; the rules below say how to validate them.
 - Confirm target, identity/role, parser or runtime assumptions, request limits,
   test data, and evidence path.
 - Build a matrix of endpoint × input × parser/sink × identity × candidate type.
@@ -19,11 +23,11 @@ sensitive data or escalating impact.
 
 ## Candidate Generation
 
-White-box candidates require a cited source-to-sink flow, including validation,
+Source candidates require a cited source-to-sink flow, including validation,
 encoding, parameterization, allowlists, and reachability in the selected
 deployment. Pattern matches alone remain leads.
 
-Black-box candidates require an inventoried input and a named parser hypothesis.
+Live-target candidates require an inventoried input and a named parser hypothesis.
 Do not spray generic payload lists across every parameter.
 
 For each candidate state a falsifiable claim, such as: “Input `q` changes the
@@ -43,8 +47,11 @@ Choose only mechanism-specific observations:
   execute external callbacks, write files, or return host data.
 - **Template injection**: harmless arithmetic or inert render markers; do not
   access objects, files, environment variables, or commands.
-- **Path handling**: owned canary files within an authorized fixture; never read
-  operating-system, application-secret, or user files.
+- **Path handling**: owned canary files within an authorized fixture. In the
+  sandbox a well-known non-sensitive system witness such as `/etc/passwd` or
+  `win.ini` is acceptable as the traversal signal; on staging use only owned
+  canaries. Never read application secrets, credentials, or user files
+  anywhere.
 - **XML/entity handling**: a controlled callback or non-sensitive local fixture;
   no file or secret retrieval.
 - **Deserialization**: parser/type behavior or a benign controlled side effect;
@@ -79,5 +86,4 @@ Write `02-injection/report.md` with:
    confidence, impact, remediation, validation criteria, and citations;
 3. tested defenses and the exact flows they covered;
 4. unresolved candidates and missing inputs;
-5. evidence index and optional Session 10 candidate reason only when additional
-   optional human-authorized impact validation would materially change a decision.
+5. evidence index.

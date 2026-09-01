@@ -12,17 +12,22 @@ supported schemes, DNS and redirect behavior, parser/normalization steps,
 allow/deny rules, proxy/egress controls, response disclosure, and callback
 availability.
 
+Open the assigned checklists first; `go-net-http.md` and the framework
+checklists name the outbound client idioms and redirect settings to trace.
+
 Use only an operator-controlled callback/canary service and explicitly
-authorized target hosts. If no safe callback or live fetcher exists, use
+authorized target hosts. `ensphere callback` provides a local listener when
+the target can reach the analyst machine; otherwise use a callback service the
+operator supplies. If no safe callback or live fetcher exists, use
 source/configuration evidence and mark dynamic coverage accordingly.
 
 ## Candidate Generation
 
-White-box review traces the user-controlled URL/host/path through parsing,
+Source review traces the user-controlled URL/host/path through parsing,
 resolution, redirects, proxy selection, request creation, response handling,
 and egress policy.
 
-Black-box candidates require behavior suggesting a server-side fetch—not merely
+Live-target candidates require behavior suggesting a server-side fetch—not merely
 client-side navigation, browser prefetch, or reflected input.
 
 ## Controlled Validation

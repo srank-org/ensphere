@@ -17,24 +17,24 @@ Cover only relevant categories:
 - documentation/schema and deprecated-version exposure;
 - object/property authorization cross-checks;
 - mass assignment and over-posting;
-- pagination/filter/export boundaries;
-- rate-limit behavior under an approved bounded burst;
-- GraphQL introspection, field authorization, batching, and complexity controls;
+- GraphQL introspection, field authorization, and batching;
 - webhook destination and signature handling;
 - content-type/parser consistency;
 - WebSocket/RPC origin, authentication, and operation authorization.
 
 Defer underlying injection/auth/authz/XSS/SSRF conclusions to the earlier
 session evidence; cite rather than retest them unless the API-specific transport
-creates a distinct claim.
+creates a distinct claim. Pagination caps, export size, rate limits, and
+GraphQL cost belong to Session 08.5; record the endpoints here and hand them
+over. Open the assigned checklists first.
 
 ## Candidate Generation
 
-White-box review maps schemas/serializers/binders, middleware ordering, field
+Source review maps schemas/serializers/binders, middleware ordering, field
 allowlists, pagination caps, version routing, rate-limit keys, GraphQL resolvers,
 webhook validators, and transport authentication.
 
-Black-box review uses supplied specifications and observed application traffic.
+Live-target review uses supplied specifications and observed application traffic.
 Do not discover APIs through broad version/path brute force.
 
 ## Controlled Validation
@@ -47,12 +47,8 @@ Do not discover APIs through broad version/path brute force.
 - **Mass assignment**: add one benign canary property to an owned test object,
   verify persistence and authorization, then restore it. Do not set role/admin,
   billing, ownership, or security-sensitive fields merely for proof.
-- **Pagination/export**: use synthetic data and bounded page sizes. Verify caps,
-  ownership filtering, and cursor binding without dumping datasets.
-- **Rate limits**: agree an endpoint-specific burst count/window with the
-  operator, begin below that limit, and stop on throttling, instability, or the
-  action cap. This is behavior measurement, not load testing; do not evade the
-  limiter or distribute sources.
+- **Pagination/export ownership**: verify ownership filtering and cursor
+  binding with synthetic data; size caps are measured in Session 08.5.
 - **GraphQL**: use a harmless query and at most a two-operation batch unless a
   different bound is explicitly approved. Do not run deeply nested or resource-
   exhaustion queries.

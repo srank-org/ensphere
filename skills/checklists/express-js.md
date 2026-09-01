@@ -1,80 +1,103 @@
-# Express.js Security Checklist
+# Express.js Checklist
 
-Attack surface specific to Express.js and Node.js web applications.
+Load this checklist when recon records `express` in `package.json`
+dependencies, `app.use(` / `express.Router()` in server source, or an
+`app.listen(` entry point. Shared endpoint classes for rate limiting live in
+[abuse-and-cost.md](abuse-and-cost.md).
 
-## NoSQL Injection
+## Data layer
 
-- [ ] MongoDB operator injection — user input passed to Mongoose/MongoDB queries without sanitization allows `$gt`, `$ne`, `$regex` operators in JSON body
-  -> payloads: `ensphere payloads nosql --technique operator_injection`
-  -> verify: `ensphere verify nosql --technique operator_injection --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./src --category nosql`
+- [ ] **Raw SQL in Knex, Sequelize, or pg** — `knex.raw()`, `sequelize.query()`, or `pool.query()` with template-string interpolation bypasses parameterization.
+  - Look for: `.raw(\``, `sequelize.query(\``, `query(\`...${` in `**/*.{js,ts}`.
+  - Measure: `ensphere verify sqli --technique error_based --url <endpoint> --param <param> --in-scope <pattern>`; `ensphere scan ./src --category sqli`.
+  - Fix: use bound parameters (`?` / `$1`) or query-builder methods.
 
-## Prototype Pollution
+- [ ] **MongoDB operator injection** — request JSON passed straight into Mongoose or driver queries accepts `$gt`, `$ne`, `$regex`, `$where`.
+  - Look for: `find(req.body`, `findOne({ ... req.query`, `$where`.
+  - Measure: `ensphere verify nosql --technique operator_injection --url <endpoint> --param <param> --in-scope <pattern>`; `ensphere scan ./src --category nosql`.
+  - Fix: validate body shape with a schema (zod, joi) and cast fields to primitives; `express-mongo-sanitize`.
 
-- [ ] Prototype pollution via `merge`, `extend`, or `defaultsDeep` — user-controlled JSON with `__proto__` or `constructor.prototype` keys poisons `Object.prototype`
-  -> payloads: `ensphere payloads prototype_pollution --technique proto_assignment`
-  -> verify: `ensphere verify protopollution --technique proto_assignment --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./src --category prototype_pollution`
+- [ ] **Unbounded list queries** — `limit` taken from the query string without a ceiling, or no limit at all.
+  - Look for: `.limit(req.query.limit`, `findAll()` without `limit` on user-facing routes.
+  - Measure: `ensphere verify limits --technique pagination --param limit --values 1,100,10000 --in-scope <pattern> (planned)`; otherwise `manual: request with a large limit and record returned count and body bytes`.
+  - Fix: clamp `limit` server-side; cursor pagination for large tables.
 
-## Path Traversal
+## Input handling
 
-- [ ] Path traversal via `express.static` or `res.sendFile` — user-controlled path segments resolve to files outside intended directory
-  -> payloads: `ensphere payloads lfi --technique directory_traversal`
-  -> verify: `ensphere verify lfi --url <endpoint> --param <param> --in-scope <pattern>`
+- [ ] **Prototype pollution via deep merge** — `merge`, `extend`, `defaultsDeep`, or hand-written recursive merges on request JSON honor `__proto__` and `constructor.prototype`.
+  - Look for: `lodash.merge`, `deepmerge`, `Object.assign` in recursive helpers, `qs` with `allowPrototypes`.
+  - Measure: `ensphere verify protopollution --technique proto_assignment --url <endpoint> --method POST --in-scope <pattern>`.
+  - Fix: upgrade merge libraries; reject `__proto__`/`constructor` keys at the validator; create objects with `Object.create(null)` where needed.
 
-## JWT Implementation
+- [ ] **Path traversal through `res.sendFile` / `express.static`** — user-controlled path segments resolve outside the intended directory.
+  - Look for: `sendFile(path.join(base, req.params`, `res.download(req.query`, `createReadStream(` with request data.
+  - Measure: `ensphere verify lfi --url <endpoint> --param <param> --in-scope <pattern>`; `ensphere scan ./src --category lfi`.
+  - Fix: resolve and verify the final path starts with the base directory; use `root` option on `sendFile`.
 
-- [ ] Insecure `jsonwebtoken` usage — missing `algorithms` whitelist in `jwt.verify()` allows algorithm confusion (RS256 to HS256) or `none` algorithm bypass
-  -> payloads: `ensphere payloads jwt --technique alg_none`
-  -> verify: `ensphere verify jwt --technique alg_none --url <endpoint> --in-scope <pattern>`
+- [ ] **SSRF through `axios`, `node-fetch`, `got`, `undici`** — user-supplied URL fetched server-side.
+  - Look for: `axios.get(req.`, `fetch(req.body.url`, webhook and preview handlers.
+  - Measure: `ensphere verify ssrf --url <endpoint> --param <param> --in-scope <pattern>`; `ensphere scan ./src --category ssrf`.
+  - Fix: allowlist hosts, resolve DNS and reject private ranges, disable redirects.
 
-## Security Headers
+## Authentication and sessions
 
-- [ ] Missing Helmet middleware — no `helmet()` middleware or individual headers (`X-Content-Type-Options`, `X-Frame-Options`, `CSP`, `HSTS`) not configured
-  -> payloads: manual — inspect response headers for missing security headers
-  -> verify: `ensphere verify clickjacking --url <endpoint> --in-scope <pattern>`
+- [ ] **`jsonwebtoken` without an `algorithms` allowlist** — enables `none` and RS256-to-HS256 confusion.
+  - Look for: `jwt.verify(token, secret)` with no `{ algorithms: [...] }`; `jwt.decode(` used for auth decisions.
+  - Measure: `ensphere verify jwt --technique alg_none --url <endpoint> --token <valid-jwt> --in-scope <pattern>`; `ensphere scan ./src --category jwt`.
+  - Fix: pass `algorithms`; use `verify`, never `decode`, for trust decisions.
 
-## CORS Configuration
+- [ ] **`express-session` defaults** — `MemoryStore` in production, missing `secure`/`httpOnly`/`sameSite`, weak secret, no session regeneration on login.
+  - Look for: `session({` options; `req.session.regenerate` absent in the login handler.
+  - Measure: `manual: log in and record Set-Cookie attributes and whether the session ID changed after authentication`.
+  - Fix: Redis store; cookie flags; `regenerate()` on login.
 
-- [ ] Overly permissive `cors()` middleware — `origin: true` or `origin: '*'` with `credentials: true` allows cross-origin credential theft
-  -> payloads: manual — send request with `Origin: https://attacker.com` and inspect CORS headers
-  -> verify: `ensphere verify cors --url <endpoint> --in-scope <pattern>`
+- [ ] **Missing auth middleware on a router** — routes mounted without the auth guard, or the guard applied after the route.
+  - Look for: `app.use("/api"` ordering relative to auth middleware; routers with no `requireAuth`.
+  - Measure: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-jwt> --in-scope <pattern>`.
+  - Fix: apply the guard at router level before routes; deny by default.
 
-## Rate Limiting
+## Headers and CORS
 
-- [ ] Missing rate limiting on auth endpoints — no `express-rate-limit` on `/login`, `/register`, `/forgot-password` enables brute force and credential stuffing
-  -> payloads: manual — rapid-fire requests to auth endpoints and observe response patterns
-  -> verify: `ensphere verify ratelimit --url <endpoint> --in-scope <pattern>`
+- [ ] **No Helmet or equivalent** — missing `X-Content-Type-Options`, `X-Frame-Options`/`frame-ancestors`, HSTS, CSP.
+  - Look for: `helmet(` in app setup.
+  - Measure: `ensphere verify clickjacking --url <endpoint> --in-scope <pattern>`; `manual: record response headers`.
+  - Fix: `app.use(helmet())` with a real CSP.
 
-## Session Management
+- [ ] **Permissive `cors()`** — `origin: true` or `*` together with `credentials: true`.
+  - Look for: `cors({` options; reflected `Origin`.
+  - Measure: `ensphere verify cors --url <endpoint> --in-scope <pattern>`.
+  - Fix: explicit origin list; no credentials with wildcards.
 
-- [ ] Insecure `express-session` configuration — default `MemoryStore` in production, missing `secure`, `httpOnly`, `sameSite` flags, or weak session secret
-  -> payloads: `ensphere payloads auth_bypass --technique session_fixation`
-  -> verify: manual — set session cookie before login, authenticate, check if same session ID persists post-auth
+- [ ] **CSRF on cookie-authenticated mutations** — no token or origin check on `POST`/`PUT`/`DELETE` when sessions live in cookies.
+  - Look for: `csurf`/`csrf-csrf` absent; `sameSite` not `lax`/`strict`.
+  - Measure: `ensphere verify csrf --url <endpoint> --method POST --in-scope <pattern>`.
+  - Fix: `SameSite` cookies plus an origin check or double-submit token.
 
-## File Upload
+## Uploads
 
-- [ ] Unrestricted multer upload — missing `fileFilter`, `limits.fileSize`, or filename sanitization allows oversized files, path traversal in filenames, or executable uploads
-  -> payloads: `ensphere payloads file_upload --technique extension_bypass`
-  -> verify: manual — upload files with double extensions (`.php.jpg`), oversized payloads, or path traversal filenames
+- [ ] **Multer without limits or filter** — unlimited size, any type, original filename reused on disk.
+  - Look for: `multer({` without `limits.fileSize` and `fileFilter`; `file.originalname` used in the destination path.
+  - Measure: `ensphere verify fileupload --technique content_type_mismatch --url <upload-endpoint> --filename test.html --field file --in-scope <pattern>`.
+  - Fix: `limits`, `fileFilter` by magic bytes, random server-side names, object storage with fixed content type.
 
-## Template Injection
+## Rate limiting and abuse
 
-- [ ] Server-side template injection in EJS or Pug — user input interpolated into template strings or passed as template options enables code execution
-  -> payloads: `ensphere payloads ssti --runtime node --technique expression_eval`
-  -> verify: `ensphere verify ssti --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./src --category ssti`
+- [ ] **No limiter on auth endpoints** — `/login`, `/register`, `/forgot-password`, OTP verify accept unlimited attempts.
+  - Look for: `express-rate-limit` or `rate-limiter-flexible` applied to those routes.
+  - Measure: `ensphere verify ratelimit --url <login-endpoint> --method POST --body '<invalid-credentials-json>' --burst-count <approved> --window-sec 10 --in-scope <pattern>`.
+  - Fix: `express-rate-limit` per route keyed by IP and by account identifier.
 
-## SQL Injection
+- [ ] **No limiter on expensive or billed endpoints** — uploads, search, export, email/SMS send, payment intents, LLM or third-party API calls run without per-user caps.
+  - Look for: handlers calling `nodemailer`, `twilio`, `stripe`, `openai`, S3/R2 SDKs, image processing (`sharp`), PDF generation (`puppeteer`); check each for a limiter.
+  - Measure: `ensphere verify ratelimit` with an approved burst on one endpoint per class; record `429` onset or its absence.
+  - Fix: per-route limiters with tighter windows; job queues with per-user concurrency.
 
-- [ ] Raw SQL in Knex or Sequelize — `knex.raw(userInput)`, `sequelize.query(userInput)`, or string interpolation in query builders bypasses parameterization
-  -> payloads: `ensphere payloads sqli --technique error_based`
-  -> verify: `ensphere verify sqli --technique error_based --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./src --category sqli`
+- [ ] **Limiter store is in-memory across replicas** — `express-rate-limit`'s default `MemoryStore` counts per process, so limits multiply by replica count and reset on restart.
+  - Look for: `store:` option absent while the app runs on PM2 cluster, Kubernetes replicas, or serverless.
+  - Measure: `manual: source and deployment review`.
+  - Fix: `rate-limit-redis` or `@upstash/ratelimit` backed by a shared store.
 
-## SSRF
-
-- [ ] SSRF via `axios`, `node-fetch`, or `got` — user-controlled URLs passed to HTTP clients without validation reach internal services, cloud metadata, or localhost
-  -> payloads: `ensphere payloads ssrf --technique metadata_access`
-  -> verify: `ensphere verify ssrf --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./src --category ssrf`
+- [ ] **Body size limits** — `express.json()` / `express.urlencoded()` at the default 100 kB or raised without reason; proxy `client_max_body_size` unset.
+  - Look for: `express.json({ limit:`; nginx or ingress config.
+  - Measure: `ensphere verify limits --technique upload_size --sizes 1048576,10485760 --field file (planned)`; otherwise `manual: post one approved oversized body and record the status`.
+  - Fix: explicit small limits per route; larger limits only on upload routes.

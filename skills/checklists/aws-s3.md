@@ -1,64 +1,77 @@
-# AWS S3 Security Checklist
+# AWS S3 Checklist
 
-Attack surface specific to Amazon S3 bucket configuration and access controls.
+Load this checklist when recon records `aws_s3_bucket` resources in Terraform or CloudFormation, the `@aws-sdk/client-s3` or `boto3` S3 client, or an `aws` CLI profile in scope. Unlike R2, S3 bills egress per GB, so a public or hotlinked bucket is a direct cost exposure as well as a data exposure. Shared abuse patterns are in `abuse-and-cost.md`.
 
-## Public Access Blocks
+## Prerequisites
 
-- [ ] Missing S3 Block Public Access — account-level or bucket-level `PublicAccessBlockConfiguration` not set; buckets can be made public via ACL or policy changes
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+`ensphere cloud storage` shells out to the `aws` CLI. If `aws sts get-caller-identity` fails, tell the operator to configure a read-only profile (`aws configure` or SSO login) for the staging account and record live items as `blocked` until then. Terraform review proceeds without credentials: `ensphere scan ./infra --category iac_terraform --absence-check`.
 
-## Bucket Encryption
+All live measurements below use `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`, which records public-access block, ACL, policy, encryption, versioning, and logging as raw provider output. Interpret the output; the command does not.
 
-- [ ] Missing default encryption — bucket lacks `ServerSideEncryptionConfiguration` (SSE-S3 or SSE-KMS); objects stored unencrypted at rest
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+## Public access
 
-## Versioning
+- [ ] **Block Public Access disabled** — without the account and bucket level block, a single ACL or policy change can expose the bucket.
+  - Look for: `aws_s3_bucket_public_access_block` per bucket with all four flags true; account-level block.
+  - Measure: `ensphere cloud storage` output field for public access block.
+  - Fix: enable all four settings at the account level and per bucket.
 
-- [ ] Versioning disabled — bucket versioning not enabled; deleted or overwritten objects are irrecoverable, and MFA Delete cannot be enforced
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+- [ ] **Wildcard principal in bucket policy** — `"Principal": "*"` without a restricting condition is public regardless of ACLs.
+  - Look for: `aws_s3_bucket_policy` documents; `Principal` `*` or `{"AWS":"*"}`; conditions such as `aws:PrincipalOrgID`, `aws:SourceVpce`.
+  - Measure: `ensphere cloud storage` policy output.
+  - Fix: explicit principals; CloudFront origin access control for public content.
 
-## Logging
+- [ ] **Legacy ACL grants** — `AllUsers` or `AuthenticatedUsers` grantees on the bucket or objects.
+  - Look for: `acl = "public-read"`; object ACLs set at upload time; Object Ownership not set to bucket owner enforced.
+  - Measure: `ensphere cloud storage` ACL output.
+  - Fix: `BucketOwnerEnforced` ownership, which disables ACLs entirely.
 
-- [ ] Server access logging disabled — no `LoggingConfiguration` on bucket; access patterns, unauthorized requests, and data exfiltration are unauditable
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+- [ ] **Cross-account grants without conditions** — external account ARNs allowed `GetObject` or `PutObject`.
+  - Look for: foreign account IDs in policy principals; missing `aws:PrincipalOrgID` condition.
+  - Measure: `ensphere cloud storage` policy output.
+  - Fix: condition keys on every cross-account statement.
 
-## Lifecycle Policies
+## Uploads and presigned URLs
 
-- [ ] Missing lifecycle policies — no rules for transitioning to Glacier, expiring incomplete multipart uploads, or deleting old versions; increases storage cost and data exposure window
-  -> verify: manual — `aws s3api get-bucket-lifecycle-configuration --bucket <bucket>`
+- [ ] **Presigned POST or PUT without constraints** — no `content-length-range`, fixed key, or content type lets a leaked URL upload anything.
+  - Look for: `createPresignedPost` conditions; `getSignedUrl` with `ContentType` and `ContentLength`; expiry values.
+  - Measure: `ensphere verify fileupload --url <presigned-url> --method PUT --filename test.html --mime-type text/html --technique content_type_mismatch --in-scope <bucket-host>` using an operator-generated fixture URL.
+  - Fix: `content-length-range` in POST policies, signed type and length for PUT, minutes-long expiry.
 
-## CORS Configuration
+- [ ] **No per-user upload quota or limiter on the presign endpoint** — one account can fill the bucket.
+  - Look for: quota checks before presigning; a limiter on the endpoint; lifecycle rule aborting incomplete multipart uploads.
+  - Measure: `manual: read the presign handler and record whether it enforces a quota`; with approval `ensphere verify ratelimit --url <origin>/api/upload-url --method POST --token <user-token> --burst-count <approved> --window-sec 10 --in-scope <host>`.
+  - Fix: quota table, endpoint limiter, `AbortIncompleteMultipartUpload` rule.
 
-- [ ] Overly permissive CORS — `AllowedOrigins: ["*"]` or `AllowedMethods: ["*"]` on bucket CORS configuration enables cross-origin reads from any domain
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+## Cost exposure
 
-## Presigned URL Scope
+- [ ] **Public objects served directly from S3 without CloudFront** — every download bills egress from S3 at the highest rate and cannot be cached or rate limited.
+  - Look for: application URLs pointing at `s3.amazonaws.com` or a bucket website endpoint.
+  - Measure: `manual: record which public asset URLs resolve to S3 directly`.
+  - Fix: CloudFront distribution with OAC, WAF rate rules, and signed URLs or cookies for private content.
 
-- [ ] Presigned URLs with excessive scope — presigned URLs generated with long expiry, no content-type restriction, or broad path prefix allow abuse after leak
-  -> payloads: manual — generate presigned URL and test uploading unexpected content types or to unexpected paths
-  -> verify: manual — review presign generation code for expiry duration, conditions, and path constraints
+- [ ] **Requester Pays and lifecycle not considered** — large shared datasets without Requester Pays, and buckets without lifecycle rules, grow cost without bound.
+  - Look for: `request_payer` setting; `aws_s3_bucket_lifecycle_configuration`.
+  - Measure: `manual: aws s3api get-bucket-lifecycle-configuration --bucket <bucket>` and `aws s3api get-bucket-request-payment --bucket <bucket>`.
+  - Fix: lifecycle transitions and expirations; Requester Pays for public datasets.
 
-## Bucket Policy Wildcards
+## Data protection
 
-- [ ] Wildcard principals in bucket policy — `"Principal": "*"` or `"Principal": {"AWS": "*"}` without condition keys grants public access regardless of Block Public Access
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+- [ ] **Default encryption missing** — objects at rest unencrypted, or SSE-KMS without a key policy.
+  - Look for: `aws_s3_bucket_server_side_encryption_configuration`.
+  - Measure: `ensphere cloud storage` encryption output.
+  - Fix: SSE-S3 at minimum; SSE-KMS with a scoped key for sensitive data.
 
-## ACL Grants
+- [ ] **Versioning, Object Lock, and MFA Delete** — deletion or overwrite is unrecoverable for buckets that hold records.
+  - Look for: `versioning`, `object_lock_configuration`, MFA delete status.
+  - Measure: `ensphere cloud storage` versioning output; `manual: aws s3api get-object-lock-configuration --bucket <bucket>`.
+  - Fix: versioning on data buckets; Object Lock for compliance retention.
 
-- [ ] Legacy ACL grants — `AllUsers` or `AuthenticatedUsers` grantee in bucket or object ACL provides public read/write access outside of policy controls
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
+- [ ] **Access logging or CloudTrail data events disabled** — abuse and exfiltration cannot be investigated.
+  - Look for: `aws_s3_bucket_logging`; CloudTrail data event selectors for the bucket.
+  - Measure: `ensphere cloud storage` logging output; `ensphere cloud logging --provider aws --in-scope "aws://<account_id>"`.
+  - Fix: server access logging to a separate bucket; data events in CloudTrail for sensitive buckets.
 
-## Object Lock
-
-- [ ] Object Lock not configured — compliance-sensitive buckets lack Object Lock (WORM); objects can be deleted or overwritten, violating retention requirements
-  -> verify: manual — `aws s3api get-object-lock-configuration --bucket <bucket>`
-
-## Cross-Account Access
-
-- [ ] Unintended cross-account access — bucket policy grants `s3:GetObject` or `s3:PutObject` to external account ARNs without condition keys (`aws:PrincipalOrgID`, `aws:SourceVpc`)
-  -> verify: `ensphere cloud storage --provider aws --bucket <bucket> --in-scope "aws://<account_id>"`
-
-## MFA Delete
-
-- [ ] MFA Delete not enabled — versioned buckets without MFA Delete allow permanent deletion of object versions without multi-factor authentication
-  -> verify: manual — `aws s3api get-bucket-versioning --bucket <bucket>` and check `MFADelete` status
+- [ ] **CORS allows any origin** — browser reads and writes from other sites.
+  - Look for: `aws_s3_bucket_cors_configuration` with `*` origins.
+  - Measure: `ensphere verify cors --url https://<bucket-host>/<fixture-key> --in-scope <bucket-host>`.
+  - Fix: exact origins and methods.

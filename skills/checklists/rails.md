@@ -1,77 +1,104 @@
-# Ruby on Rails Security Checklist
+# Ruby on Rails Checklist
 
-Attack surface specific to Ruby on Rails applications.
+Load this checklist when recon records `rails` in the `Gemfile`, a
+`config/routes.rb`, or `bin/rails`. Shared endpoint classes for rate
+limiting live in [abuse-and-cost.md](abuse-and-cost.md).
 
-## Mass Assignment
+## Data layer
 
-- [ ] Strong parameters bypass — `params.permit!` or missing `require().permit()` allows setting arbitrary model attributes including `admin`, `role`
-  -> payloads: manual — POST/PUT with additional fields (`admin: true`, `role: superadmin`)
-  -> verify: `ensphere verify authz --url <endpoint> --in-scope <pattern>`
+- [ ] **String fragments in ActiveRecord** — `where("name = '#{params[:q]}'")`, `order(params[:sort])`, `pluck(params[:col])`, `Arel.sql(user_input)`.
+  - Look for: `where("`, `order(params`, `group(params`, `Arel.sql(` in `app/**/*.rb`.
+  - Measure: `ensphere verify sqli --technique error_based --url <endpoint> --param <param> --in-scope <pattern>`; `ensphere scan ./app --category sqli`.
+  - Fix: hash or placeholder conditions; allowlist sortable columns.
 
-## ActiveRecord Injection
+- [ ] **Unbounded list queries** — `Model.all` rendered without pagination, or `per_page` accepted unclamped.
+  - Look for: index actions without `page`/`limit`; Kaminari or Pagy `max_per_page` unset.
+  - Measure: `ensphere verify limits --technique pagination --param per_page --values 1,100,10000 --in-scope <pattern> (planned)`; otherwise `manual: request with a large per_page and record returned count and body bytes`.
+  - Fix: Pagy with `limit_max`, or Kaminari `max_per_page`.
 
-- [ ] SQL injection via ActiveRecord — user input in `where()`, `order()`, `pluck()`, `group()`, or `having()` clauses passed as raw strings
-  -> payloads: `ensphere payloads sqli --db postgres --technique error_based`
-  -> verify: `ensphere verify sqli --technique error_based --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./app --category sqli`
+## Authorization
 
-## SQL Injection via Arel
+- [ ] **Strong parameters bypass** — `params.permit!` or attribute writes from `params` without `permit`.
+  - Look for: `permit!`, `update(params[:model])` without `require(...).permit(...)`.
+  - Measure: `ensphere verify massassignment --url <endpoint> --method PATCH --body '{"user":{"admin":true}}' --watch-fields admin --token <user-token> --in-scope <pattern>`.
+  - Fix: explicit `permit` lists; never permit `admin`, `role`, or foreign keys from users.
 
-- [ ] SQL injection through Arel nodes — `Arel.sql(user_input)` or raw SQL fragments in Arel queries bypass parameterization
-  -> payloads: `ensphere payloads sqli --db postgres --technique union`
-  -> verify: `ensphere verify sqli --technique blind_time --url <endpoint> --param <param> --in-scope <pattern>`
-  -> scan: `ensphere scan ./app --category sqli`
+- [ ] **Record lookup without scoping** — `Model.find(params[:id])` on user-owned records instead of `current_user.models.find`.
+  - Look for: `find(params[:id])` in controllers for owned resources; Pundit/CanCan `authorize` absent.
+  - Measure: `ensphere verify idor --url <endpoint>/<other-user-id> --id <other-user-id> --token <user-token> --in-scope <pattern>`.
+  - Fix: scope lookups through the association; `verify_authorized` after actions.
 
-## Marshal Deserialization
+- [ ] **Missing `authenticate_user!`** — controllers or actions without the Devise before-action.
+  - Look for: `before_action :authenticate_user!` coverage; `skip_before_action` usage.
+  - Measure: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-session> --in-scope <pattern>`.
+  - Fix: apply in `ApplicationController`; opt out explicitly for public actions.
 
-- [ ] Insecure deserialization via `Marshal.load` — deserialization of untrusted data leads to arbitrary code execution
-  -> payloads: `ensphere payloads deserialization --runtime ruby --technique deserialization_rce`
-  -> verify: manual (Ruby runtime not yet supported by deserialization verifier)
+## CSRF and sessions
 
-## Open Redirect
+- [ ] **CSRF protection skipped** — `skip_before_action :verify_authenticity_token` or `protect_from_forgery with: :null_session` on cookie-authenticated state changes.
+  - Look for: those directives in `app/controllers/**`.
+  - Measure: `ensphere verify csrf --url <endpoint> --method POST --in-scope <pattern>`.
+  - Fix: keep `:exception`; token auth for API clients.
 
-- [ ] `redirect_to` with user-controlled input — missing host validation allows redirecting to attacker-controlled domains
-  -> payloads: `ensphere payloads redirect --technique open_redirect_param`
-  -> verify: `ensphere verify redirect --url <endpoint> --param <param> --in-scope <pattern>`
+- [ ] **Session fixation** — no `reset_session` at login (Devise handles this; custom login flows often do not).
+  - Look for: custom `SessionsController#create` without `reset_session`.
+  - Measure: `manual: set a session cookie before login, authenticate, and record whether the session ID changed`.
+  - Fix: `reset_session` before setting the user.
 
-## CSRF
+- [ ] **Cookie flags** — session cookie without `secure`, `httponly`, `same_site`.
+  - Look for: `config.session_store` options; `config.force_ssl`.
+  - Measure: `manual: log in and record the Set-Cookie attributes`.
+  - Fix: `secure: true, httponly: true, same_site: :lax`; `force_ssl = true`.
 
-- [ ] Missing CSRF token validation — `skip_before_action :verify_authenticity_token` or `protect_from_forgery with: :null_session` on state-changing endpoints
-  -> payloads: `ensphere payloads csrf --technique form_auto_submit`
-  -> verify: `ensphere verify csrf --url <endpoint> --in-scope <pattern>`
+## Redirects and rendering
 
-## Authentication
+- [ ] **`redirect_to params[:return_to]`** — open redirect without host validation.
+  - Look for: `redirect_to params`, `redirect_back` with untrusted fallback.
+  - Measure: `ensphere verify redirect --url <endpoint> --param <param> --in-scope <pattern>`.
+  - Fix: `allow_other_host: false`; `url_from` in Rails 7+.
 
-- [ ] Devise auth bypass — custom authentication logic bypassing Devise guards, or missing `authenticate_user!` before_action on controllers
-  -> payloads: `ensphere payloads auth_bypass --technique forced_browsing`
-  -> verify: `ensphere verify auth --technique no_token --url <endpoint> --token <valid-jwt> --in-scope <pattern>`
+- [ ] **Unsafe HTML output** — `raw`, `html_safe`, `<%==` on user data; weak CSP.
+  - Look for: `.html_safe`, `raw(`, `<%==` in `app/views/**`; `config/initializers/content_security_policy.rb` with `unsafe-inline`.
+  - Measure: `ensphere verify xss --url <endpoint> --param <param> --payload '<svg onload=alert(1)>' --in-scope <pattern>`; `ensphere scan ./app --category xss`.
+  - Fix: default escaping; `sanitize` with an allowlist; nonce-based CSP.
 
-## Secret Key Base
+## Secrets and deserialization
 
-- [ ] `secret_key_base` exposure — hardcoded in `secrets.yml`, `credentials.yml.enc` with committed master key, or environment variable leaking via error pages
-  -> payloads: manual — search git history, `config/secrets.yml`, `config/credentials.yml.enc`, `config/master.key`
-  -> scan: `ensphere scan ./config --category secrets`
+- [ ] **`master.key` or `secret_key_base` committed** — invalidates cookie signing and encrypted credentials.
+  - Look for: `config/master.key`, `config/credentials/*.key` in git history; `secret_key_base` literal in `secrets.yml`.
+  - Measure: `manual: git log --all -- config/master.key config/secrets.yml`.
+  - Fix: rotate; load from environment; purge history if it was pushed.
 
-## Content Security Policy
+- [ ] **`Marshal.load` or YAML.load on untrusted data** — code execution on deserialization.
+  - Look for: `Marshal.load(`, `YAML.load(` (not `safe_load`), `Oj.load` with default modes on request or cache data.
+  - Measure: `manual: source review; confirm inputs are internal only`.
+  - Fix: `YAML.safe_load`; JSON for cross-boundary data.
 
-- [ ] Missing or weak CSP — no `content_security_policy` block in initializer, or overly permissive `unsafe-inline`, `unsafe-eval` directives
-  -> payloads: `ensphere payloads xss --technique reflected`
-  -> verify: `ensphere verify xss --url <endpoint> --param <param> --payload "<script>alert(1)</script>" --in-scope <pattern>`
+## Uploads
 
-## File Upload
+- [ ] **Active Storage without validation** — no content-type or size validation on attachments; files served with original type.
+  - Look for: `has_one_attached` without a validator gem (`active_storage_validations`) or model validation.
+  - Measure: `ensphere verify fileupload --technique content_type_mismatch --url <upload-endpoint> --filename test.html --field file --in-scope <pattern>`.
+  - Fix: validate content type by magic bytes and size; serve via proxy with `Content-Disposition: attachment` for untrusted types.
 
-- [ ] Active Storage upload validation — missing content-type validation or file size limits on `has_one_attached` / `has_many_attached`
-  -> payloads: `ensphere payloads file_upload --technique extension_bypass`
-  -> verify: manual — upload executable or HTML file and check if it is served with original content-type
+## Rate limiting and abuse
 
-## Session Fixation
+- [ ] **No limiter on auth endpoints** — sign in, sign up, password reset, OTP verify without throttling.
+  - Look for: `rack-attack` initializer (`Rack::Attack.throttle`), Rails 8 `rate_limit` in controllers, Devise `lockable`.
+  - Measure: `ensphere verify ratelimit --url <sign-in-endpoint> --method POST --body '<invalid-credentials>' --burst-count <approved> --window-sec 10 --in-scope <pattern>`.
+  - Fix: `Rack::Attack.throttle("logins/email", limit: 5, period: 60) { |req| req.params.dig("user", "email") if req.path == "/users/sign_in" && req.post? }`.
 
-- [ ] Session fixation via `reset_session` omission — session ID not regenerated after authentication, allowing attacker to fixate session before login
-  -> payloads: `ensphere payloads auth_bypass --technique session_fixation`
-  -> verify: manual — set session cookie before login, authenticate, check if same session ID persists post-auth
+- [ ] **No limiter on expensive or billed endpoints** — uploads, search, export, mailers, SMS, payment, and third-party API calls without per-user caps.
+  - Look for: controllers invoking `deliver_now`/`deliver_later`, Twilio, Stripe, S3/R2, image processing; a matching `throttle` rule.
+  - Measure: `ensphere verify ratelimit` with an approved burst on one endpoint per class; record `429` onset or its absence.
+  - Fix: per-path throttles keyed by `current_user`; background jobs with per-user concurrency.
 
-## Insecure Cookie Settings
+- [ ] **Limiter cache is per instance** — `Rack::Attack.cache.store` defaults to `Rails.cache`; a memory store does not share counts across dynos or pods.
+  - Look for: `config.cache_store` in production while running multiple instances.
+  - Measure: `manual: source and deployment review`.
+  - Fix: Redis or Memcached cache store.
 
-- [ ] Missing `secure`, `httponly`, or `samesite` flags on session cookie — session cookie transmitted over HTTP or accessible via JavaScript
-  -> payloads: manual — inspect `Set-Cookie` headers for missing flags
-  -> verify: `ensphere verify cors --url <endpoint> --in-scope <pattern>`
+- [ ] **Body size limits** — no request size cap at the proxy; Puma accepts large bodies.
+  - Look for: nginx `client_max_body_size`; load balancer settings; `Rack::Attack.blocklist` by `Content-Length`.
+  - Measure: `ensphere verify limits --technique upload_size --sizes 1048576,10485760 --field file (planned)`; otherwise `manual: post one approved oversized body and record the status`.
+  - Fix: enforce at the proxy; larger cap only for upload routes.

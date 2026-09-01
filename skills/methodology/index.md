@@ -1,34 +1,24 @@
 # Methodology Index
 
-All sessions inherit the scope, controlled-validation, stop, and reporting
-rules in [../shared/workflow-contract.md](../shared/workflow-contract.md) and
-[../shared/evidence-standards.md](../shared/evidence-standards.md).
+Every session inherits [../shared/contract.md](../shared/contract.md).
+Open the checklists the plan assigned to the session alongside the
+methodology file.
 
-| Session | Methodology | Primary artifact |
-|---------|-------------|------------------|
-| 01 | [Recon](01-recon.md) | Provenance-backed inventories and target profile |
-| 01.5 | [Session plan](01.5-session-plan.md) | Validated applicability/coverage plan |
+| Session | File | Primary artifact |
+|---------|------|------------------|
+| 01 | [Recon](01-recon.md) | Stack profile, surface inventories, `target-profile.yaml` |
+| 01.5 | [Plan](01.5-session-plan.md) | `assessment-plan.yaml` with session decisions and assigned checklists |
 | 02 | [Injection](02-injection.md) | Resolved injection claims |
-| 03 | [Authentication](03-auth.md) | Resolved identity/session claims |
+| 03 | [Authentication](03-auth.md) | Resolved identity and session claims |
 | 04 | [Authorization](04-authz.md) | Tested subject-object-operation matrix |
 | 05 | [XSS](05-xss.md) | Tested render-context matrix |
-| 06 | [SSRF](06-ssrf.md) | Tested outbound-fetch policy matrix |
-| 07 | [Cloud](07-cloud.md) | Read-only cloud/IaC findings and coverage |
-| 08 | [API](08-api.md) | API-control findings and coverage |
-| 09 | [Assessment report](09-report.md) | Complete report, registry, and evidence appendix |
-| 10 | [Human-authorized impact validation](10-impact-validation.md) | Optional selected-finding outcomes |
-| 11 | [Validation-aware report](11-final-report.md) | Optional derived report preserving Session 09 status |
+| 06 | [SSRF](06-ssrf.md) | Tested outbound-fetch matrix |
+| 07 | [Cloud and platform](07-cloud.md) | Read-only configuration findings; appendices 07a to 07f |
+| 08 | [API](08-api.md) | API-control findings |
+| 08.5 | [Abuse and cost](08.5-abuse.md) | Missing limiters, caps, and quotas with fixes |
+| 08.7 | [Chains and workflows](08.7-chains.md) | Chains observed end to end in the sandbox, or marked as risk scenarios |
+| 09 | [Report](09-report.md) | Fix list, missing controls, checks executed, registry |
 
-Sessions 01–09 form the complete assessment. Session 10 must be explicitly
-enabled and selected, requires exact human authorization, names either the
-human or AI as executor, and cannot be entered automatically. Session 11 exists
-only to report valid Session 10 outcomes as a separate dimension.
-
-Runner gates:
-
-- `ensphere run plan` validates the Session 01.5 plan.
-- `ensphere run report` validates readiness and the Session 09 registry.
-- `ensphere run validate-impact --finding ID` prepares the optional handoff;
-  execution remains paused until the exact plan revision and executor are
-  human-authorized.
-- `ensphere run final` validates outcomes and derives the Session 11 registry.
+Sessions 01, 01.5, and 09 always run. Sessions 02 to 08.7 run according to
+the plan. Sessions 01.5 and 09 have runner gates: `ensphere run plan` and
+`ensphere run report`.

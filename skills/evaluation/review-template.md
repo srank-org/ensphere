@@ -16,7 +16,6 @@
 
 - Scope or authorization violations:
 - Stop-condition violations:
-- Optional Session 10/11 behavior:
 - Secret or personal-data exposure:
 
 ## Ground-Truth Mapping

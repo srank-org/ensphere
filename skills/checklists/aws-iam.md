@@ -1,63 +1,62 @@
-# AWS IAM Security Checklist
+# AWS IAM Checklist
 
-Attack surface specific to AWS Identity and Access Management configuration.
+Load this checklist when recon records `aws_iam_*` resources in Terraform or CloudFormation, an `aws` CLI profile in scope, or application code that assumes roles or uses long-lived access keys. IAM is where a compromised application credential turns into account-wide impact, and where a runaway principal can create expensive resources. Shared abuse patterns are in `abuse-and-cost.md`.
 
-## Least Privilege Policies
+## Prerequisites
 
-- [ ] Overly permissive IAM policies — `"Action": "*"` or `"Resource": "*"` in attached policies grant full access; check for `AdministratorAccess` on non-admin users/roles
-  -> verify: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`
+`ensphere cloud iam` shells out to the `aws` CLI and records attached and inline policies, MFA state, and access key metadata for one principal. If `aws sts get-caller-identity` fails, tell the operator to configure a read-only profile for the staging account and record live items as `blocked` until then. Terraform review proceeds without credentials: `ensphere scan ./infra --category iac_terraform`.
 
-## MFA Enforcement
+Live measurement for every item below: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`. Read the raw policy documents it returns; the command does not classify them.
 
-- [ ] MFA not enforced — IAM users without MFA can access console and API; no SCP or IAM policy denying actions without `aws:MultiFactorAuthPresent`
-  -> verify: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`
+## Application principals
 
-## Access Key Rotation
+- [ ] **Application role or user with wildcard permissions** — `"Action": "*"`, `"Resource": "*"`, or `AdministratorAccess` on the principal the application runs as.
+  - Look for: `aws_iam_role_policy`, `aws_iam_policy` documents attached to task, Lambda, EC2 instance, or CI roles.
+  - Measure: `ensphere cloud iam` policy output for each application principal.
+  - Fix: service-specific actions on specific ARNs; permission boundaries on roles created by CI.
 
-- [ ] Stale access keys — IAM user access keys older than 90 days not rotated; long-lived credentials increase blast radius of key compromise
-  -> verify: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`
+- [ ] **Long-lived access keys in application configuration** — static keys in `.env`, container images, or mobile apps instead of a role.
+  - Look for: `AWS_ACCESS_KEY_ID` in source, `.env*`, Dockerfiles, CI variables, git history; key age from the CLI output.
+  - Measure: `ensphere cloud iam` access-key metadata; `manual: grep source and git history for AKIA and ASIA prefixes`.
+  - Fix: IAM roles for compute, OIDC federation for CI, rotate and delete any key found in a repository.
 
-## Role Trust Policies
+- [ ] **Principal able to create expensive resources** — a compromised or buggy service can run up the bill through `ec2:RunInstances`, `sagemaker:*`, `bedrock:*`, `lambda:CreateFunction`, or `iam:*`.
+  - Look for: those actions in application principal policies; absence of service control policies or budgets.
+  - Measure: `ensphere cloud iam` policy output; `manual: aws budgets describe-budgets --account-id <id>`.
+  - Fix: deny lists for compute creation on application roles; AWS Budgets alerts with actions.
 
-- [ ] Overly broad trust policies — `"Principal": {"AWS": "*"}` or missing condition keys (`sts:ExternalId`, `aws:PrincipalOrgID`) in role trust policy allow cross-account assumption
-  -> verify: `ensphere cloud iam --provider aws --principal <role_arn> --in-scope "aws://<account_id>"`
+## Trust and escalation
 
-## Permission Boundaries
+- [ ] **Role trust policy open to any principal or external account** — `"Principal": {"AWS": "*"}` or a foreign account without `sts:ExternalId` or `aws:PrincipalOrgID`.
+  - Look for: `assume_role_policy` documents; third-party integrations.
+  - Measure: `ensphere cloud iam` on each role.
+  - Fix: specific principals; `ExternalId` condition for vendors.
 
-- [ ] Missing permission boundaries — delegated admin roles without permission boundaries can escalate privileges by creating new users/roles with full access
-  -> verify: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`
+- [ ] **Privilege escalation paths** — `iam:PassRole` with `*`, `iam:CreatePolicyVersion`, `iam:AttachUserPolicy`, `lambda:UpdateFunctionCode` on a function with a privileged role.
+  - Look for: those actions on non-admin principals.
+  - Measure: `ensphere cloud iam` policy output; do not exercise the path.
+  - Fix: constrain `PassRole` to named roles; remove policy-mutation actions from application principals.
 
-## Access Analyzer
+- [ ] **Missing permission boundary on delegated roles** — roles that can create users or roles without a boundary can mint full-access principals.
+  - Look for: `permissions_boundary` on roles used by CI and platform teams.
+  - Measure: `ensphere cloud iam` output field for permission boundary.
+  - Fix: a boundary policy required by SCP for every created role.
 
-- [ ] IAM Access Analyzer not enabled — no analyzer configured for the account/org; external access grants to resources go undetected
-  -> verify: manual — `aws accessanalyzer list-analyzers --region <region>` and check for active analyzers
+## Account hygiene
 
-## Root Account Usage
+- [ ] **Root account with access keys or no MFA** — the root user must have no keys and hardware MFA.
+  - Measure: `manual: aws iam get-account-summary and read AccountAccessKeysPresent and AccountMFAEnabled`.
+  - Fix: delete root keys; hardware MFA; alarm on root sign-in.
 
-- [ ] Root account active usage — root account has access keys, lacks MFA, or shows recent API activity; root should only be used for account-level operations
-  -> verify: manual — `aws iam get-account-summary` and check `AccountAccessKeysPresent`, `AccountMFAEnabled`
+- [ ] **Human users without MFA** — console or API users without an MFA condition.
+  - Look for: `aws:MultiFactorAuthPresent` deny policy; IAM Identity Center adoption.
+  - Measure: `ensphere cloud iam` MFA output per user; `manual: aws iam generate-credential-report`.
+  - Fix: Identity Center with MFA; deny-without-MFA policy for legacy users.
 
-## Password Policy
+- [ ] **Stale users, roles, and keys** — unused credentials are the ones nobody notices when abused.
+  - Measure: `manual: credential report fields password_last_used and access_key_last_used; aws iam get-role last-used metadata`.
+  - Fix: remove or disable after ninety days idle.
 
-- [ ] Weak password policy — IAM password policy allows short passwords, no uppercase/symbol requirements, or does not enforce rotation
-  -> verify: manual — `aws iam get-account-password-policy` and check minimum length, complexity, and max age
-
-## Service Control Policies
-
-- [ ] Missing or permissive SCPs — AWS Organizations without SCPs restricting dangerous services (`iam:CreateUser`, `sts:AssumeRole` to external accounts, region restrictions)
-  -> verify: manual — `aws organizations list-policies --filter SERVICE_CONTROL_POLICY` and review attached SCPs
-
-## Cross-Account Roles
-
-- [ ] Unaudited cross-account roles — roles assumable by external accounts without logging or alerting; no CloudTrail monitoring for `AssumeRole` events from external principals
-  -> verify: `ensphere cloud iam --provider aws --principal <role_arn> --in-scope "aws://<account_id>"`
-
-## Unused Credentials
-
-- [ ] Unused IAM users and roles — users with no console/API activity in 90+ days and roles never assumed; dormant credentials are targets for compromise
-  -> verify: manual — `aws iam generate-credential-report` and review `password_last_used`, `access_key_last_used`
-
-## Inline vs Managed Policies
-
-- [ ] Excessive inline policies — inline policies attached directly to users/roles are harder to audit and lack version control; prefer managed policies for centralized governance
-  -> verify: `ensphere cloud iam --provider aws --principal <arn> --in-scope "aws://<account_id>"`
+- [ ] **No Access Analyzer or organization guardrails** — external access grants and dangerous actions go unnoticed.
+  - Measure: `manual: aws accessanalyzer list-analyzers --region <region>; aws organizations list-policies --filter SERVICE_CONTROL_POLICY`.
+  - Fix: an analyzer per region in use; SCPs denying region sprawl, root usage, and IAM mutation outside a pipeline role.

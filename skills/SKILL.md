@@ -1,167 +1,151 @@
 ---
 name: ensphere
-description: Evidence-first methodology for authorized software security assessments. Use when starting or resuming an Ensphere assessment, planning category coverage, validating candidates with deterministic measurements, producing the Session 09 report, or running optional human-authorized Sessions 10–11.
+description: Defensive security assessment of a system you own or are authorized to assess. Learns the project's stack, loads the matching checklists, runs bounded measurements with the ensphere CLI, and produces an evidence-backed report of findings, missing controls, and what was checked. Say "ensphere" to start or resume.
 ---
 
 # Ensphere
 
-Ensphere is an evidence-first assessment workflow for software the user is
-authorized to assess.
-
 > Ensphere produces verifiable facts. The analyst produces all security
 > judgments.
 
-Read [shared/workflow-contract.md](shared/workflow-contract.md) and
-[shared/evidence-standards.md](shared/evidence-standards.md) before running a
-session. Their scope, evidence, controlled-validation, stop, and reporting rules
-override examples in category files.
+Ensphere is a defensive checker. You are helping a developer find weaknesses
+and missing controls in their own system: injection, broken authentication or
+authorization, exposed storage, and endpoints that let an attacker spam the
+server or run up the bill. You prove findings only in a sandbox copy that
+cannot be hurt, never extract real data, and never send a probe to
+production.
 
-## Start or Resume
+Read [shared/contract.md](shared/contract.md) once before the first session.
+It holds the scope, evidence, stop, and reporting rules; nothing below
+overrides it. Read [shared/fundamentals.md](shared/fundamentals.md) with it:
+the stack-agnostic map of roles every system has and the invariant each must
+satisfy. That map is what you check. Stack checklists only translate it into
+a framework's idioms and are optional accelerators, never prerequisites.
+
+## How an assessment works
+
+1. **Learn the project (Session 01).** Read the repository and the running
+   target. Identify languages, frameworks, data layers, auth provider, hosting,
+   storage, and every third-party service that bills per call. Inventory the
+   attack surface. Write `01-recon/target-profile.yaml` including the `stack`
+   block.
+2. **Plan from the stack (Session 01.5).** Map the detected stack to checklist
+   files using the table in
+   [methodology/01.5-session-plan.md](methodology/01.5-session-plan.md).
+   Decide which sessions run and record the checklists to load. Run
+   `ensphere run plan` to validate the plan.
+3. **Check (Sessions 02 to 08.5).** Each session opens its methodology file
+   plus any checklists the plan assigned to it. The methodology and the
+   fundamentals say what to check; a checklist, when one exists for the
+   stack, says where that lives in this framework and the idiomatic fix.
+   Every measurement uses baseline, probe, control.
+4. **Prove (Session 08.7).** In the sandbox only, join the `likely` findings
+   and workflow candidates into chains and run each end to end, so the report
+   separates observed paths from hypothetical ones.
+5. **Report (Session 09).** Findings, missing controls with concrete fixes,
+   what was checked and found not supported, what was not checked and why.
+   `ensphere run report` verifies citations and evidence chains.
+
+Sessions 01, 01.5, and 09 always run. Sessions 02 to 08.7 run when the plan
+says they apply.
+
+## Start or resume
 
 When the user says `ensphere` or names a session:
 
-1. Locate `ensphere-pentest/config.md` and `progress.md`.
-2. If the workspace is absent, collect the first-run inputs below and initialize
-   it. Never assume authorization from repository access alone.
-3. Read `ensphere run status` output, the assessment plan, the selected
-   session's methodology, the prior session report, and any checkpoint.
-4. Confirm the selected target when the workspace contains multiple deployable
-   applications or backends. Do not silently assess every repository.
-5. State the active mode and material limits:
-   - `WHITE_BOX`: source/configuration plus an authorized live target;
-   - `BLACK_BOX`: authorized live target without source;
-   - `SOURCE_ONLY`: source/configuration without a live target.
-6. Resume the recorded candidate and coverage state. Do not repeat completed
-   probes merely because the conversation context changed.
-7. Follow the session lifecycle in the shared workflow contract.
+1. Locate `ensphere-pentest/config.md` and `progress.md`. If absent, collect
+   the first-run inputs and run `ensphere run init`. Never assume
+   authorization from repository access alone.
+2. Run `ensphere run status`. Read `next-action.md`, the assessment plan, the
+   current session's methodology, its assigned checklists, the previous
+   session report, and any checkpoint.
+3. If the workspace contains several deployable applications, confirm which
+   one is the target. Do not assess the whole monorepo silently.
+4. State the environment: the source path and the live target's tier,
+   `sandbox` or `staging`, as the contract defines them. The sandbox is where
+   proof happens; offer to stand one up if there is none. Without a live
+   target the coverage label is `source_only` and every measurement row is
+   `not_tested`; source review and missing-control findings still proceed.
+5. Resume from the recorded coverage matrix. Do not repeat completed probes.
 
-Ask for user direction when authorization, target identity, environment, or a
-material boundary cannot be established safely. Missing optional context is a
+Ask for direction when authorization, target identity, environment, or a
+material boundary cannot be established. Missing optional context is a
 coverage limitation, not permission to broaden testing.
 
-## First-Run Inputs
+First-run inputs: source path; live target URL and environment, if any, and
+target type; in-scope and out-of-scope assets; environment and stability constraints; test identities,
+roles, and tenants; prohibited actions and request limits; cloud or platform
+accounts in scope; authorization statement.
 
-Initialize with `ensphere run init` when available, or create equivalent
-workspace configuration containing:
+## Session map
 
-- selected target URL or artifact and target type;
-- source availability and path;
-- explicitly in-scope and out-of-scope assets;
-- test environment and stability constraints;
-- supplied test identities, roles, tenants, and owned/synthetic data;
-- prohibited actions and request/action limits;
-- cloud accounts/projects/subscriptions/clusters, if applicable;
-- authorization attestation;
-- optional Session 10 disabled by default.
+| Session | File | Outcome |
+|---------|------|---------|
+| 01 | [Recon](methodology/01-recon.md) | Stack profile and attack-surface inventory. |
+| 01.5 | [Plan](methodology/01.5-session-plan.md) | Session decisions and assigned checklists. |
+| 02 | [Injection](methodology/02-injection.md) | SQL, NoSQL, command, template, path, XML, header, LDAP, XPath. |
+| 03 | [Authentication](methodology/03-auth.md) | Login, session, token, reset, MFA, OAuth. |
+| 04 | [Authorization](methodology/04-authz.md) | Object, property, function, tenant, RLS. |
+| 05 | [XSS](methodology/05-xss.md) | Render contexts and client execution. |
+| 06 | [SSRF](methodology/06-ssrf.md) | Outbound fetchers and webhooks. |
+| 07 | [Cloud and platform](methodology/07-cloud.md) | AWS, GCP, Azure, Kubernetes, Cloudflare, Supabase configuration. |
+| 08 | [API](methodology/08-api.md) | Schema exposure, mass assignment, GraphQL, WebSocket, webhooks. |
+| 08.5 | [Abuse and cost](methodology/08.5-abuse.md) | Missing rate limits, billing-exposed services, storage and upload abuse. |
+| 08.7 | [Chains and workflows](methodology/08.7-chains.md) | Multi-step paths proven end to end in the sandbox; sandbox only. |
+| 09 | [Report](methodology/09-report.md) | Findings, missing controls, coverage appendix, statement. |
 
-Never place real secrets in reports, prompts, command history examples, or
-published artifacts.
+Checklists live in [checklists/](checklists/index.md). They exist for the
+most common stacks only. A stack with no checklist is assessed from the
+fundamentals and your own knowledge of it; it is never `blocked` for that
+reason.
 
-## Session Map
+## Session artifacts
 
-Read only the methodology needed for the current session and directly linked
-provider appendix.
+Each session directory contains, as applicable: `plan.md` (scope, limits,
+coverage matrix, candidates), `evidence.jsonl`, `transcripts/` or
+`artifacts/`, `checkpoint.md`, and `report.md`. Update `progress.md` only
+after the report is written.
 
-| Session | Methodology | Outcome |
-|---------|-------------|---------|
-| 01 | [Recon](methodology/01-recon.md) | Target profile and provenance-backed attack-surface inventory. |
-| 01.5 | [Session plan](methodology/01.5-session-plan.md) | Evidence-backed applicability and coverage plan. |
-| 02 | [Injection](methodology/02-injection.md) | Injection candidate resolution. |
-| 03 | [Authentication](methodology/03-auth.md) | Authentication and session-control candidate resolution. |
-| 04 | [Authorization](methodology/04-authz.md) | Object, function, and workflow authorization candidate resolution. |
-| 05 | [XSS](methodology/05-xss.md) | Render-context and client execution candidate resolution. |
-| 06 | [SSRF](methodology/06-ssrf.md) | Outbound-fetch policy candidate resolution. |
-| 07 | [Cloud](methodology/07-cloud.md) | Read-only cloud, Kubernetes, and IaC assessment. |
-| 08 | [API](methodology/08-api.md) | API-specific control candidate resolution. |
-| 09 | [Assessment report](methodology/09-report.md) | Complete decision-ready report and finding registry. |
-| 10 | [Human-authorized impact validation](methodology/10-impact-validation.md) | Optional outcomes for an explicitly selected subset. |
-| 11 | [Validation-aware report](methodology/11-final-report.md) | Optional derived report that preserves Session 09 judgments. |
+Before a long operation, write `checkpoint.md` with the current
+coverage-matrix position, completed and remaining candidates, evidence paths
+and chain state, and request counters, so a run that loses its context can
+resume rather than restart. Delete it after the session report is done.
 
-Sessions 01, 01.5, and 09 always run. Sessions 02–08 follow the evidence-backed
-applicability plan. Sessions 10–11 are not part of normal completion.
+## Using the CLI
 
-## Standard Session Artifacts
+`ensphere help` and subcommand help are the source of truth for syntax.
 
-Each session directory should contain, as applicable:
+- `ensphere scan` finds sink candidates in source. A match is a lead.
+- `ensphere payloads` selects controlled inputs. Presence in the corpus does
+  not make a payload appropriate for this scope.
+- `ensphere verify <category>` records measurements. Read the raw baseline,
+  probe, and control values yourself. Every verify command requires
+  `--in-scope`.
+- `ensphere evidence log` records manual observations into the same
+  hash-chained ledger; `ensphere evidence verify` checks it.
+- `ensphere cloud <area>` reads provider configuration through the provider
+  CLI. If the CLI is missing or logged out, tell the operator what to run and
+  mark the check blocked.
+- `ensphere cvss` scores a vector after you fix the metrics. Optional.
 
-- `plan.md`: scope, limits, coverage matrix, candidates, and controls;
-- `evidence.jsonl`: deterministic factual measurements;
-- `transcripts/` or `artifacts/`: workspace-relative supporting material;
-- `checkpoint.md`: resumable position and remaining candidates;
-- `report.md`: coverage, findings, tested defenses, limitations, and evidence
-  index.
+If a checklist command conflicts with the approved scope or a stop rule, do
+not run it.
 
-Update `progress.md` only after the report is written. Use `DONE`, `SKIPPED`,
-`BLOCKED`, or `NOT_APPLICABLE`; these are workflow states, not security
-conclusions.
+## Ending a session
 
-## Checkpoints
+1. Resolve every planned candidate or record why it is `not_tested`.
+2. Reconcile the coverage matrix with the work actually done.
+3. Verify cited evidence paths and run `ensphere evidence verify`.
+4. Write the session report, ending with the **Needs from you** list.
+5. Mark the session terminal in `progress.md`, run `ensphere run next`, and
+   continue with the next session (contract, Pacing). Stop only at a human
+   gate, or after Session 09 to present the report and the statement.
 
-Before a long operation or context boundary, record:
+## Report rules
 
-- current phase and coverage-matrix position;
-- completed candidate IDs and their resolution;
-- remaining candidates and why they matter;
-- evidence paths and latest hash-chain state;
-- target identity/role/state needed to resume;
-- request/action counters and stop conditions.
-
-Delete the checkpoint only after the session report and progress update are
-complete.
-
-## Tool Use
-
-Use Ensphere as the deterministic measurement layer. Consult `ensphere help`
-and subcommand help for current CLI syntax instead of relying on duplicated
-command catalogs in this skill.
-
-- `ensphere scan`, sink patterns, and source citations create candidates; they
-  do not confirm vulnerabilities.
-- payload queries select controlled inputs; a payload's presence in the corpus
-  does not make it appropriate for the current scope.
-- verify commands record measurements. Read raw baseline/probe/control output
-  and apply the evidence standard; never inherit a conclusion from a threshold.
-- external scanners remain source-provided leads until corroborated.
-- calculate CVSS v4.0 only after the analyst fixes the metric inputs.
-- if a CLI example conflicts with the approved scope or shared stop rules, do
-  not run it.
-
-## End Protocol
-
-1. Resolve every planned candidate or record why it remains `not_tested`.
-2. Reconcile the coverage matrix with actual work.
-3. Verify cited evidence paths and evidence-chain state.
-4. Write the session report using the category methodology.
-5. Mark the session terminal and prepare only the next applicable session.
-6. Tell the user the result, material limitations, and next session.
-
-Do not automatically continue across sessions.
-
-After Session 09, the assessment is complete. Do not offer, enter, or execute
-Session 10 unless the human explicitly enables it and selects finding IDs with
-`ensphere run validate-impact`. For every selected finding, prepare the exact
-bounded plan and pause. A human must then authorize that plan revision and name
-its executor. Serialize that approval in the strict authorization record and
-require `ensphere run impact-ready` to return `ready: true` before any action.
-The executor may be the human or the AI agent. Never treat broad assessment
-authorization as authorization for Session 10.
-
-Session 11 runs only when the human explicitly requests `ensphere run final`
-after valid Session 10 outcomes exist. `run next` must not offer or start it. It
-attaches optional validation results without overwriting the Session 09 finding
-status or evidence.
-
-Methodology changes are evaluated with the blind, ground-truth protocol in
-[evaluation/README.md](evaluation/README.md). Do not consult benchmark answers
-during an assessment or present benchmark branding as evidence.
-
-## Non-Negotiable Report Rules
-
-- No uncited finding.
-- No broad "safe" or "secure" claim from bounded testing.
+- No uncited finding or missing control.
+- No broad "secure" or "safe" claim from bounded testing.
 - No scanner severity presented as Ensphere severity.
 - No attack path presented as observed unless every edge has evidence.
-- No compliance certification language from an assessment mapping.
-- No universal remediation deadline detached from business context.
-- No impact-validation outcome used as the base finding status.
-- No implication that optional Session 10 covered findings it did not select.
+- No compliance certification language.
+- Every missing control comes with a concrete fix for this stack.
