@@ -1,38 +1,49 @@
 # Security Policy
 
-Ensphere is an evidence-first application security assessment toolkit and may contain offensive payloads and measurement probes. Use it only for systems where you have explicit authorization. Session 10 is disabled by default; when explicitly selected, each strict plan must name a human or AI executor, receive human authorization bound to its exact SHA-256, and pass the pre-execution readiness gate.
+Ensphere is a defensive security checker for systems their owners run it
+against. Its probes are bounded measurements, its payload corpus is built for
+detection, and proof of a finding happens only in a sandbox copy the operator
+controls. Production is never probed. Use it only against systems you own or
+are explicitly authorized to assess.
 
-## Reporting Security Issues
+Reports produced with Ensphere are self-assessments by the system owner. They
+are not independent audits, attestations, or certifications, and a clean run
+is not a security guarantee.
 
-Do not open public issues for sensitive vulnerabilities. Report privately to the project owner through the agreed internal channel for this repository.
+## Reporting security issues in Ensphere
 
-Include:
+Do not open public issues for sensitive vulnerabilities. Use GitHub's private
+vulnerability reporting on this repository, or contact the maintainers through
+the address listed on the organization profile.
 
-- Affected component or command
-- Reproduction steps
-- Expected and actual behavior
-- Impact
-- Logs or evidence with secrets redacted
+Include the affected component or command, reproduction steps, expected and
+actual behavior, impact, and logs or evidence with secrets redacted.
 
 ## Scope
 
-Security reports should focus on vulnerabilities in Ensphere itself, including:
+Reports should concern Ensphere itself:
 
-- Scope bypasses
-- Evidence integrity failures
-- Secret redaction failures
-- Unsafe default behavior
-- Supply-chain or dependency risk
-- Command behavior that violates the measurement-only boundary
+- scope bypasses, including a probe reaching a host outside `--in-scope`;
+- evidence integrity failures in the hash-chained ledger;
+- secret redaction failures;
+- unsafe defaults, such as a probe that changes state without the plan
+  authorizing it;
+- a command, flag, or payload that crosses the measurement-only boundary;
+- supply-chain or dependency risk.
 
-Reports about third-party targets assessed with Ensphere belong to that target owner's disclosure process.
+Weaknesses in systems assessed with Ensphere belong to that system owner's
+own process, not to this repository.
 
-## Handling Secrets
+## Handling secrets and assessment data
 
-Do not commit credentials, tokens, evidence from third-party targets, or pentest artifacts. Local evidence and assessment output are ignored by default.
+Do not commit credentials, tokens, sandbox fixtures containing real data,
+evidence ledgers, or assessment workspaces. `ensphere-pentest/` and
+`evidence.jsonl` are ignored by default. The sandbox must never contain
+production data; `skills/shared/sandbox.md` states the isolation check.
 
-## Dependency Monitoring
+## Dependency monitoring
 
-GitHub Dependabot vulnerability alerts are enabled for detection. Dependabot version-update pull requests are also enabled through grouped configuration so dependency and GitHub Actions updates are visible, reviewable, and covered by CI before merge.
-
-When GitHub reports a vulnerable dependency, maintainers should review the generated PR or create an equivalent maintainer-authored update, run the full validation gate, and include the alert context in the commit or pull request notes.
+GitHub Dependabot vulnerability alerts and grouped version-update pull
+requests are enabled. When GitHub reports a vulnerable dependency, review the
+generated pull request or author an equivalent update, run the full
+validation gate, and note the alert in the commit or pull request.

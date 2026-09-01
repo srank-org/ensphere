@@ -1,109 +1,147 @@
 # Ensphere Development Guide
 
-## Design Principle
+Guidance for AI coding agents working in the Ensphere repository.
+
+## What this is
+
+Ensphere is a defensive security checker for a system its operator owns: a
+portable agent skill (`skills/`) that carries the assessment methodology, plus
+a Go CLI (`cli/`) that performs scoped measurements and keeps a hash-chained
+evidence ledger. The agent reads the operator's source, stands up a sandbox
+copy, runs Sessions 01 to 09 (08.7 proves chains in the sandbox), and writes
+a report of findings, missing controls, fixes, and what was and was not
+checked, plus a one-page self-assessment statement.
+
+When asked what Ensphere is, how it works, or how to use it: `README.md` is
+the narrative for people, `docs/cli-reference.md` is the command surface,
+`skills/SKILL.md` is how an assessment runs, and `skills/shared/contract.md`
+is the rulebook every session follows. `index.md` maps the rest.
+
+## Design principle
 
 > **Ensphere produces verifiable facts. The AI produces all security judgments.**
 
-Everything that ships as part of Ensphere — Go code, Python templates, YAML seeds, all tooling — is a **measurement and execution engine**. Given the same inputs, it produces the same outputs every time. Ensphere never classifies, interprets, or judges findings.
+Everything in this repository is either a deterministic measurement layer
+(the Go CLI) or agent methodology (the skill). Given the same inputs the CLI
+produces the same outputs. It never classifies, interprets, or judges.
 
-**Ensphere is allowed to:** execute HTTP requests, measure timing, hash responses, compare raw values, count rows, validate scope, redact secrets, calculate CVSS from fixed inputs, map to compliance frameworks. All deterministic.
+The CLI may: send scoped HTTP requests, measure timing, hash responses,
+capture headers, count rows, read provider configuration through a provider
+CLI, validate scope, redact secrets, compute CVSS from supplied metrics, map
+categories to compliance controls.
 
-**Ensphere must NOT:** assign status (confirmed/potential/safe), assign confidence (high/medium/low), apply thresholds ("delta > 500ms = SQLi"), decide exploitability, or make any statement that requires interpretation or context. Those are heuristics, not facts — they belong to the AI.
+The CLI must not: assign status, confidence, or severity; apply thresholds
+("delta > 500ms means SQLi"); decide exploitability; name a technique in a
+way that presumes the outcome. A contract test in `cli/internal/verify`
+rejects forbidden output fields.
 
-**The AI agent or human analyst** consumes Ensphere's raw measurements and applies context, reasoning, multi-step correlation, framework knowledge, and security expertise to classify findings, assign confidence, chain attack paths, and write reports.
+The product is defensive. The person running it owns the system. Proof
+happens only in a sandbox the operator controls; the CLI has no exploitation
+command and never probes production.
 
-This separation means: no hallucinated probes (Ensphere owns execution), no fake determinism (Ensphere never pretends to be certain about judgments), and maximum intelligence where it matters (the AI reasons with full context instead of crude thresholds).
-
-## Architecture
-
-Go CLI binary (`ensphere`) + portable AI-agent skill files (`skills/`). CLI commands and business logic live in `cli/`. Skill methodology and checklists live in `skills/`.
+## Layout
 
 | Path | Purpose |
 |------|---------|
-| `cli/cmd/` | Cobra command files (one per command) |
-| `cli/internal/` | Business logic packages |
-| `cli/internal/verify/` | Verification probe logic |
-| `cli/internal/evidence/` | JSONL evidence writer/reader |
-| `cli/internal/payloads/` | SQLite DB + query logic |
-| `cli/internal/runner/` | Workspace runner, report/final gates, strict Session 10 handoff and pre-execution authorization gate |
-| `cli/internal/templates/` | Pre-built Python 3 measurement probes |
-| `cli/internal/checklist/` | Framework-specific security checklists |
-| `cli/internal/compliance/` | Compliance framework mappings |
-| `cli/internal/cvss/` | CVSS v4.0 scoring engine |
-| `cli/internal/scan/` | Static sink pattern scanner |
-| `cli/internal/sinks/` | Sink pattern database |
-| `cli/internal/callback/` | OOB callback HTTP listener |
-| `cli/internal/cloud/` | Cloud security probes + Prowler/Trivy parser |
-| `cli/internal/openapi/` | OpenAPI/Swagger specification parser |
-| `cli/internal/enums/` | Enum validation maps |
-| `cli/tools/seedgen/` | YAML → SQLite compiler |
-| `assets/seeds/` | YAML payload seed files |
-| `skills/` | Portable AI-agent skill files |
-| `skills/methodology/` | Session methodology (01-11, plus 01.5 planner and 07a-d cloud sub-files) |
-| `skills/checklists/` | Security checklists |
-| `skills/shared/` | Evidence standards and proof-level definitions |
+| `skills/SKILL.md` | Agent entry point |
+| `skills/shared/contract.md` | The one rulebook: scope, evidence, findings, stop rules |
+| `skills/shared/fundamentals.md` | Stack-agnostic map of roles, invariants, and generic fixes; the checks themselves |
+| `skills/shared/sandbox.md` | How to build, isolate, seed, and reset the sandbox where proof happens |
+| `skills/shared/coverage-map.md` | Sessions mapped to WSTG categories and ASVS chapters, with the gaps named |
+| `skills/methodology/` | Sessions 01, 01.5, 02 to 08, 08.5, 08.7, 09, plus cloud appendices 07a to 07f |
+| `skills/checklists/` | Stack-specific checklists; the plan maps stack values to these files |
+| `skills/evaluation/` | Blind benchmark protocol for methodology changes |
+| `cli/cmd/` | Cobra commands, one file per command, flags only |
+| `cli/internal/verify/` | Measurement probes and the shared scoped HTTP layer |
+| `cli/internal/evidence/` | Hash-chained JSONL ledger, redaction, locking |
+| `cli/internal/runner/` | Workspace init, plan validation, next-action handoff, report gate |
+| `cli/internal/scan/`, `cli/internal/sinks/` | Regex sink scanner and its pattern data |
+| `cli/internal/payloads/` | Embedded payload corpus and query |
+| `cli/internal/cloud/` | Read-only provider configuration probes |
+| `cli/internal/openapi/` | OpenAPI parser |
+| `cli/internal/cvss/`, `cli/internal/compliance/` | CVSS v4.0 scorer, control mappings |
+| `cli/internal/callback/` | Local out-of-band listener |
+| `cli/internal/enums/` | Shared enum vocabulary |
+| `assets/seeds/` | YAML payload sources |
+| `templates/` | Workspace config template |
 
-## Build
-
-```bash
-make build        # YAML seeds → SQLite → Go binary (bin/ensphere)
-make seeds        # only recompile seed database
-make test         # go vet + go test
-make install      # copy binary to /usr/local/bin
-make install-all  # install binary + skill files
-make clean        # remove build artifacts
-```
-
-## Testing
+## Build and test
 
 ```bash
-cd cli && go test -short ./...    # fast suite
-cd cli && go test ./...           # full suite
+make build           # bin/ensphere
+make test            # go vet + go test
+make smoke           # CLI smoke checks
+make verify-generated
+make install-all     # binary + skill files
+cd cli && go test -short ./...
 ```
 
-See `docs/testing.md` for the full test file inventory, conventions, and drift guard details.
+See `docs/testing.md` for the test inventory and `docs/development.md` for
+conventions.
 
 ## Conventions
 
-- **Commands**: One file per command in `cli/cmd/`. Register with parent in `init()`.
-- **Logic**: All business logic in `cli/internal/<package>/`. Commands only parse flags, build config, call logic, encode JSON output.
-- **JSON output**: `json.NewEncoder(os.Stdout).SetIndent("", "  ")` for all structured output.
-- **Errors**: `fmt.Errorf("context: %w", err)` for wrapping.
+- One command per file in `cli/cmd/`; commands parse flags, build a config,
+  call `cli/internal/<package>`, and encode JSON with two-space indent.
+- Shared verify flags come from the helper in `cli/cmd/helpers.go`; do not
+  re-declare `--in-scope`, `--throttle`, `--timeout`, `--evidence`,
+  `--max-risk`, or `--header` by hand.
+- Errors wrap with `fmt.Errorf("context: %w", err)`.
+- Every verify command requires `--in-scope`. Scope failures exit 2, runtime
+  failures exit 3.
+- There is one assessment mode. Source is always in scope; a live target is
+  optional (`run init` without `--target` yields a `source_only` draft plan).
+  Do not reintroduce a black-box or live-only axis.
+- Live targets are `sandbox` or `staging` (`target.environment`). Production
+  is never probed; only its provider configuration is read. Session 08.7
+  (chains) runs only in a sandbox.
+- Technique and vuln-type names describe what is measured, not the outcome
+  (`rate_limit_burst`, not `rate_limit_bypass`).
+- Payloads live in `assets/seeds/*.yaml`; enum values are validated at load
+  time against `cli/internal/enums/enums.go`. Risk 4 and 5 payloads must not
+  read credentials or execute code.
 
-## Adding Payloads
+## Editing the skill
 
-1. Edit or create YAML in `assets/seeds/`
-2. Follow format: `defaults:` section + `payloads:` array
-3. All enum values validated at build time (`make build`)
-4. Valid enums defined in `cli/internal/enums/enums.go`
+- `skills/shared/contract.md` is the only place a rule is stated. Category
+  files add procedure and reference it; they never restate it.
+- Every checklist item has the four lines: title and why, Look for, Measure,
+  Fix. Every `ensphere` command in a checklist must exist with those flags.
+- Checks are stack-agnostic and belong in `fundamentals.md` or a session
+  methodology. A checklist only translates them for one common stack; add
+  one only when many users run that stack, and then add its stack values to
+  the map in `skills/methodology/01.5-session-plan.md` and a row in
+  `skills/checklists/index.md`.
+- Keep methodology files under about 1,000 words and checklists under about
+  1,300. A mid-tier model has to read them alongside the target's code.
 
-## Adding Commands
+## Do not
 
-1. Create `cli/cmd/<name>.go` with Cobra command
-2. Create `cli/internal/<package>/` for business logic
-3. Register command with parent in `init()`
-4. Follow patterns in existing commands (e.g., `verify_sqli.go`)
+- Add Go dependencies without a clear need.
+- Put business logic in `cli/cmd/`.
+- Add any command, flag, or payload whose purpose is exploitation, data
+  extraction, credential access, or load generation.
+- Write "secure", "safe", or "no vulnerabilities" anywhere in a report
+  template. Never call any output an attestation or a certification; the
+  report is a self-assessment.
+- Add a production environment tier. Live targets are `sandbox` or
+  `staging` only.
+- Edit `CLAUDE.md`. It is `@AGENTS.md` so Claude Code and other harnesses
+  read one file; change `AGENTS.md`.
 
-## What NOT To Do
-
-- Don't modify `payloads.sqlite` directly — it's generated from YAML
-- Don't add Go dependencies without clear need
-- Don't put business logic in `cli/cmd/` files
-- Don't skip `--in-scope` validation on verify commands (all verify commands require it)
-
-## Docs Map
+## Docs map
 
 | Topic | File |
 |-------|------|
+| Overview and quick start | README.md |
 | Project index | index.md |
-| Full docs index | docs/index.md |
-| CLI reference | docs/cli-reference.md |
-| Agent workflow | docs/agent-workflow.md |
-| Methodology index | skills/methodology/index.md |
-| Workflow contract | skills/shared/workflow-contract.md |
+| CLI reference and safety contract (normative) | docs/cli-reference.md |
 | Development guide | docs/development.md |
-| Test inventory & conventions | docs/testing.md |
-| Active product plan (local, untracked) | docs/ensphere-product-plan.html |
-| Production hardening plan (local, untracked) | docs/production-grade-hardening-plan.html |
-| External-tool integration plan (local, untracked) | ENSPHERE-EXTERNAL-TOOL-INTEGRATION-PLAN.md |
-| Current Go CLI specification | ENSPHERE-GO-SPEC.md |
+| Test inventory | docs/testing.md |
+| Skill entry point | skills/SKILL.md |
+| Contract | skills/shared/contract.md |
+| Sandbox | skills/shared/sandbox.md |
+| Coverage map | skills/shared/coverage-map.md |
+| Benchmark protocol | skills/evaluation/README.md |
+| Methodology index | skills/methodology/index.md |
+| Checklist index | skills/checklists/index.md |

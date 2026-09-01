@@ -24,13 +24,13 @@ git diff --check
 
 ## Generated Files
 
-`cli/internal/payloads/payloads.sqlite` and `cli/internal/checklist/data/` are generated and committed intentionally. Regenerate them with:
+Payload seeds are embedded as YAML. `cli/internal/payloads/data/` is a copy of `assets/seeds/*.yaml`, generated so `go:embed` can read it (Go embed cannot reach files outside the module) and committed intentionally so CI can detect drift. Re-sync it with:
 
 ```bash
 make verify-generated
 ```
 
-Do not edit generated files by hand.
+Edit the sources under `assets/seeds/`, never the copy under `cli/internal/payloads/data/`.
 
 ## Dependency Updates
 

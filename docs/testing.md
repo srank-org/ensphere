@@ -5,8 +5,8 @@
 ```bash
 make test                                          # go vet + go test ./...
 make smoke                                         # build + basic CLI command checks
-make verify-generated                              # regenerate payload/checklist embeds and fail on drift
-cd cli && go test -short ./...                     # fast: contracts + core + evidence + drift
+make verify-generated                              # re-sync the embedded seed copy and fail on drift
+cd cli && go test -short ./...                     # fast: contracts + core + evidence + payloads
 cd cli && go test ./...                            # full: everything including integration
 cd cli && go test -race ./internal/verify/         # race detector on verify package
 cd cli && go test -race -short ./internal/verify/  # race detector, fast path only
@@ -24,13 +24,13 @@ GitHub Actions runs on every push and on pull requests. The workflow uses `go-ve
 
 ## Generated Artifacts
 
-`make seeds` compiles `assets/seeds/*.yaml` into the embedded SQLite payload database. `make checklists` deletes and recopies `cli/internal/checklist/data/` from `skills/checklists/` so removed source checklists cannot leave stale embeds. `make verify-generated` runs both generators, confirms known generated assets are tracked, and then checks for Git drift in `cli/internal/payloads/payloads.sqlite` and `cli/internal/checklist/data`.
+Payload seeds are embedded directly as YAML. `make copy-seeds` (run automatically by `make build`) mirrors `assets/seeds/*.yaml` into `cli/internal/payloads/data/`, which is the copy `go:embed` reads at compile time — Go embed cannot reach files outside the module, so the copy is the only generated artifact. `make verify-generated` re-runs the copy, confirms the copied seeds are tracked, and checks for Git drift in `cli/internal/payloads/data/`. The seed YAML is parsed once on first use, applying each file's `defaults` block and validating every enum value against `cli/internal/enums`. Checklists are Markdown under `skills/checklists/` and are not embedded in the binary.
 
-The payload DB uses a fixed generated timestamp for deterministic rebuilds. If payload counts change, update the canary tests and docs together.
+Golden fixtures in `cli/internal/payloads/testdata/` capture a representative `ensphere payloads` query per vulnerability type; a test asserts the YAML store reproduces each byte-for-byte. If payload counts change, update the canary tests and docs together.
 
 ## Local Artifacts
 
-Expected local artifacts from builds and smoke runs include `bin/`, `cli/ensphere`, `cli/.gocache/`, `evidence.jsonl`, `evidence.jsonl.lock`, and `ensphere-pentest/`. These are ignored. Committed embedded assets such as `cli/internal/payloads/payloads.sqlite` and `cli/internal/checklist/data/` remain visible to Git and CI.
+Expected local artifacts from builds and smoke runs include `bin/`, `cli/ensphere`, `cli/.gocache/`, `evidence.jsonl`, `evidence.jsonl.lock`, and `ensphere-pentest/`. These are ignored. The embedded seed copy under `cli/internal/payloads/data/` is tracked and visible to Git and CI.
 
 ## JSON Contracts
 
@@ -39,8 +39,7 @@ Verify outputs must remain measurement-only and must not add exact JSON fields
 named `status`, `confidence`, `confirmed`, `safe`, or `potential`.
 
 Runner YAML inputs use strict field decoding. Tests cover the current plan,
-recon profile, finding registry, Session 10 handoff/outcome, and derived-report
-contracts directly.
+recon profile, finding registry, and report-gate contracts directly.
 
 ## Test File Inventory
 
@@ -48,16 +47,16 @@ contracts directly.
 |------|---------|---------|
 | `cmd/helpers_test.go` | cmd | Command helper behavior: header parsing and verify exit-code mapping |
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
-| `cmd/run_test.go` | cmd | Runner CLI lifecycle, report gates, human-authorized Session 10 handoff, and status-preserving Session 11 derivation |
-| `runner/workspace_test.go` | runner | Current workspace/planning/report contracts, evidence/citation gates, and optional validation boundaries |
+| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, environment flag validation, status, next, plan drafting, and the report gate |
+| `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only coverage, report contracts, and evidence/citation gates |
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
 | `verify/sqli_test.go` | verify | SQLi DB engine normalization and DB-specific payload selection |
-| `verify/contracts_test.go` | verify | Safety gate contracts for all 33 probes (scope, max-risk, technique validation, forbidden judgment JSON tags) |
-| `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, deserialization, csvinjection, ldap, xpath, fileupload |
+| `verify/contracts_test.go` | verify | Safety gate contracts for all 32 probes (scope, max-risk, technique validation, forbidden judgment JSON tags) |
+| `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, csvinjection, ldap, xpath, fileupload |
 | `verify/integration_auth_test.go` | verify | Integration: auth, authz, rls, jwt, cors, csrf, idor, massassignment, countJSONRows |
 | `verify/integration_infra_test.go` | verify | Integration: ssrf, redirect, protopollution, graphql, cachepoisoning |
-| `verify/smuggling_test.go` | verify | Smuggling: buildSmugglingPayload + rawHTTPProbe |
+| `verify/limits_test.go` | verify | Integration: pagination, upload-size (with cap rejection), response-size measurements, scope and technique validation |
 | `verify/race_test.go` | verify | Race: concurrent burst verification |
 | `verify/websocket_test.go` | verify | WebSocket: computeWSAccept, generateWSKey, parseHTTPStatus |
 | `verify/grpc_test.go` | verify | gRPC: extractServiceNames, isPrintable |
@@ -66,14 +65,16 @@ contracts directly.
 | `verify/ratelimit_test.go` | verify | Integration: sequential burst, no throttling, window expiry |
 | `verify/propertyauthz_test.go` | verify | Integration: field difference, identical responses, watch fields, non-JSON |
 | `evidence/evidence_test.go` | evidence | Hash chain integrity, redaction, write-time IDs, lock contention, duplicate IDs, read/write/filter, NextID, malformed line handling |
-| `payloads/drift_test.go` | payloads | Docs drift guard (payload count + vuln type canary values) |
+| `payloads/store_test.go` | payloads | Docs canaries (payload count + vuln type set), embedded-seed enum validation, and invalid-enum/invalid-risk/duplicate-id load errors |
+| `payloads/golden_test.go` | payloads | Golden reproduction: the YAML store's query output matches the captured per-vuln-type fixtures byte-for-byte |
 | `scan/scanner_test.go` | scan | Regex pattern-match scanner: matches, no matches, excludes, absence rules, extension overrides, sorting, redaction |
 | `sinks/query_test.go` | sinks | Embedded sink loader, invalid category, and regex compile validation |
-| `templates/templates_test.go` | templates | Template listing, invalid lookup, materialization to writer and temp dir |
-| `checklist/list_test.go` | checklist | Embedded checklist listing, invalid lookup, markdown title and checkbox parsing |
 | `compliance/query_test.go` | compliance | Mapping list, valid lookup, invalid vuln type, no-mapping behavior |
-| `tools/seedgen/main_test.go` | seedgen | Fixture-based deterministic seed compilation and invalid seed errors |
-| `cloud/parser_test.go` | cloud | Prowler/Trivy parser + vuln type mapping |
+| `cvss/v40_test.go` | cvss | CVSS v4.0 scoring, macro-vector lookup, vector string, invalid inputs |
+| `cloud/exec_test.go` | cloud | Provider CLI runner: installed check, exit codes, output capture |
+| `cloud/storage_test.go` | cloud | AWS/GCP/Azure storage parse functions: ACL, encryption, versioning, logging |
+| `cloud/iam_test.go` | cloud | IAM parse functions: attached and inline policies, MFA, last-used |
+| `cloud/network_test.go` | cloud | Network parse functions: security groups, flow logs, public IPs, port ranges |
 | `cloud/compute_test.go` | cloud | AWS/GCP/Azure compute parse functions |
 | `cloud/logging_test.go` | cloud | CloudTrail/GCP sinks/Azure diagnostics parse functions |
 | `cloud/secrets_test.go` | cloud | Secrets Manager/Secret Manager/Key Vault parse functions |
@@ -87,4 +88,4 @@ contracts directly.
 - No `t.Parallel()` in timing-sensitive or raw-TCP tests
 - Use `newTestServer(t, handler)` for all test HTTP servers (IPv4-only, auto-cleanup); never use `httptest.NewServer` directly
 - Use `t.Cleanup()` for net.Listener, temp files
-- Drift test canary values (1206 payloads, 27 DB vuln types) must be updated alongside docs when payloads change
+- Payload canary values in `payloads/store_test.go` (956 payloads, 25 vuln types) must be updated alongside docs when payloads change
