@@ -57,13 +57,11 @@ func parseSpec(data []byte) (*Spec, error) {
 
 	spec := &Spec{}
 
-	// Extract info block.
 	info := getMap(raw, "info")
 	spec.Title = getStr(info, "title")
 	spec.Version = getStr(info, "version")
 	spec.Description = getStr(info, "description")
 
-	// Extract servers.
 	for _, s := range getSlice(raw, "servers") {
 		sm, ok := s.(map[string]interface{})
 		if !ok {
@@ -75,11 +73,9 @@ func parseSpec(data []byte) (*Spec, error) {
 		})
 	}
 
-	// Determine top-level security.
 	topSecurity := getSlice(raw, "security")
 	hasTopSecurity := len(topSecurity) > 0
 
-	// Walk paths.
 	paths := getMap(raw, "paths")
 	uniquePaths := map[string]bool{}
 	totalOps := 0
@@ -91,7 +87,6 @@ func parseSpec(data []byte) (*Spec, error) {
 		}
 		uniquePaths[path] = true
 
-		// Collect path-level parameters.
 		pathParams := extractParameters(getSlice(pathItem, "parameters"))
 
 		for _, method := range httpMethods {
@@ -113,18 +108,15 @@ func parseSpec(data []byte) (*Spec, error) {
 				Deprecated:  getBool(op, "deprecated"),
 			}
 
-			// Tags.
 			for _, t := range getSlice(op, "tags") {
 				if ts, ok := t.(string); ok {
 					ep.Tags = append(ep.Tags, ts)
 				}
 			}
 
-			// Parameters: merge path-level and operation-level.
 			opParams := extractParameters(getSlice(op, "parameters"))
 			ep.Parameters = mergeParameters(pathParams, opParams)
 
-			// Request body.
 			if rb := getMap(op, "requestBody"); rb != nil {
 				body := &RequestBody{
 					Required: getBool(rb, "required"),
@@ -138,7 +130,6 @@ func parseSpec(data []byte) (*Spec, error) {
 				ep.RequestBody = body
 			}
 
-			// Auth required: check operation-level security first.
 			ep.AuthRequired = determineAuthRequired(op, hasTopSecurity)
 
 			spec.Endpoints = append(spec.Endpoints, ep)
@@ -148,7 +139,6 @@ func parseSpec(data []byte) (*Spec, error) {
 	spec.TotalPaths = len(uniquePaths)
 	spec.TotalOps = totalOps
 
-	// Sort endpoints by path, then method.
 	sort.Slice(spec.Endpoints, func(i, j int) bool {
 		if spec.Endpoints[i].Path != spec.Endpoints[j].Path {
 			return spec.Endpoints[i].Path < spec.Endpoints[j].Path
@@ -165,13 +155,11 @@ func parseSpec(data []byte) (*Spec, error) {
 // operation-level security, fall back to top-level security.
 func determineAuthRequired(op map[string]interface{}, hasTopSecurity bool) bool {
 	if secVal, exists := op["security"]; exists {
-		// Operation explicitly overrides security.
 		if secSlice, ok := secVal.([]interface{}); ok {
 			return len(secSlice) > 0
 		}
 		return false
 	}
-	// Fall back to top-level security.
 	return hasTopSecurity
 }
 
@@ -188,7 +176,6 @@ func extractParameters(raw []interface{}) []Parameter {
 			In:       getStr(pm, "in"),
 			Required: getBool(pm, "required"),
 		}
-		// Extract type from schema.
 		if schema := getMap(pm, "schema"); schema != nil {
 			param.Type = getStr(schema, "type")
 		}

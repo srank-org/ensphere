@@ -67,7 +67,6 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 			return nil, fmt.Errorf("aws CLI required: %w", err)
 		}
 
-		// Describe security groups
 		sgArgs := []string{"ec2", "describe-security-groups", "--output", "json"}
 		if cfg.VPCID != "" {
 			sgArgs = append(sgArgs, "--filters", "Name=vpc-id,Values="+cfg.VPCID)
@@ -78,7 +77,6 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 			openIngress, totalSGs = parseAWSSGs(sgResult.Stdout)
 		}
 
-		// Check flow logs
 		flArgs := []string{"ec2", "describe-flow-logs", "--output", "json"}
 		if cfg.VPCID != "" {
 			flArgs = append(flArgs, "--filter", "Name=resource-id,Values="+cfg.VPCID)
@@ -90,7 +88,6 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 			flowLogsEnabled = &fl
 		}
 
-		// List public IPs
 		eipResult := RunCLI(cliName, []string{"ec2", "describe-addresses", "--output", "json"}, timeout)
 		cliOutputs = append(cliOutputs, eipResult)
 		if eipResult.ExitCode == 0 {
@@ -102,14 +99,12 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
-		// Firewall rules
 		fwArgs := []string{"compute", "firewall-rules", "list", "--format=json"}
 		fwResult := RunCLI(cliName, fwArgs, timeout)
 		cliOutputs = append(cliOutputs, fwResult)
 		if fwResult.ExitCode == 0 {
 			openIngress, totalSGs = parseGCPFirewallRules(fwResult.Stdout)
 		}
-		// Subnets for flow logs
 		subArgs := []string{"compute", "networks", "subnets", "list", "--format=json"}
 		subResult := RunCLI(cliName, subArgs, timeout)
 		cliOutputs = append(cliOutputs, subResult)
@@ -117,7 +112,6 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 			fl := parseGCPSubnetsFlowLogs(subResult.Stdout)
 			flowLogsEnabled = &fl
 		}
-		// External addresses
 		addrArgs := []string{"compute", "addresses", "list", "--format=json"}
 		addrResult := RunCLI(cliName, addrArgs, timeout)
 		cliOutputs = append(cliOutputs, addrResult)
@@ -130,14 +124,12 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("az CLI required: %w", err)
 		}
-		// NSG list
 		nsgArgs := []string{"network", "nsg", "list", "--output", "json"}
 		nsgResult := RunCLI(cliName, nsgArgs, timeout)
 		cliOutputs = append(cliOutputs, nsgResult)
 		if nsgResult.ExitCode == 0 {
 			openIngress, totalSGs = parseAzureNSGs(nsgResult.Stdout)
 		}
-		// Flow logs
 		flArgs := []string{"network", "watcher", "flow-log", "list", "--output", "json"}
 		flResult := RunCLI(cliName, flArgs, timeout)
 		cliOutputs = append(cliOutputs, flResult)
@@ -145,7 +137,6 @@ func VerifyCloudNetwork(cfg NetworkConfig) (*verify.ProbeResult, error) {
 			fl := parseAzureFlowLogs(flResult.Stdout)
 			flowLogsEnabled = &fl
 		}
-		// Public IPs
 		ipArgs := []string{"network", "public-ip", "list", "--output", "json"}
 		ipResult := RunCLI(cliName, ipArgs, timeout)
 		cliOutputs = append(cliOutputs, ipResult)

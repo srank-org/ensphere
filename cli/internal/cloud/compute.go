@@ -90,7 +90,6 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
-		// Cloud Functions
 		args := []string{"functions", "list", "--format=json"}
 		result := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, result)
@@ -100,7 +99,6 @@ func VerifyCloudCompute(cfg ComputeConfig) (*verify.ProbeResult, error) {
 			envVarPatterns = append(envVarPatterns, patterns...)
 			endpointConfiguredCount += pub
 		}
-		// Cloud Run
 		args = []string{"run", "services", "list", "--format=json"}
 		runResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, runResult)
@@ -176,19 +174,16 @@ func parseAWSLambdaFunctions(stdout string) ([]FunctionInfo, []string, int) {
 			Name:    f.FunctionName,
 			Runtime: f.Runtime,
 		}
-		// VPC attachment
 		if f.VpcConfig != nil {
 			attached := len(f.VpcConfig.SubnetIds) > 0
 			fi.VPCAttached = &attached
 		}
-		// Endpoint configuration
 		if f.FunctionUrlConfig != nil {
 			configured := true
 			fi.EndpointConfigured = &configured
 			fi.EndpointAuthMode = f.FunctionUrlConfig.AuthType
 			endpointConfiguredCount++
 		}
-		// Secret pattern matching on env var names
 		if f.Environment != nil {
 			for key := range f.Environment.Variables {
 				for _, re := range secretPatterns {

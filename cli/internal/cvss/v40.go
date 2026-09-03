@@ -121,7 +121,6 @@ var maxEQLevel = [6]int{2, 1, 2, 2, 2, 1}
 //	si:  Subsequent System Integrity (H, L, N)
 //	sa:  Subsequent System Availability (H, L, N)
 func CalculateV40(av, ac, at, pr, ui, vc, vi, va, sc, si, sa string) (*CvssOutput, error) {
-	// Validate all inputs.
 	metrics := []struct {
 		name  string
 		value string
@@ -160,7 +159,6 @@ func CalculateV40(av, ac, at, pr, ui, vc, vi, va, sc, si, sa string) (*CvssOutpu
 		baseScore = 0.0
 	}
 
-	// --- interpolation ---
 	if baseScore > 0.0 {
 		baseScore = interpolate(mv, baseScore, av, ac, at, pr, ui, vc, vi, va, sc, si, sa)
 	}

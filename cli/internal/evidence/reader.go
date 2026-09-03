@@ -161,14 +161,12 @@ func VerifyChain(path string) (*ChainResult, error) {
 	}
 
 	for i, e := range entries {
-		// Check hash field exists
 		if e.Hash == "" {
 			result.BrokenAt = e.ID
 			result.Error = "missing hash"
 			return result, nil
 		}
 
-		// Recompute and verify hash
 		expected := ComputeHash(e)
 		if e.Hash != expected {
 			result.BrokenAt = e.ID
@@ -176,7 +174,6 @@ func VerifyChain(path string) (*ChainResult, error) {
 			return result, nil
 		}
 
-		// Verify chain link
 		if i == 0 {
 			if e.PrevHash != "" {
 				result.BrokenAt = e.ID

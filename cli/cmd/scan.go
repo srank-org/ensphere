@@ -51,7 +51,6 @@ func init() {
 func runScan(cmd *cobra.Command, args []string) error {
 	dir := args[0]
 
-	// Validate categories
 	if len(scanCategories) > 0 {
 		validNames := sinks.CategoryNames()
 		validSet := make(map[string]bool)

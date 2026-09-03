@@ -72,7 +72,6 @@ func VerifyRace(cfg RaceConfig) (*ProbeResult, error) {
 	close(start) // release all goroutines at once
 	wg.Wait()
 
-	// Collect results
 	var rounds []RoundResult
 	successCount := 0
 	hashSet := make(map[string]bool)

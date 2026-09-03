@@ -54,13 +54,11 @@ func init() {
 }
 
 func runCloudStorage(cmd *cobra.Command, args []string) error {
-	// Validate --account-name required for Azure
 	if csProvider == "azure" && csAccountName == "" {
 		fmt.Fprintln(os.Stderr, "--account-name is required when --provider is azure")
 		os.Exit(2)
 	}
 
-	// Extract account ID from in-scope pattern
 	accountID := extractAccountID(csInScope, csProvider)
 
 	cfg := cloud.StorageConfig{

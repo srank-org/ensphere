@@ -75,7 +75,6 @@ func VerifyAuth(cfg AuthConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("baseline with valid token returned %d — expected 2xx", baselineResp.StatusCode)
 	}
 
-	// Build probe headers based on technique
 	probeHeaders := make(map[string]string)
 	for k, v := range cfg.Headers {
 		probeHeaders[k] = v

@@ -48,13 +48,11 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		return nil, fmt.Errorf("load sink patterns: %w", err)
 	}
 
-	// Filter by categories if specified
 	categoryFilter := make(map[string]bool)
 	for _, c := range cfg.Categories {
 		categoryFilter[c] = true
 	}
 
-	// Compile patterns
 	var compiled []compiledPattern
 	extUnion := make(map[string]bool)
 	filenameUnion := make(map[string]bool)
@@ -92,7 +90,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		}
 	}
 
-	// Load absence rules if enabled
 	var absenceRules []compiledAbsenceRule
 	if cfg.AbsenceCheck {
 		absRules, absErr := sinks.AllAbsenceRules()
@@ -174,7 +171,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		excludeSet[d] = true
 	}
 
-	// Collect files
 	var files []string
 	err = filepath.WalkDir(cfg.Directory, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -207,7 +203,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		return nil, fmt.Errorf("walk directory: %w", err)
 	}
 
-	// Fan out to workers
 	numWorkers := runtime.NumCPU()
 	if numWorkers > 8 {
 		numWorkers = 8
@@ -242,7 +237,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 	}
 	wg.Wait()
 
-	// Run absence checks if enabled
 	if cfg.AbsenceCheck && len(absenceRules) > 0 {
 		for _, path := range files {
 			absMatches := scanFileAbsence(path, cfg.Directory, absenceRules, cfg.ContextLines)
@@ -250,7 +244,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		}
 	}
 
-	// Sort by file + line
 	sort.Slice(allMatches, func(i, j int) bool {
 		if allMatches[i].File != allMatches[j].File {
 			return allMatches[i].File < allMatches[j].File
@@ -258,7 +251,6 @@ func RunScan(cfg ScanConfig) (*ScanResult, error) {
 		return allMatches[i].Line < allMatches[j].Line
 	})
 
-	// Build summary
 	catCounts := make(map[string]int)
 	for _, m := range allMatches {
 		catCounts[m.Category]++
@@ -459,7 +451,6 @@ func matchExclude(pattern, name, relPath string) bool {
 		}
 		return false
 	}
-	// Standard glob against name and relative path
 	if matched, _ := filepath.Match(pattern, name); matched {
 		return true
 	}

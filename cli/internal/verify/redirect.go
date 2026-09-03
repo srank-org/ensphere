@@ -47,7 +47,6 @@ func VerifyRedirect(cfg RedirectConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Inject evil redirect target
 	evilURL := "https://evil.com/ensphere-redirect-test"
 	parsed, err := url.Parse(cfg.URL)
 	if err != nil {
@@ -108,7 +107,6 @@ func VerifyRedirect(cfg RedirectConfig) (*ProbeResult, error) {
 		locationHeader = resp.Header.Get("Location")
 	}
 
-	// Check if redirect points to our injected domain
 	externalRedirect := strings.Contains(locationHeader, "evil.com")
 
 	statusCode := 0

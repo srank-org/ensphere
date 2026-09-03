@@ -108,7 +108,6 @@ func VerifyMassAssignment(cfg MassAssignmentConfig) (*ProbeResult, error) {
 
 	followUpKeys, followUpObj := extractJSONKeys(followUpResp.Body)
 
-	// Build field results
 	baselineSet := make(map[string]bool)
 	if baselineObj != nil {
 		for k := range baselineObj {

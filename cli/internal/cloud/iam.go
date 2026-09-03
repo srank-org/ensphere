@@ -61,14 +61,12 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			return nil, fmt.Errorf("aws CLI required: %w", err)
 		}
 
-		// Extract username from ARN if needed
 		username := cfg.Principal
 		if strings.Contains(username, ":user/") {
 			parts := strings.Split(username, "/")
 			username = parts[len(parts)-1]
 		}
 
-		// List attached policies
 		args := []string{"iam", "list-attached-user-policies", "--user-name", username, "--output", "json"}
 		attachedResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, attachedResult)
@@ -76,7 +74,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			attachedPolicies = parseAWSAttachedPolicies(attachedResult.Stdout)
 		}
 
-		// List inline policies
 		args = []string{"iam", "list-user-policies", "--user-name", username, "--output", "json"}
 		inlineResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, inlineResult)
@@ -84,7 +81,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			inlinePolicies = parseAWSInlinePolicies(inlineResult.Stdout)
 		}
 
-		// Check MFA
 		args = []string{"iam", "list-mfa-devices", "--user-name", username, "--output", "json"}
 		mfaResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, mfaResult)
@@ -93,7 +89,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			mfaEnabled = &m
 		}
 
-		// Get user info for last used
 		args = []string{"iam", "get-user", "--user-name", username, "--output", "json"}
 		userResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, userResult)
@@ -101,7 +96,7 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			lastUsed = parseAWSLastUsed(userResult.Stdout)
 		}
 
-		// Collect all actions from policy documents for preserving the provider-supplied action list
+		// Collect actions from each attached policy document, preserving the provider-supplied action list
 		for _, policyARN := range attachedPolicies {
 			policyActions, pResult := extractActionsFromPolicy(cliName, policyARN, timeout)
 			cliOutputs = append(cliOutputs, pResult)
@@ -113,7 +108,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
-		// Project IAM policy
 		args := []string{"projects", "get-iam-policy", cfg.AccountID, "--format=json"}
 		iamResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, iamResult)
@@ -121,7 +115,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			attachedPolicies = parseGCPIAMPolicy(iamResult.Stdout)
 		}
 
-		// Service account keys (if principal looks like a service account email)
 		if strings.Contains(cfg.Principal, "iam.gserviceaccount.com") {
 			args = []string{"iam", "service-accounts", "keys", "list", "--iam-account", cfg.Principal, "--format=json"}
 			keysResult := RunCLI(cliName, args, timeout)
@@ -140,7 +133,6 @@ func VerifyCloudIAM(cfg IAMConfig) (*verify.ProbeResult, error) {
 			attachedPolicies = parseAzureRoleAssignments(roleResult.Stdout)
 		}
 
-		// Custom roles
 		args = []string{"role", "definition", "list", "--custom-role-only", "true", "--output", "json"}
 		customResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, customResult)
@@ -260,7 +252,6 @@ func parseActionsFromPolicyVersion(stdout string) []string {
 	}
 	// Document is URL-encoded JSON
 	doc := result.PolicyVersion.Document
-	// Try URL-decode
 	if decoded, err := url.QueryUnescape(doc); err == nil {
 		doc = decoded
 	}

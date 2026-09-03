@@ -50,7 +50,6 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Build base headers with auth token
 	baseHeaders := make(map[string]string)
 	for k, v := range cfg.Headers {
 		baseHeaders[k] = v
@@ -106,7 +105,6 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "csrf", "origin_validation", cfg.URL, "", mismatchResp.StatusCode,
 		fmt.Sprintf("%dms", mismatchResp.ElapsedMs), "probe", "Origin: https://evil.com")
 
-	// Check SameSite on Set-Cookie
 	sameSiteFound := false
 	sameSiteValue := ""
 	for _, cookie := range baselineResp.Headers.Values("Set-Cookie") {
@@ -124,7 +122,6 @@ func VerifyCSRF(cfg CSRFConfig) (*ProbeResult, error) {
 		}
 	}
 
-	// Check for CSRF token in body
 	csrfTokenInBody := false
 	for _, re := range csrfTokenPatterns {
 		if re.MatchString(baselineResp.Body) {

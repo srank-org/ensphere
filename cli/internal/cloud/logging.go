@@ -66,7 +66,6 @@ func VerifyCloudLogging(cfg LoggingConfig) (*verify.ProbeResult, error) {
 			return nil, fmt.Errorf("aws CLI required: %w", err)
 		}
 
-		// Describe trails
 		args := []string{"cloudtrail", "describe-trails", "--output", "json"}
 		descResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, descResult)
@@ -74,7 +73,6 @@ func VerifyCloudLogging(cfg LoggingConfig) (*verify.ProbeResult, error) {
 			trails = parseAWSCloudTrails(descResult.Stdout)
 		}
 
-		// Get trail status for each trail
 		for i, trail := range trails {
 			args = []string{"cloudtrail", "get-trail-status", "--name", trail.Name, "--output", "json"}
 			statusResult := RunCLI(cliName, args, timeout)
@@ -88,7 +86,6 @@ func VerifyCloudLogging(cfg LoggingConfig) (*verify.ProbeResult, error) {
 			}
 		}
 
-		// Aggregate multi-region and log validation
 		for _, t := range trails {
 			if t.IsMultiRegion != nil && *t.IsMultiRegion {
 				mr := true

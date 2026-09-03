@@ -41,7 +41,6 @@ func VerifyClickjacking(cfg ClickjackingConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Send a normal request and inspect frame-related headers
 	throttle.Wait()
 	probeCount++
 
@@ -53,7 +52,6 @@ func VerifyClickjacking(cfg ClickjackingConfig) (*ProbeResult, error) {
 	xfo := resp.Headers.Get("X-Frame-Options")
 	csp := resp.Headers.Get("Content-Security-Policy")
 
-	// Extract frame-ancestors from CSP
 	cspFrameAncestors := ""
 	for _, directive := range strings.Split(csp, ";") {
 		directive = strings.TrimSpace(directive)

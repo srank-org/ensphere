@@ -70,7 +70,6 @@ func VerifyJWT(cfg JWTConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "jwt", cfg.Technique, cfg.URL, "", baselineResp.StatusCode,
 		fmt.Sprintf("%dms", baselineResp.ElapsedMs), "baseline", "valid token")
 
-	// Build modified token based on technique
 	var modifiedToken string
 	var payloadUsed string
 	var err error
@@ -91,7 +90,6 @@ func VerifyJWT(cfg JWTConfig) (*ProbeResult, error) {
 		payloadUsed = "kid:../../dev/null"
 	}
 
-	// Send with modified token
 	probeHeaders := make(map[string]string)
 	for k, v := range cfg.Headers {
 		probeHeaders[k] = v

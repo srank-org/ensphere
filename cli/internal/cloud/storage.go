@@ -79,7 +79,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			regionArgs = []string{"--region", cfg.Region}
 		}
 
-		// Get bucket ACL
 		args := append([]string{"s3api", "get-bucket-acl", "--bucket", cfg.Bucket, "--output", "json"}, regionArgs...)
 		aclResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, aclResult)
@@ -87,7 +86,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			aclEntries = parseAWSACL(aclResult.Stdout)
 		}
 
-		// Get encryption
 		args = append([]string{"s3api", "get-bucket-encryption", "--bucket", cfg.Bucket, "--output", "json"}, regionArgs...)
 		encResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, encResult)
@@ -97,7 +95,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			encryption = "none"
 		}
 
-		// Get versioning
 		args = append([]string{"s3api", "get-bucket-versioning", "--bucket", cfg.Bucket, "--output", "json"}, regionArgs...)
 		verResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, verResult)
@@ -105,7 +102,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			versioning = parseAWSVersioning(verResult.Stdout)
 		}
 
-		// Get logging
 		args = append([]string{"s3api", "get-bucket-logging", "--bucket", cfg.Bucket, "--output", "json"}, regionArgs...)
 		logResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, logResult)
@@ -113,7 +109,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			logging = parseAWSLogging(logResult.Stdout)
 		}
 
-		// Get public access block
 		args = append([]string{"s3api", "get-public-access-block", "--bucket", cfg.Bucket, "--output", "json"}, regionArgs...)
 		pubResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, pubResult)
@@ -126,7 +121,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("gcloud CLI required: %w", err)
 		}
-		// Describe bucket
 		args := []string{"storage", "buckets", "describe", "gs://" + cfg.Bucket, "--format=json"}
 		descResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, descResult)
@@ -143,7 +137,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 			}
 			gcpPublicAccessPrevention = prevention
 		}
-		// IAM policy
 		args = []string{"storage", "buckets", "get-iam-policy", "gs://" + cfg.Bucket, "--format=json"}
 		iamResult := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, iamResult)
@@ -156,13 +149,11 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 		if err := CheckCLIInstalled(cliName); err != nil {
 			return nil, fmt.Errorf("az CLI required: %w", err)
 		}
-		// Container show
 		args := []string{"storage", "container", "show", "--name", cfg.Bucket, "--output", "json"}
 		result := RunCLI(cliName, args, timeout)
 		cliOutputs = append(cliOutputs, result)
 
 		if cfg.AccountName != "" {
-			// Storage account properties
 			args = []string{"storage", "account", "show", "--name", cfg.AccountName, "--output", "json"}
 			acctResult := RunCLI(cliName, args, timeout)
 			cliOutputs = append(cliOutputs, acctResult)
@@ -172,7 +163,6 @@ func VerifyCloudStorage(cfg StorageConfig) (*verify.ProbeResult, error) {
 				azureAllowBlobPublicAccess = allowBlobPublicAccess
 			}
 
-			// Blob service properties
 			args = []string{"storage", "account", "blob-service-properties", "show", "--account-name", cfg.AccountName, "--output", "json"}
 			blobResult := RunCLI(cliName, args, timeout)
 			cliOutputs = append(cliOutputs, blobResult)
@@ -318,7 +308,6 @@ func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging, pub
 		encryption = "google-managed"
 	}
 
-	// versioning
 	if v, ok := result["versioning"]; ok {
 		if m, ok := v.(map[string]interface{}); ok {
 			if enabled, ok := m["enabled"].(bool); ok && enabled {
@@ -331,7 +320,6 @@ func parseGCPBucketDescribe(stdout string) (encryption, versioning, logging, pub
 		versioning = "disabled"
 	}
 
-	// logging
 	if l, ok := result["logging"]; ok {
 		if m, ok := l.(map[string]interface{}); ok {
 			if _, ok := m["logBucket"]; ok {
@@ -380,7 +368,6 @@ func parseAzureStorageAccount(stdout string) (encryption string, publicAccess *b
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		return "unknown", nil
 	}
-	// Check encryption services
 	if enc, ok := result["encryption"]; ok {
 		if m, ok := enc.(map[string]interface{}); ok {
 			if services, ok := m["services"]; ok {
@@ -396,7 +383,6 @@ func parseAzureStorageAccount(stdout string) (encryption string, publicAccess *b
 	if encryption == "" {
 		encryption = "unknown"
 	}
-	// publicAccess: allowBlobPublicAccess
 	if allow, ok := result["allowBlobPublicAccess"].(bool); ok {
 		publicAccess = &allow
 	}

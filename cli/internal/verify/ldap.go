@@ -107,7 +107,6 @@ func verifyLDAPFilterInjection(cfg LDAPConfig, throttle *Throttle, timer *Timer,
 	}
 	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
 
-	// Scan for LDAP error patterns
 	var matchedPatterns []string
 	for _, pattern := range ldapErrorPatterns {
 		if strings.Contains(probeResp.Body, pattern) {
@@ -238,7 +237,6 @@ func verifyLDAPBlindError(cfg LDAPConfig, throttle *Throttle, timer *Timer, ew *
 	}
 	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
 
-	// Scan for LDAP error patterns
 	var matchedPatterns []string
 	for _, pattern := range ldapErrorPatterns {
 		if strings.Contains(probeResp.Body, pattern) {

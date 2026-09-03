@@ -45,7 +45,6 @@ func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Build and send probe
 	throttle.Wait()
 	probeCount++
 
@@ -75,11 +74,9 @@ func VerifyXSS(cfg XSSConfig) (*ProbeResult, error) {
 
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d len=%d\n", resp.StatusCode, len(resp.Body))
 
-	// Check for reflection
 	reflected := strings.Contains(resp.Body, cfg.Payload)
 	encoded := strings.Contains(resp.Body, html.EscapeString(cfg.Payload))
 
-	// Extract context around match
 	var context string
 	if reflected {
 		idx := strings.Index(resp.Body, cfg.Payload)

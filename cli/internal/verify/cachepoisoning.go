@@ -59,7 +59,6 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 
 	probeCount := 0
 
-	// Add cache-buster to URL
 	var buf [8]byte
 	_, _ = crypto_rand.Read(buf[:])
 	cacheBuster := fmt.Sprintf("ensphere_cb=%x", buf[:])
@@ -111,7 +110,7 @@ func VerifyCachePoisoning(cfg CachePoisoningConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "cache_poisoning", cfg.Technique, cfg.URL, "", verifyResp.StatusCode,
 		fmt.Sprintf("%dms", verifyResp.ElapsedMs), "probe", "verify after injection")
 
-	// Report factual hash comparisons — AI decides if cache was poisoned
+	// Report factual hash comparisons; the AI decides whether the cache was poisoned.
 	verifyMatchesInjection := verifyResp.BodyHash == injectionResp.BodyHash
 	verifyMatchesBaseline := verifyResp.BodyHash == baselineResp.BodyHash
 

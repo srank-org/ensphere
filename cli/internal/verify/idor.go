@@ -42,10 +42,8 @@ func VerifyIDOR(cfg IDORConfig) (*ProbeResult, error) {
 		}
 	}
 
-	// Replace {id} placeholder with target ID
 	targetURL := strings.ReplaceAll(cfg.URL, "{id}", cfg.ID)
 
-	// Build headers with auth token
 	headers := make(map[string]string)
 	for k, v := range cfg.Headers {
 		headers[k] = v

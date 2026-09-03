@@ -85,7 +85,6 @@ func runCallback(cmd *cobra.Command, args []string) error {
 		os.Exit(3)
 	}
 
-	// Log callbacks to evidence file
 	if cfg.Evidence != "" && result.TotalReceived > 0 {
 		ew, ewErr := evidence.NewWriter(cfg.Evidence)
 		if ewErr != nil {

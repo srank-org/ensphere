@@ -71,7 +71,6 @@ func VerifyHeaderInjection(cfg HeaderInjectionConfig) (*ProbeResult, error) {
 		return nil, fmt.Errorf("header injection probe: %w", probeResp.Error)
 	}
 
-	// Check if injected header appears in response
 	headerFound := probeResp.Headers.Get(injectedHeader) == injectedValue
 
 	fmt.Fprintf(os.Stderr, "[PROBE] status=%d header_found=%v\n", probeResp.StatusCode, headerFound)
@@ -79,7 +78,6 @@ func VerifyHeaderInjection(cfg HeaderInjectionConfig) (*ProbeResult, error) {
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe",
 		fmt.Sprintf("injected=%s:%s found=%v", injectedHeader, injectedValue, headerFound))
 
-	// Extract response snippet around injected content
 	snippet := ""
 	if headerFound {
 		snippet = fmt.Sprintf("Response header: %s: %s", injectedHeader, probeResp.Headers.Get(injectedHeader))

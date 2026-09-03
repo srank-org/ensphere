@@ -115,13 +115,11 @@ func wsInjection(cfg WebSocketConfig, timer *Timer, throttle *Throttle, ew *evid
 	if err == nil && upgradeSuccess && conn != nil {
 		defer conn.Close()
 
-		// Send payload as text frame
 		if cfg.Payload != "" {
 			if writeErr := wsWriteTextFrame(conn, cfg.Payload); writeErr == nil {
 				framesSent++
 			}
 
-			// Read response frame
 			_ = conn.SetReadDeadline(time.Now().Add(time.Duration(cfg.TimeoutSec) * time.Second))
 			if _, readErr := wsReadFrame(conn); readErr == nil {
 				framesReceived++
@@ -325,7 +323,6 @@ func wsHandshake(rawURL string, origin string, extraHeaders map[string]string, t
 
 	statusCode := parseHTTPStatus(statusLine)
 
-	// Read remaining headers and validate WebSocket upgrade
 	var hasUpgrade, hasConnection bool
 	var serverAccept string
 	for {
@@ -403,7 +400,6 @@ func wsWriteTextFrame(conn net.Conn, payload string) error {
 	data := []byte(payload)
 	payloadLen := len(data)
 
-	// Build frame header
 	var frame []byte
 	frame = append(frame, 0x81) // FIN=1, opcode=1 (text)
 

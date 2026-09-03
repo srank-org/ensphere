@@ -81,7 +81,6 @@ func VerifySSRF(cfg SSRFConfig) (*ProbeResult, error) {
 	writeEvidence(ew, "ssrf", "metadata_access", cfg.URL, cfg.Param, probeResp.StatusCode,
 		fmt.Sprintf("%dms", probeResp.ElapsedMs), "probe", fmt.Sprintf("injected %s", probeURL))
 
-	// Check for internal content signatures — collect all matches
 	var matchedSignatures []string
 	for _, sig := range internalSignatures {
 		if strings.Contains(probeResp.Body, sig) {

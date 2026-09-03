@@ -85,7 +85,6 @@ func VerifyCMDi(cfg CMDiConfig) (*ProbeResult, error) {
 			fmt.Sprintf("%dms", resp.ElapsedMs), "baseline", fmt.Sprintf("round %d", i+1))
 	}
 
-	// Try each payload template
 	for _, tmpl := range payloads {
 		payload := fmt.Sprintf(tmpl, sleepSec)
 		var payloadRounds []RoundResult

@@ -163,6 +163,30 @@ func TestRunStatementRefusesWhenGateNotReady(t *testing.T) {
 	}
 }
 
+func TestRunReportAcceptsOptionalCoverageFields(t *testing.T) {
+	workspace := writeStatementReadyWorkspace(t)
+	writeCoverageFile(t, workspace, "08", `session: "08"
+rows:
+  - id: COV-08-001
+    surface: "POST /api/checkout/coupon"
+    check: "coupon_redemption_race"
+    identity: "[TENANT_A_USER]"
+    state: not_tested
+    checklist: "abuse-and-cost"
+    hypothesis: "HYP-001"
+    reason: "no live target"
+`)
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report: %v", err)
+	}
+	for _, issue := range gate.Issues {
+		if strings.HasPrefix(issue.Code, "coverage_") && strings.Contains(issue.Path, "08-api") {
+			t.Fatalf("unexpected coverage issue for optional fields: %+v", issue)
+		}
+	}
+}
+
 func TestRunReportValidatesCoverageRows(t *testing.T) {
 	workspace := writeStatementReadyWorkspace(t)
 	writeCoverageFile(t, workspace, "08", `session: "07"

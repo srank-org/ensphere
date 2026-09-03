@@ -77,7 +77,6 @@ func VerifyCSVInjection(cfg CSVInjectionConfig) (*ProbeResult, error) {
 	}
 	fmt.Fprintf(os.Stderr, "[EXPORT] status=%d len=%d\n", exportResp.StatusCode, len(exportResp.Body))
 
-	// Check if formula appears in export
 	formulaFound := strings.Contains(exportResp.Body, `=CMD(`)
 	formulaEscaped := strings.Contains(exportResp.Body, `'=CMD(`) ||
 		strings.Contains(exportResp.Body, `"=CMD(`)

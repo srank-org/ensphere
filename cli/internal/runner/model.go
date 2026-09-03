@@ -267,6 +267,7 @@ type CoverageRow struct {
 	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
 	Transcripts []string `json:"transcripts,omitempty" yaml:"transcripts,omitempty"`
 	Checklist   string   `json:"checklist,omitempty" yaml:"checklist,omitempty"`
+	Hypothesis  string   `json:"hypothesis,omitempty" yaml:"hypothesis,omitempty"`
 	Reason      string   `json:"reason,omitempty" yaml:"reason,omitempty"`
 }
 

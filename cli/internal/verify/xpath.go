@@ -104,7 +104,6 @@ func verifyXPathInjection(cfg XPathConfig, throttle *Throttle, timer *Timer, ew 
 
 	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
 
-	// Scan for XPath error patterns
 	var matchedPatterns []string
 	for _, pattern := range xpathErrorPatterns {
 		if strings.Contains(probeResp.Body, pattern) {
@@ -235,7 +234,6 @@ func verifyXPathBlindError(cfg XPathConfig, throttle *Throttle, timer *Timer, ew
 
 	hashesMatch := baselineResp.BodyHash == probeResp.BodyHash
 
-	// Scan for XPath error patterns
 	var matchedPatterns []string
 	for _, pattern := range xpathErrorPatterns {
 		if strings.Contains(probeResp.Body, pattern) {

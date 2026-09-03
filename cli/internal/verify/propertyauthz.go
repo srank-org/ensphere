@@ -92,13 +92,11 @@ func VerifyPropertyAuthZ(cfg PropertyAuthZConfig) (*ProbeResult, error) {
 		BodyLength: len(lowResp.Body),
 	}
 
-	// Extract top-level JSON keys from both responses
 	highFields := extractTopLevelKeys(highResp.Body)
 	lowFields := extractTopLevelKeys(lowResp.Body)
 
 	shared, highOnly, lowOnly := fieldSets(highFields, lowFields)
 
-	// Check watch fields
 	var watchResults []WatchFieldResult
 	if len(cfg.WatchFields) > 0 {
 		highSet := toSet(highFields)

@@ -83,7 +83,6 @@ func verifyGraphQLIntrospection(cfg GraphQLConfig, headers map[string]string, th
 		return nil, fmt.Errorf("introspection probe: %w", resp.Error)
 	}
 
-	// Check if introspection returned types
 	introspectionEnabled := false
 	typeCount := 0
 	var result map[string]interface{}
