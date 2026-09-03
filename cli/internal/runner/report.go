@@ -76,6 +76,8 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		issues = append(issues, validateSessionReportReadiness(workspace, states)...)
 	}
 	issues = append(issues, validateEvidenceFiles(workspace)...)
+	coverageIssues, coverage := validateCoverageFiles(workspace, states)
+	issues = append(issues, coverageIssues...)
 
 	registryPath := findingRegistryPath(workspace)
 	registryState := "missing"
@@ -88,6 +90,9 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		}
 		issues = append(issues, validateSession09Artifacts(workspace)...)
 	}
+
+	statementIssues, statementState := validateStatement(workspace, coverage)
+	issues = append(issues, statementIssues...)
 
 	ready := !hasErrorIssue(issues)
 	message := "Report gate passed. Session 09 can generate or refresh the evidence-backed assessment report."
@@ -103,6 +108,10 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		FindingRegistryPath:  registryPath,
 		FindingRegistryState: registryState,
 		Issues:               issues,
+		Coverage:             coverage,
+		StatementPath:        statementPath(workspace),
+		StatementMarkdown:    statementMarkdownPath(workspace),
+		StatementState:       statementState,
 		NextActionPath:       filepath.Join(workspace, "next-action.md"),
 		PromptPath:           filepath.Join(workspace, "agent-prompt.md"),
 		Message:              message,
@@ -313,16 +322,19 @@ func renderReportGateMarkdown(gate *ReportGateOutput) string {
 	b.WriteString("# Session 09 Report Gate\n\n")
 	b.WriteString(fmt.Sprintf("- **Ready**: %t\n", gate.Ready))
 	b.WriteString(fmt.Sprintf("- **Finding Registry**: %s\n", gate.FindingRegistryState))
-	b.WriteString(fmt.Sprintf("- **Finding Registry Path**: %s\n\n", gate.FindingRegistryPath))
+	b.WriteString(fmt.Sprintf("- **Finding Registry Path**: %s\n", gate.FindingRegistryPath))
+	b.WriteString(fmt.Sprintf("- **Statement**: %s\n\n", orNone(gate.StatementState, "missing")))
 	if len(gate.Issues) == 0 {
-		b.WriteString("No blocking or warning issues detected.\n")
-		return b.String()
+		b.WriteString("No blocking or warning issues detected.\n\n")
+	} else {
+		b.WriteString("| Severity | Code | Path | Message |\n")
+		b.WriteString("|----------|------|------|---------|\n")
+		for _, issue := range gate.Issues {
+			b.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", escapeMarkdownCell(issue.Severity), escapeMarkdownCell(issue.Code), escapeMarkdownCell(issue.Path), escapeMarkdownCell(issue.Message)))
+		}
+		b.WriteString("\n")
 	}
-	b.WriteString("| Severity | Code | Path | Message |\n")
-	b.WriteString("|----------|------|------|---------|\n")
-	for _, issue := range gate.Issues {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", escapeMarkdownCell(issue.Severity), escapeMarkdownCell(issue.Code), escapeMarkdownCell(issue.Path), escapeMarkdownCell(issue.Message)))
-	}
+	b.WriteString(renderCoverageSummaryMarkdown(gate.Coverage))
 	return b.String()
 }
 

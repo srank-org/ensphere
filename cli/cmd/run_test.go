@@ -148,3 +148,34 @@ func TestCLIRunInitRecordsEnvironmentInConfig(t *testing.T) {
 		t.Fatalf("config missing environment:\n%s", raw)
 	}
 }
+
+func TestCLIRunStatementRefusesUntilGateReady(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if result := runCLISplit(t, "run", "--workspace", workspace, "init",
+		"--target", "https://example.com",
+		"--assessed-by", "Claude Fable 5.1 via Claude Code",
+		"--operator", "Test Operator",
+	); result.code != 0 {
+		t.Fatalf("run init exit %d stderr=%s", result.code, result.stderr)
+	}
+	config, err := os.ReadFile(filepath.Join(workspace, "config.md"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if !strings.Contains(string(config), "- Assessed by: Claude Fable 5.1 via Claude Code") ||
+		!strings.Contains(string(config), "- Operator: Test Operator") {
+		t.Fatalf("config missing assessment fields:\n%s", config)
+	}
+	result := runCLISplit(t, "run", "--workspace", workspace, "statement")
+	if result.code != 2 {
+		t.Fatalf("expected exit 2 while the gate is not ready, got %d stdout=%s stderr=%s", result.code, result.stdout, result.stderr)
+	}
+	if !strings.Contains(result.stderr, "report gate not ready") {
+		t.Fatalf("expected gate refusal on stderr, got %s", result.stderr)
+	}
+	for _, name := range []string{"statement.yaml", "statement.md"} {
+		if _, err := os.Stat(filepath.Join(workspace, "09-report", name)); err == nil {
+			t.Fatalf("expected no %s while the gate is not ready", name)
+		}
+	}
+}

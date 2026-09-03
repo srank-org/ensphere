@@ -22,6 +22,10 @@
 - Approved upload sizes: (bytes, for Session 08.5 upload-size measurement against a staging bucket)
 - Areas to focus: (e.g. payment flow, upload pipeline, edge functions)
 
+## Assessment
+- Assessed by: (model or person performing the assessment, e.g. Claude Fable 5.1 via Claude Code)
+- Operator: (person who authorizes the assessment and signs the statement)
+
 ## Authorization
 This assessment is authorized against the environment named above by its owner.
 It does not authorize exploitation, data extraction, or testing of any other system.

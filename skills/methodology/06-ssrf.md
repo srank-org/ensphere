@@ -58,7 +58,7 @@ next step would access a real internal/metadata resource only to raise impact.
 
 ## Report
 
-Write `06-ssrf/report.md` with the fetcher coverage matrix, outbound policy and
+Write `06-ssrf/report.md` with the fetcher rows from `coverage.yaml`, outbound policy and
 egress facts, baseline/probe/control observations, callback attribution,
 resolved findings, tested defenses, untested destination classes, risk
 scenarios clearly labeled as such, remediation/validation criteria, cleanup,

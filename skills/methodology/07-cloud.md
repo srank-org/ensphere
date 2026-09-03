@@ -22,7 +22,7 @@ Record the exact authorized:
 Validate the active provider/cluster identity before collecting facts. Never
 infer scope from whichever credentials happen to be installed.
 
-Create a coverage matrix for identity/policy, storage, network exposure,
+Create `coverage.yaml` rows for identity/policy, storage, network exposure,
 compute/serverless, containers/Kubernetes, encryption/key management, logging
 and monitoring, secrets configuration metadata, backups/recovery, and IaC drift.
 Track each provider/region/cluster separately.
@@ -118,7 +118,7 @@ escalation. Preserve unavailable regions/services as coverage gaps.
 Write `07-cloud/report.md` with:
 
 1. exact provider/account/region/cluster and identity scope;
-2. coverage matrix and unavailable services/regions;
+2. `coverage.yaml` summary and unavailable services/regions;
 3. evidence provenance and any operator-supplied scanner output used as leads;
 4. resolved configuration/policy findings with evidence strength and confidence;
 5. tested controls and effective-policy facts;

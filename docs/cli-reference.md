@@ -97,7 +97,8 @@ return valid values.
 Create and inspect the `ensphere-pentest/` workspace used by the agent
 workflow. The runner writes deterministic workspace files, `next-action.md`,
 and `agent-prompt.md`; it does not run AI reasoning and has no exploitation
-command. Subcommands are `init`, `status`, `next`, `plan`, and `report`.
+command. Subcommands are `init`, `status`, `next`, `plan`, `report`, and
+`statement`.
 
 ```bash
 ensphere run init \
@@ -111,6 +112,7 @@ ensphere run status
 ensphere run plan
 ensphere run next
 ensphere run report
+ensphere run statement
 ```
 
 Flags for `run init`:
@@ -127,7 +129,13 @@ Flags for `run init`:
 --login-url, --username, --password   Test identity for authenticated sessions
 --approved-bursts        Operator-approved rate-limit bursts, e.g. "POST /api/otp: 10/10s"
 --approved-upload-sizes  Operator-approved upload sizes in bytes for the size-limit probe
+--assessed-by            Model or person performing the assessment, e.g. "Claude Fable 5.1 via Claude Code"
+--operator               Person who authorizes the assessment and signs the statement
 ```
+
+`--assessed-by` and `--operator` are recorded under an `Assessment` heading
+in `config.md` and copied into the Statement of Assessment. Both may be
+filled in later by editing `config.md`.
 
 `run plan` accepts `--force` to overwrite an existing assessment plan from
 config.
@@ -168,6 +176,32 @@ vectors for vulnerability findings, invalid confidence/severity/priority values,
 invalid evidence categories, invalid coverage labels, missing or unsafe
 transcript/artifact/cleanup paths, or an incomplete final report and evidence
 appendix.
+
+The gate also reads every session's `coverage.yaml` (Sessions 02 through
+08.7; Recon and the plan carry none). A `DONE` session without the file is
+an error. Each row needs an id of the form `COV-<session>-NNN`, a `surface`,
+a `check`, and a `state` of `planned`, `tested`, `not_tested`, `blocked`, or
+`not_applicable`. A `planned` row blocks the report. A `tested` row must cite
+`evidence_ids` that exist in that session's `evidence.jsonl`; every other
+resolved state needs a `reason`. The gate output carries a `coverage` block
+with counts per session and in total, and `report-gate.md` renders the same
+table. Those counts are the only source for the report's "checks executed"
+and "not checked" numbers.
+
+`run statement` derives `09-report/statement.yaml` and
+`09-report/statement.md`, the one-page Statement of Assessment, from the
+workspace alone: target, environment, source path, platforms, assessor and
+operator from `config.md`; every session's plan decision, coverage label, and
+progress state; the coverage counts above; finding counts by kind, status,
+and severity with the unresolved findings listed; each ledger's entry count,
+chain validity, and final hash; the earliest and latest evidence timestamps;
+and the Ensphere version. Nothing is typed by the caller. The command exits 2
+while the report gate has errors. It records a SHA-256 digest of its inputs
+in both files; afterwards the gate reports `statement_stale` if any input
+changes, `statement_edited` if `statement.md` no longer matches
+`statement.yaml`, and `statement_markdown_missing` if the markdown is
+deleted. Regenerate rather than edit. The markdown ends with the fixed
+self-assessment sentence and a signature block for the operator.
 
 Runner-generated state, plans, recon profiles, report artifacts, and finding
 registries use one canonical schema. Unknown fields are rejected rather than

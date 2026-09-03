@@ -39,7 +39,8 @@ Verify outputs must remain measurement-only and must not add exact JSON fields
 named `status`, `confidence`, `confirmed`, `safe`, or `potential`.
 
 Runner YAML inputs use strict field decoding. Tests cover the current plan,
-recon profile, finding registry, and report-gate contracts directly.
+recon profile, finding registry, coverage file, statement, and report-gate
+contracts directly.
 
 ## Test File Inventory
 
@@ -47,8 +48,9 @@ recon profile, finding registry, and report-gate contracts directly.
 |------|---------|---------|
 | `cmd/helpers_test.go` | cmd | Command helper behavior: header parsing and verify exit-code mapping |
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
-| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, environment flag validation, status, next, plan drafting, and the report gate |
+| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, and the statement refusal exit code |
 | `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only coverage, report contracts, and evidence/citation gates |
+| `runner/statement_test.go` | runner | Coverage file validation codes, statement generation, stable inputs digest, and stale or edited statement detection |
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
 | `verify/sqli_test.go` | verify | SQLi DB engine normalization and DB-specific payload selection |

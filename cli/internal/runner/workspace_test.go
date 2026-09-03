@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1029,7 +1030,38 @@ func writeReportReadyWorkspace(t *testing.T, workspace string) {
 			t.Fatalf("write report %s: %v", path, err)
 		}
 	}
+	for _, id := range []string{"02", "06", "08", "08.5"} {
+		writeCoverageFile(t, workspace, id, fmt.Sprintf(`session: "%s"
+rows:
+  - id: COV-%s-001
+    surface: "GET /fixture"
+    check: "fixture_control"
+    identity: anonymous
+    state: not_tested
+    reason: "fixture workspace"
+`, id, id))
+	}
 	writeSession09Artifacts(t, workspace)
+}
+
+func writeCoverageFile(t *testing.T, workspace, sessionID, content string) {
+	t.Helper()
+	var dir string
+	for _, session := range reportRequiredSessions {
+		if session.ID == sessionID {
+			dir = session.Directory
+		}
+	}
+	if dir == "" {
+		t.Fatalf("unknown session %s", sessionID)
+	}
+	path := filepath.Join(workspace, dir, "coverage.yaml")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("mkdir coverage dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("write coverage %s: %v", path, err)
+	}
 }
 
 func writeValidFindingRegistry(t *testing.T, workspace string, ids ...string) {

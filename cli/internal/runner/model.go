@@ -21,6 +21,8 @@ type InitConfig struct {
 	Password            string
 	ApprovedBursts      string
 	ApprovedUploadSizes string
+	AssessedBy          string
+	Operator            string
 }
 
 type Status struct {
@@ -53,6 +55,10 @@ type ReportGateOutput struct {
 	FindingRegistryPath  string            `json:"finding_registry_path" yaml:"finding_registry_path"`
 	FindingRegistryState string            `json:"finding_registry_state" yaml:"finding_registry_state"`
 	Issues               []ReportGateIssue `json:"issues,omitempty" yaml:"issues,omitempty"`
+	Coverage             *CoverageSummary  `json:"coverage,omitempty" yaml:"coverage,omitempty"`
+	StatementPath        string            `json:"statement_path,omitempty" yaml:"statement_path,omitempty"`
+	StatementMarkdown    string            `json:"statement_markdown_path,omitempty" yaml:"statement_markdown_path,omitempty"`
+	StatementState       string            `json:"statement_state,omitempty" yaml:"statement_state,omitempty"`
 	NextActionPath       string            `json:"next_action_path,omitempty" yaml:"next_action_path,omitempty"`
 	PromptPath           string            `json:"prompt_path,omitempty" yaml:"prompt_path,omitempty"`
 	Message              string            `json:"message" yaml:"message"`
@@ -242,4 +248,119 @@ var Sessions = []Session{
 	{ID: "08.5", Name: "Abuse and Cost Controls", Methodology: "skills/methodology/08.5-abuse.md", Directory: "08.5-abuse"},
 	{ID: "08.7", Name: "Chains and Workflows", Methodology: "skills/methodology/08.7-chains.md", Directory: "08.7-chains"},
 	{ID: "09", Name: "Report", Methodology: "skills/methodology/09-report.md", Directory: "09-report"},
+}
+
+// CoverageFile is <session-dir>/coverage.yaml: the machine-read record of
+// every check a session planned and its state. See the contract's "Coverage
+// file" section for the schema.
+type CoverageFile struct {
+	Session string        `json:"session" yaml:"session"`
+	Rows    []CoverageRow `json:"rows" yaml:"rows"`
+}
+
+type CoverageRow struct {
+	ID          string   `json:"id" yaml:"id"`
+	Surface     string   `json:"surface" yaml:"surface"`
+	Check       string   `json:"check" yaml:"check"`
+	Identity    string   `json:"identity,omitempty" yaml:"identity,omitempty"`
+	State       string   `json:"state" yaml:"state"`
+	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
+	Transcripts []string `json:"transcripts,omitempty" yaml:"transcripts,omitempty"`
+	Checklist   string   `json:"checklist,omitempty" yaml:"checklist,omitempty"`
+	Reason      string   `json:"reason,omitempty" yaml:"reason,omitempty"`
+}
+
+// CoverageCounts counts coverage rows by state.
+type CoverageCounts struct {
+	Planned       int `json:"planned" yaml:"planned"`
+	Tested        int `json:"tested" yaml:"tested"`
+	NotTested     int `json:"not_tested" yaml:"not_tested"`
+	Blocked       int `json:"blocked" yaml:"blocked"`
+	NotApplicable int `json:"not_applicable" yaml:"not_applicable"`
+	Total         int `json:"total" yaml:"total"`
+}
+
+// SessionCoverage is one session's coverage file summary.
+type SessionCoverage struct {
+	ID        string         `json:"id" yaml:"id"`
+	Directory string         `json:"directory" yaml:"directory"`
+	Present   bool           `json:"present" yaml:"present"`
+	Counts    CoverageCounts `json:"counts" yaml:"counts"`
+}
+
+// CoverageSummary is the report gate's count of every coverage file.
+type CoverageSummary struct {
+	Sessions []SessionCoverage `json:"sessions" yaml:"sessions"`
+	Totals   CoverageCounts    `json:"totals" yaml:"totals"`
+}
+
+// Statement is 09-report/statement.yaml: every number in the Statement of
+// Assessment, derived from the workspace by ensphere run statement.
+type Statement struct {
+	GeneratedAt     string             `json:"generated_at" yaml:"generated_at"`
+	EnsphereVersion string             `json:"ensphere_version" yaml:"ensphere_version"`
+	System          StatementSystem    `json:"system" yaml:"system"`
+	Dates           StatementDates     `json:"dates" yaml:"dates"`
+	Checklists      []string           `json:"checklists" yaml:"checklists"`
+	Sessions        []StatementSession `json:"sessions" yaml:"sessions"`
+	Coverage        CoverageSummary    `json:"coverage" yaml:"coverage"`
+	Findings        StatementFindings  `json:"findings" yaml:"findings"`
+	Ledgers         []StatementLedger  `json:"ledgers" yaml:"ledgers"`
+	InputsDigest    string             `json:"inputs_digest" yaml:"inputs_digest"`
+}
+
+type StatementSystem struct {
+	TargetURL   string   `json:"target_url" yaml:"target_url"`
+	Environment string   `json:"environment" yaml:"environment"`
+	SourcePath  string   `json:"source_path" yaml:"source_path"`
+	TargetType  string   `json:"target_type" yaml:"target_type"`
+	Cloud       []string `json:"cloud" yaml:"cloud"`
+	InScope     string   `json:"in_scope" yaml:"in_scope"`
+	AssessedBy  string   `json:"assessed_by" yaml:"assessed_by"`
+	Operator    string   `json:"operator" yaml:"operator"`
+}
+
+type StatementDates struct {
+	EarliestEvidence string `json:"earliest_evidence" yaml:"earliest_evidence"`
+	LatestEvidence   string `json:"latest_evidence" yaml:"latest_evidence"`
+}
+
+type StatementSession struct {
+	ID            string `json:"id" yaml:"id"`
+	Name          string `json:"name" yaml:"name"`
+	Decision      string `json:"decision" yaml:"decision"`
+	CoverageLabel string `json:"coverage_label" yaml:"coverage_label"`
+	State         string `json:"state" yaml:"state"`
+}
+
+type StatementFindings struct {
+	ByKind     map[string]int      `json:"by_kind" yaml:"by_kind"`
+	ByStatus   map[string]int      `json:"by_status" yaml:"by_status"`
+	BySeverity map[string]int      `json:"by_severity" yaml:"by_severity"`
+	Unresolved []UnresolvedFinding `json:"unresolved" yaml:"unresolved"`
+}
+
+type UnresolvedFinding struct {
+	ID       string `json:"id" yaml:"id"`
+	Kind     string `json:"kind" yaml:"kind"`
+	Status   string `json:"status" yaml:"status"`
+	Severity string `json:"severity" yaml:"severity"`
+	Title    string `json:"title" yaml:"title"`
+}
+
+type StatementLedger struct {
+	Session   string `json:"session" yaml:"session"`
+	Path      string `json:"path" yaml:"path"`
+	Entries   int    `json:"entries" yaml:"entries"`
+	FinalHash string `json:"final_hash" yaml:"final_hash"`
+	Valid     bool   `json:"valid" yaml:"valid"`
+}
+
+// StatementOutput is the JSON result of ensphere run statement.
+type StatementOutput struct {
+	Workspace     string `json:"workspace"`
+	StatementPath string `json:"statement_path"`
+	MarkdownPath  string `json:"markdown_path"`
+	InputsDigest  string `json:"inputs_digest"`
+	Message       string `json:"message"`
 }

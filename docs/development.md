@@ -35,7 +35,7 @@ Not allowed in code:
 | `cli/internal/verify/` | Verification probe logic |
 | `cli/internal/evidence/` | JSONL evidence writer and reader |
 | `cli/internal/payloads/` | Embedded YAML payload seeds and query logic |
-| `cli/internal/runner/` | Workspace runner, assessment-plan drafting, Session 09 report gate |
+| `cli/internal/runner/` | Workspace runner, assessment-plan drafting, coverage validation, Session 09 report gate, Statement of Assessment |
 | `cli/internal/compliance/` | Compliance mappings |
 | `cli/internal/cvss/` | CVSS v4.0 calculator |
 | `cli/internal/scan/` | Regex-based sink scanner |

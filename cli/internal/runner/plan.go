@@ -587,6 +587,13 @@ func parseConfigMarkdown(text string) InitConfig {
 			case "cloud":
 				cfg.Cloud = value
 			}
+		case "Assessment":
+			switch key {
+			case "assessed by":
+				cfg.AssessedBy = value
+			case "operator":
+				cfg.Operator = value
+			}
 		case "Authentication":
 			switch key {
 			case "login url":

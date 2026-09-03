@@ -66,7 +66,7 @@ When the user says `ensphere` or names a session:
    proof happens; offer to stand one up if there is none. Without a live
    target the coverage label is `source_only` and every measurement row is
    `not_tested`; source review and missing-control findings still proceed.
-5. Resume from the recorded coverage matrix. Do not repeat completed probes.
+5. Resume from the session's `coverage.yaml`. Do not repeat completed probes.
 
 Ask for direction when authorization, target identity, environment, or a
 material boundary cannot be established. Missing optional context is a
@@ -102,12 +102,13 @@ reason.
 ## Session artifacts
 
 Each session directory contains, as applicable: `plan.md` (scope, limits,
-coverage matrix, candidates), `evidence.jsonl`, `transcripts/` or
+candidates), `coverage.yaml` (the machine-read record of every check and
+its state; see the contract), `evidence.jsonl`, `transcripts/` or
 `artifacts/`, `checkpoint.md`, and `report.md`. Update `progress.md` only
 after the report is written.
 
 Before a long operation, write `checkpoint.md` with the current
-coverage-matrix position, completed and remaining candidates, evidence paths
+`coverage.yaml` position, completed and remaining candidates, evidence paths
 and chain state, and request counters, so a run that loses its context can
 resume rather than restart. Delete it after the session report is done.
 
@@ -134,7 +135,8 @@ not run it.
 ## Ending a session
 
 1. Resolve every planned candidate or record why it is `not_tested`.
-2. Reconcile the coverage matrix with the work actually done.
+2. Reconcile `coverage.yaml` with the work actually done: no `planned`
+   rows remain, every `tested` row cites evidence.
 3. Verify cited evidence paths and run `ensphere evidence verify`.
 4. Write the session report, ending with the **Needs from you** list.
 5. Mark the session terminal in `progress.md`, run `ensphere run next`, and

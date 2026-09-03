@@ -80,7 +80,7 @@ or escalate to command execution for proof.
 
 Write `02-injection/report.md` with:
 
-1. scope, mode, coverage matrix, and limits;
+1. scope, environment, `coverage.yaml` summary, and limits;
 2. each resolved finding with claim, source/data flow, baseline/probe/control,
    observed facts, alternatives considered, status, evidence strength,
    confidence, impact, remediation, validation criteria, and citations;

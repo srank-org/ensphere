@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -25,6 +26,8 @@ var (
 	runPassword            string
 	runApprovedBursts      string
 	runApprovedUploadSizes string
+	runAssessedBy          string
+	runOperator            string
 	runPlanForce           bool
 )
 
@@ -66,6 +69,8 @@ var runInitCmd = &cobra.Command{
 			Password:            runPassword,
 			ApprovedBursts:      runApprovedBursts,
 			ApprovedUploadSizes: runApprovedUploadSizes,
+			AssessedBy:          runAssessedBy,
+			Operator:            runOperator,
 		})
 		if err != nil {
 			return err
@@ -122,6 +127,28 @@ var runReportCmd = &cobra.Command{
 	},
 }
 
+var runStatementCmd = &cobra.Command{
+	Use:   "statement",
+	Short: "Write the Statement of Assessment from the workspace",
+	Long: `Derive 09-report/statement.yaml and statement.md from the workspace: config,
+progress, plan decisions, coverage counts, finding counts, and evidence ledger
+hashes. Nothing is typed by the caller. The command refuses to run until
+ensphere run report is ready, and the report gate fails with statement_stale
+or statement_edited if the workspace or the markdown changes afterwards.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		out, err := runner.RunStatement(runWorkspace, version)
+		if err != nil {
+			if errors.Is(err, runner.ErrReportGateNotReady) {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				osExit(2)
+				return nil
+			}
+			return err
+		}
+		return encodeRunJSON(out)
+	},
+}
+
 func init() {
 	runCmd.PersistentFlags().StringVar(&runWorkspace, "workspace", runner.DefaultWorkspace(), "Ensphere workspace directory")
 
@@ -137,10 +164,12 @@ func init() {
 	runInitCmd.Flags().StringVar(&runPassword, "password", "", "Test password")
 	runInitCmd.Flags().StringVar(&runApprovedBursts, "approved-bursts", "", "Operator-approved rate-limit bursts, e.g. \"POST /api/otp: 10/10s\"")
 	runInitCmd.Flags().StringVar(&runApprovedUploadSizes, "approved-upload-sizes", "", "Operator-approved upload sizes in bytes for Session 08.5")
+	runInitCmd.Flags().StringVar(&runAssessedBy, "assessed-by", "", "Model or person performing the assessment, e.g. \"Claude Fable 5.1 via Claude Code\"")
+	runInitCmd.Flags().StringVar(&runOperator, "operator", "", "Person who authorizes the assessment and signs the statement")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
 
-	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd)
+	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runStatementCmd)
 	rootCmd.AddCommand(runCmd)
 }
 

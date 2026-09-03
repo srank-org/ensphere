@@ -146,10 +146,14 @@ func renderConfig(cfg InitConfig) string {
 - Approved upload sizes: %s
 - Areas to focus:
 
+## Assessment
+- Assessed by: %s
+- Operator: %s
+
 ## Authorization
 This assessment is authorized against the environment named above by its owner.
 It does not authorize exploitation, data extraction, or testing of any other system.
-`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes)
+`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes, cfg.AssessedBy, cfg.Operator)
 }
 
 func renderProgress(workspace string) string {

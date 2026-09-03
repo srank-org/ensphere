@@ -73,7 +73,7 @@ impact.
 
 ## Report
 
-Write `03-auth/report.md` with the coverage matrix, account/role limitations,
+Write `03-auth/report.md` with the `coverage.yaml` summary, account/role limitations,
 resolved findings, baseline/probe/control evidence, tested defenses, token and
 session lifecycle facts, unresolved flows, evidence index, and remediation
 validation criteria. Never include live tokens, passwords, reset links, or

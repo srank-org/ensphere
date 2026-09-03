@@ -53,9 +53,10 @@ Every session follows this sequence:
 1. **Preflight.** Confirm authorization, the selected target, the source
    path, whether a live target is in scope and which environment it is,
    scope, identities and roles, request limits, and a writable evidence path.
-2. **Coverage matrix.** List the applicable surface for this session and mark
-   each row `planned`, `tested`, `not_tested`, `blocked`, or `not_applicable`
-   with a reason and a provenance reference.
+2. **Coverage file.** List the applicable surface for this session in
+   `coverage.yaml` (schema below) and mark each row `planned`, `tested`,
+   `not_tested`, `blocked`, or `not_applicable`. The report gate validates
+   this file; it is the record of what was checked.
 3. **Candidates.** Turn the recon inventory, the loaded checklists, and source
    review into narrow claims. A candidate is not a finding.
 4. **Controlled validation.** Baseline, probe, control (below).
@@ -66,8 +67,36 @@ Every session follows this sequence:
    step would only increase impact for a more dramatic proof. In a sandbox the
    last clause does not apply: continue until the claim is demonstrated end to
    end or contradicted.
-7. **Session report.** Coverage, findings, missing controls, tested defenses,
-   unresolved candidates, limitations, evidence index.
+7. **Session report.** Findings, missing controls, tested defenses,
+   unresolved candidates, limitations, evidence index. Before writing it,
+   update `coverage.yaml` so no row is still `planned`.
+
+## Coverage file
+
+Every session directory holds `coverage.yaml`. It is machine-read: the
+report gate counts it, checks that every `tested` row cites evidence that
+exists in that session's ledger, and `ensphere run statement` derives the
+"checks executed" numbers from it. Never claim a check in prose that is not
+a row here.
+
+```yaml
+session: "02"
+rows:
+  - id: COV-02-001
+    surface: "POST /api/search"        # endpoint, table, bucket, function, or config item
+    check: "sql_predicate_control"     # short lowercase name of the claim tested
+    identity: "[TENANT_A_USER]"        # or anonymous
+    state: tested                      # planned | tested | not_tested | blocked | not_applicable
+    evidence_ids: [EVID-012, EVID-013] # required for tested; must exist in this session's evidence.jsonl
+    transcripts: []                    # optional workspace-relative paths
+    checklist: "prisma-drizzle"        # optional: the checklist item that produced the row
+    reason: ""                         # required for not_tested, blocked, not_applicable
+```
+
+One row per surface and check. A `tested` row means baseline, probe, and
+control were run and recorded; a defense that held is still `tested`, with
+the finding resolved `not_supported`. Rows with no evidence are not
+`tested`, whatever the transcript says.
 
 ## Controlled validation
 

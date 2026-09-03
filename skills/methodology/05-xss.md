@@ -56,7 +56,7 @@ session use, or any real-user impact for proof.
 
 ## Report
 
-Write `05-xss/report.md` with the render-context coverage matrix, source/data
+Write `05-xss/report.md` with the render-context rows from `coverage.yaml`, source/data
 flows, safe witness and cleanup, browser and policy context, resolved findings,
 tested defenses, unresolved contexts, remediation and validation criteria, and
 evidence citations.
