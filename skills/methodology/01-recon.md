@@ -120,6 +120,17 @@ known paths. Fingerprint technologies only when responses support the
 inference. Do not brute-force directories, enumerate subdomains, scan ports,
 or probe unrelated infrastructure.
 
+## Step 4: Write hypotheses
+
+The role table says which invariants to check; it does not know what this
+system is for. From the application description, the objects and workflows
+inventory, the data classes, and the billed services, answer the six
+questions in `shared/fundamentals.md` (Beyond the map) and write
+`01-recon/hypotheses.md` in the table given there: one `HYP-NNN` row per
+goal, with what it rests on and its owning session. An empty table carries
+its reasoning. The contract (Hypotheses) says how later sessions treat each
+row; here they are candidates, and none is probed.
+
 ## Target profile
 
 Write `01-recon/target-profile.yaml`:
@@ -181,6 +192,8 @@ Before marking Session 01 `DONE`:
 - the stack table has an evidence reference or `unknown` in every row;
 - every billing-exposed service and storage surface is listed;
 - every inventory has provenance or an explicit gap;
+- `hypotheses.md` exists, and every row cites what it rests on or the
+  table's emptiness is reasoned;
 - source and live discrepancies are recorded;
 - missing accounts, roles, tenants, and credentials are listed;
 - profile signals agree with the inventories;
@@ -192,6 +205,7 @@ Write `01-recon/report.md` with: authorization, source path, live target and
 environment tier with a link to `sandbox.md`, and scope; the
 stack table and application description; coverage and collection limits;
 each inventory; existing rate and cost controls; source and live drift;
-candidate index for later sessions with provenance; evidence index.
+candidate index for later sessions with provenance; a pointer to
+`hypotheses.md`; evidence index.
 
 Then proceed to Session 01.5.

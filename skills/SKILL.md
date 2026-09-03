@@ -34,7 +34,9 @@ rule is in doubt:
    auth provider, hosting, storage, edge, and every third-party service that
    bills per call. Write the role table from the fundamentals, inventory
    the attack surface, and write `01-recon/target-profile.yaml` with its
-   `stack` block. Stand up the sandbox as
+   `stack` block. Then write `01-recon/hypotheses.md`: what a motivated
+   user of this exact system would go after, as the fundamentals' Beyond
+   the map section describes. Stand up the sandbox as
    [shared/sandbox.md](shared/sandbox.md) describes.
 2. **Plan from the stack (Session 01.5).** Map the detected stack to
    checklist files with the table in
@@ -43,7 +45,8 @@ rule is in doubt:
    need, and ask for all of it at once. Run `ensphere run plan`.
 3. **Check (Sessions 02 to 08.5).** Each session opens its methodology plus
    the checklists the plan assigned to it, writes its `coverage.yaml`, and
-   resolves every row with baseline, probe, control. The methodology and
+   resolves every row, including the hypotheses assigned to it, with
+   baseline, probe, control. The methodology and
    the fundamentals say what to check; a checklist, when one exists, says
    where that lives in this framework and the idiomatic fix.
 4. **Prove (Session 08.7).** In the sandbox only, join the `likely`
@@ -103,7 +106,7 @@ First-run inputs, collected once:
 
 | Session | File | Outcome |
 |---------|------|---------|
-| 01 | [Recon](methodology/01-recon.md) | Stack profile, role table, attack-surface inventory, sandbox record. |
+| 01 | [Recon](methodology/01-recon.md) | Stack profile, role table, attack-surface inventory, sandbox record, system-specific hypotheses. |
 | 01.5 | [Plan](methodology/01.5-session-plan.md) | Session decisions, assigned checklists, the complete Needs-from-you list. |
 | 02 | [Injection](methodology/02-injection.md) | SQL, NoSQL, command, template, path, XML, header, LDAP, XPath. |
 | 03 | [Authentication](methodology/03-auth.md) | Login, session, token, reset, MFA, OAuth, cookie flags. |
@@ -134,7 +137,7 @@ ensphere-pentest/
   assessment-plan.yaml      written by run plan, mirrored into 01.5-session-plan/
   next-action.md            handoff written by run next; read it first on resume
   agent-prompt.md           the prompt a fresh context should start from
-  01-recon/                 report.md, target-profile.yaml, sandbox.md
+  01-recon/                 report.md, target-profile.yaml, sandbox.md, hypotheses.md
   01.5-session-plan/        report.md, assessment-plan.yaml
   02-injection/ ... 08.7-chains/
     plan.md                 scope, limits, candidates
@@ -200,6 +203,9 @@ or a stop rule, do not run it; record the row `blocked` with the reason.
   number without both is not evidence.
 - Name things by role. "The limiter on the OTP send" says more than the
   middleware's package name, and the fix follows from the role.
+- The map is the floor. After the role table, ask what a motivated user of
+  this system would go after and write each answer down as a hypothesis
+  with a coverage row. That list is where your judgment shows.
 - Write as you go: the coverage row before the probe, the evidence id in
   the row after it, the transcript while the observation is fresh.
 - Prefer the sandbox for anything that changes state. Prefer staging only

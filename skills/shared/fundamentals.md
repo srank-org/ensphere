@@ -79,13 +79,67 @@ A source-review candidate says which question failed and cites the line. A
 live measurement then shows the consequence: the request that should have
 been refused and was not, with its baseline and control.
 
+## Beyond the map: hypotheses
+
+The table above is the floor of an assessment. It guarantees every role is
+checked; it cannot know what this particular system is for, and the
+failures that cost a business most are often specific to it: a coupon that
+stacks, a refund that can be replayed, a plan limit enforced only in the
+UI. Session 01 therefore writes `01-recon/hypotheses.md` after the role
+table, and the contract (Hypotheses) says how the rest of the run treats it.
+
+Generate hypotheses from the application description, the objects and
+workflows inventory, the data classes, and the billed services by asking six
+questions about this system, not about systems in general:
+
+1. **Where does money move?** Prices, credits, refunds, coupons, quotas,
+   metered usage, payouts. What would let a user pay less, get more, or
+   make the owner pay?
+2. **What is worth reading?** The data classes recon found. Who must not
+   see each, and which path passes near it: an export, a search, a
+   notification, a shared link, a log line?
+3. **What is privilege here?** Roles, tenants, admin, ownership, verified
+   status. Which transitions grant it, and which request fields feed those
+   transitions?
+4. **What does the system trust from outside?** Webhooks, callbacks, OAuth
+   returns, imported files, third-party identifiers, signed URLs. What
+   happens when one is forged, replayed, or arrives late?
+5. **What is scarce?** Invites, seats, codes, storage, model calls,
+   free-tier allowances. What counts them, and where is the count enforced?
+6. **What did the developers build that a framework usually provides?**
+   Custom auth, custom crypto, a hand-written limiter or parser, a home-grown
+   template engine. Each is a role filled without the usual guarantees.
+
+An answer that is already a row from the roles table is not a hypothesis;
+the row covers it. An answer that is not becomes one row here:
+
+| Id | Goal on synthetic data | Rests on | Owning session | Edges |
+|----|------------------------|----------|----------------|-------|
+| HYP-001 | Apply one coupon twice to one order by racing two redemption requests | `api/checkout/coupon.ts:41` reads the remaining-uses count and writes it back without a transaction | 04 | single step |
+| HYP-002 | Make the owner pay for image transforms with no account | `routes/thumb.ts:12` calls the transform API for any URL before any auth check | 08.5 | single step |
+| HYP-003 | Read tenant B's export as tenant A | `jobs/export.ts:77` emails a download token; `api/download.ts:19` checks that the token exists, not whose it is | 04, joined in 08.7 | token issuance (04); download without tenant check (04) |
+
+The goal is concrete and provable in the sandbox. "Rests on" cites the file
+and line, or the configuration item, that makes the goal plausible; a
+hypothesis with nothing to rest on is a guess and is written as one, with
+`rests on: none`, so the owning session tests it last. The owning session
+is the category that resolves single-step claims of that kind. A multi-step
+goal lists its edges, each owned by a category session, and names 08.7 as
+where they join once every edge has been probed.
+
+Zero hypotheses is a legitimate answer for a small system whose role table
+already names every path to money, data, and privilege. Write the reasoning
+down. A long list is not a better one: five hypotheses that each rest on a
+line beat twenty that rest on nothing.
+
 ## Using this file
 
 - **Session 01** writes a role table in `01-recon/report.md`: one row per
   role above, the product that fills it (free-form lowercase name, or
   `none` with the evidence that nothing does), and the file where it lives.
   The stack block in the target profile lists those products by dimension
-  so Session 01.5 can match them to checklists.
+  so Session 01.5 can match them to checklists. Then it writes the
+  hypotheses table above into `01-recon/hypotheses.md`.
 - **Session 01.5** loads a checklist when one exists for the product. When
   none exists, it plans the session from this table: the "how to find it"
   column gives the source-review target, the session methodology gives the

@@ -117,10 +117,14 @@ Write `09-report/report.md`:
    construction and never says "secure".
 6. **Not checked**: every `not_tested`, `blocked`, and `not_applicable`
    coverage row with its reason and its effect on the conclusions.
-7. **Scope and method**: source path, live target and environment tier with
-   the sandbox isolation record, dates, in and out of scope, checklists loaded, uncovered stack, approved request limits, tool
-   versions.
-8. **Appendices**: evidence index with hash-chain state, redactions; the
+7. **Hypotheses**: every row of `01-recon/hypotheses.md` with its outcome:
+   the finding it became, the tested defense that held, or `not_tested` or
+   `blocked` with the reason, taken from the coverage rows that carry its
+   id. An empty table is reported with the reasoning recon gave.
+8. **Scope and method**: source path, live target and environment tier with
+   the sandbox isolation record, dates, in and out of scope, checklists
+   loaded, uncovered stack, approved request limits, tool versions.
+9. **Appendices**: evidence index with hash-chain state, redactions; the
    coverage appendix from `shared/coverage-map.md` (every WSTG category and
    ASVS chapter with evidence IDs, `not_tested`, or `not covered`); optional
    compliance mapping; optional attack-path notes that keep observed edges
@@ -149,7 +153,8 @@ producer, target and role context, integrity state, limitations.
 Run `ensphere run report` again. Then check for: uncited findings, status
 inconsistent with evidence strength, severity unsupported by stated impact,
 duplicates, scanner severity presented as Ensphere severity, hypothetical
-edges presented as observed, certification language, broad negative
+edges presented as observed, a hypothesis with no outcome, certification
+language, broad negative
 assurance, secrets or personal data, and coverage statements that disagree
 with session reports.
 

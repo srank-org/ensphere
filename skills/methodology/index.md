@@ -6,7 +6,7 @@ methodology file.
 
 | Session | File | Primary artifact |
 |---------|------|------------------|
-| 01 | [Recon](01-recon.md) | Stack profile, surface inventories, `target-profile.yaml` |
+| 01 | [Recon](01-recon.md) | Stack profile, surface inventories, `target-profile.yaml`, `hypotheses.md` |
 | 01.5 | [Plan](01.5-session-plan.md) | `assessment-plan.yaml` with session decisions and assigned checklists |
 | 02 | [Injection](02-injection.md) | Resolved injection claims |
 | 03 | [Authentication](03-auth.md) | Resolved identity and session claims |

@@ -20,7 +20,7 @@ the current WSTG; this file only names categories.
 | INPV Input validation | 02 injection families, 05 XSS, 06 SSRF, 08 mass assignment | HTTP parameter pollution, host header injection, format string, incubated vulnerabilities |
 | ERRH Error handling | 03 error differentiation only | Stack trace and verbose error review as its own check |
 | CRYP Cryptography | 03 JWT algorithm and signature checks only | TLS configuration, padding oracle, unencrypted channels |
-| BUSL Business logic | 04 workflow and state, 08.7 chains, 08.5 misuse defenses, `verify fileupload` | Process timing; function-use limits beyond rate limits |
+| BUSL Business logic | 01 hypotheses, 04 workflow and state, 08.7 chains, 08.5 misuse defenses, `verify fileupload` | Process timing; function-use limits beyond rate limits |
 | CLNT Client-side | 05 DOM XSS; `verify cors`, `verify clickjacking`, `verify redirect`, `verify websocket` | Client-side storage, cross-site script inclusion, reverse tabnabbing |
 | APIT API testing | 08 GraphQL, gRPC, schema exposure; 08.5 | |
 
@@ -38,7 +38,7 @@ the current WSTG; this file only names categories.
 | V8 Data protection | 07 storage configuration only |
 | V9 Communication | Not covered |
 | V10 Malicious code | Not covered |
-| V11 Business logic | 04, 08.5, 08.7 |
+| V11 Business logic | 01 hypotheses, 04, 08.5, 08.7 |
 | V12 Files and resources | 02 path handling, 08.5 uploads |
 | V13 API and web service | 08 |
 | V14 Configuration | 07 |

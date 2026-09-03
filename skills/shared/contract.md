@@ -88,8 +88,8 @@ target until one application or service in it is named.
   `blocked` and ask at the next human gate. Risk 4 and 5 payloads never
   read credentials or execute code, whatever the ceiling.
 - **Leads are not findings.** Source candidates, `ensphere scan` matches,
-  and imported scanner results establish that something is worth checking,
-  never that it is reachable or exploitable.
+  hypotheses, and imported scanner results establish that something is
+  worth checking, never that it is reachable or exploitable.
 
 Missing optional context (a second tenant, a provider login, a staging URL)
 is a coverage limitation. It never widens what may be tested.
@@ -191,8 +191,8 @@ coverage file.
    marked `planned` or, with a reason, `not_tested`, `blocked`, or
    `not_applicable`. This is the record of what was checked.
 3. **Candidates.** Turn the recon inventory, the fundamentals map, the
-   loaded checklists, and source review into narrow claims. A candidate is
-   not a finding.
+   loaded checklists, the hypotheses assigned to this session, and source
+   review into narrow claims. A candidate is not a finding.
 4. **Controlled validation.** Baseline, probe, control (below), one
    candidate at a time.
 5. **Resolution.** For each candidate record status, confidence, evidence
@@ -209,6 +209,39 @@ coverage file.
    every `tested` row cites evidence, and `ensphere evidence verify`
    passes on the session ledger. Then mark the session terminal in
    `progress.md` and run `ensphere run next`.
+
+## Hypotheses
+
+The fundamentals map is the floor of an assessment, not its ceiling. It
+guarantees every role is checked; it cannot know what one system is for.
+Session 01 therefore writes `01-recon/hypotheses.md`: what a motivated user
+of this exact system would try to obtain, on synthetic data, generated as
+`shared/fundamentals.md` (Beyond the map) describes. Each hypothesis has an
+id `HYP-NNN`, a goal, the source or configuration it rests on, an owning
+session, and its edges when it needs more than one step.
+
+Hypotheses are candidates and follow every rule candidates follow:
+
+- Session 01.5 confirms the owning session of each and records the
+  assignment in its report. No hypothesis is left without an owner.
+- The owning session gives it a coverage row carrying `hypothesis: HYP-NNN`
+  before testing it and resolves the row with baseline, probe, control. A
+  multi-step hypothesis is split into single-step edges, each with its own
+  row in the session that owns that kind of claim.
+- A hypothesis is never dropped silently. One that cannot be tested
+  resolves `not_tested` or `blocked` with the reason on its row.
+- Session 08.7 joins the probed edges of a multi-step hypothesis into a
+  chain. An edge no session probed is not an edge; the hypothesis is
+  reported with its rows' states, not as a chain.
+- A hypothesis becomes a finding only through controlled validation, like a
+  scan match or an imported lead. Speculation reaches the report as a
+  hypothesis with its state, never as a finding.
+- Session 09 reports every hypothesis with its outcome.
+
+An empty list is legitimate for a small system whose role table already
+names every path to money, data, and privilege; Session 01 writes the
+reasoning down. The list is where the analyst's judgment about this system
+shows, and the report makes that judgment visible and checkable.
 
 ## Coverage file
 
@@ -231,6 +264,7 @@ rows:
     evidence_ids: [EVID-012, EVID-013] # required for tested; must exist in this session's evidence.jsonl
     transcripts: []                    # optional workspace-relative paths
     checklist: "prisma-drizzle"        # optional: the checklist item that produced the row
+    hypothesis: ""                     # optional: the HYP-NNN row in 01-recon/hypotheses.md this row resolves
     reason: ""                         # required for not_tested, blocked, not_applicable
 ```
 
