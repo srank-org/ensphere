@@ -34,9 +34,9 @@ Start from the repository root and read, in this order, whatever exists:
 `fly.toml`, `supabase/config.toml`, `firebase.json`, Terraform or CDK roots,
 `.github/workflows`, `.env.example`, and the top-level directory layout.
 
-Fill this table. Each row is a role from `shared/fundamentals.md`; the value
-is whichever product fills it in this project, written as a free-form
-lowercase name. The examples are illustrations, not an allowed list. Every
+Fill this table. Each dimension collects the products that fill the roles
+in `shared/fundamentals.md`; the value is whichever product fills it in this
+project, written as a free-form lowercase name. The examples are illustrations, not an allowed list. Every
 row cites the file that proves it. Use `unknown` rather than guessing.
 
 | Dimension | Examples of values | Evidence |
@@ -56,8 +56,10 @@ row cites the file that proves it. Use `unknown` rather than guessing.
 low-privilege caller can make the owner pay per invocation, per byte, or per
 message. List every one; Session 08.5 checks each.
 
-Then write, in two or three sentences, what the application does and who its
-users are. This sentence drives which checks matter (a public file-sharing app
+Then write the role table `shared/fundamentals.md` asks for in
+`01-recon/report.md`: one row per role, the product that fills it or `none`
+with evidence, and the file where it lives. Then write, in two or three
+sentences, what the application does and who its users are. This sentence drives which checks matter (a public file-sharing app
 and an internal admin tool have different abuse surfaces).
 
 ## Step 2: Stand up the sandbox
