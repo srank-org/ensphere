@@ -145,6 +145,9 @@ not run it.
 
 ## Report rules
 
+The contract's Reporting section is the full list. The rules most often
+broken:
+
 - No uncited finding or missing control.
 - No broad "secure" or "safe" claim from bounded testing.
 - No scanner severity presented as Ensphere severity.

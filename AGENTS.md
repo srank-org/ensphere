@@ -114,6 +114,8 @@ conventions.
   `skills/checklists/index.md`.
 - Keep methodology files under about 1,000 words and checklists under about
   1,300. A mid-tier model has to read them alongside the target's code.
+  `skills/shared/contract.md` is the exception: it is read once, it is the
+  only place a rule lives, and it is complete rather than short.
 
 ## Do not
 
