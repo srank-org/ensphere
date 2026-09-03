@@ -16,6 +16,7 @@ Fast orientation for agents and contributors.
 | How to benchmark a methodology change | [skills/evaluation/README.md](skills/evaluation/README.md) |
 | Which checklist a stack loads | [skills/methodology/01.5-session-plan.md](skills/methodology/01.5-session-plan.md) |
 | CLI commands and flags | [docs/cli-reference.md](docs/cli-reference.md) |
+| Running it from a release pipeline | [docs/release-pipeline.md](docs/release-pipeline.md) |
 
 ## Repository map
 
@@ -25,7 +26,7 @@ Fast orientation for agents and contributors.
 | [cli/cmd/](cli/cmd/) | Cobra command layer |
 | [cli/internal/](cli/internal/) | Deterministic business logic |
 | [assets/seeds/](assets/seeds/) | YAML payload sources |
-| [docs/](docs/) | CLI reference, development, testing |
+| [docs/](docs/) | CLI reference, release pipeline, development, testing |
 | [templates/](templates/) | Workspace configuration template |
 
 ## Folder indexes

@@ -1,6 +1,6 @@
 # Ensphere Development Guide
 
-Guidance for AI coding agents working in the Ensphere repository.
+Guidance for agents working in the Ensphere repository.
 
 ## What this is
 
@@ -139,6 +139,7 @@ conventions.
 | Overview and quick start | README.md |
 | Project index | index.md |
 | CLI reference and safety contract (normative) | docs/cli-reference.md |
+| Running it from a release pipeline | docs/release-pipeline.md |
 | Development guide | docs/development.md |
 | Test inventory | docs/testing.md |
 | Skill entry point | skills/SKILL.md |

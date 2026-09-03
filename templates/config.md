@@ -8,6 +8,12 @@
 - Cloud / platform: none | aws | gcp | azure | kubernetes | cloudflare | supabase | (comma-separated if multiple)
 - Environment: sandbox | staging | none (sandbox is a local disposable instance with synthetic data; production is never a live target)
 
+## Sandbox
+- Start: (exact command that starts the disposable local instance, e.g. docker compose -f compose.sandbox.yml up -d --wait)
+- Seed: (exact command that loads the synthetic fixtures)
+- Reset: (exact command that returns the instance to its seeded state)
+- (Writing the commands here approves them. The agent runs them without asking and records the isolation check in 01-recon/sandbox.md.)
+
 ## Authentication
 - Login URL: /login
 - Username: testuser

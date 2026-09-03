@@ -11,7 +11,9 @@ runs only here.
 From Step 1 you know how the application runs: a compose file, a dev script,
 `supabase start`, `wrangler dev`, a migration and seed command. Write the
 exact commands you intend to run and ask the operator before running any of
-them. If the runtime they need is missing (no container engine, no local
+them. If `config.md` already lists them under a `Sandbox` heading, the
+operator approved them by writing them there: run them without asking and
+cite that heading. If the runtime they need is missing (no container engine, no local
 database), that is an assessment-level blocker under the contract: stop and
 ask; do not install it.
 

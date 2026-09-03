@@ -183,7 +183,9 @@ an error. Each row needs an id of the form `COV-<session>-NNN`, a `surface`,
 a `check`, and a `state` of `planned`, `tested`, `not_tested`, `blocked`, or
 `not_applicable`. A `planned` row blocks the report. A `tested` row must cite
 `evidence_ids` that exist in that session's `evidence.jsonl`; every other
-resolved state needs a `reason`. The gate output carries a `coverage` block
+resolved state needs a `reason`. `identity`, `transcripts`, `checklist`,
+and `hypothesis` (the `HYP-NNN` recon hypothesis the row resolves) are
+optional; the gate checks transcript paths and records the rest. The gate output carries a `coverage` block
 with counts per session and in total, and `report-gate.md` renders the same
 table. Those counts are the only source for the report's "checks executed"
 and "not checked" numbers.

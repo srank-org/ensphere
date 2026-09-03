@@ -4,111 +4,37 @@
 
 </div>
 
-# Ensphere
+---
 
-**A security check for the system you own, run by your AI coding agent, that reports facts and shows its work.**
+**A security review of the system you own, run by your agent on every release.**
 
-Most small teams ship without a security review. A penetration test costs thousands and happens once a year, if ever, and the problems that actually hurt a small team are ordinary: an OTP endpoint with no rate limit in front of an SMS bill, an upload path with no size cap, a database table with no row policy, a query built by string concatenation. Ensphere is a skill for coding agents plus a small Go CLI. Point the agent at your repository and a disposable copy of your app. It learns your stack, decides what needs checking, runs bounded measurements through the CLI, and writes a report of what is broken, which controls are missing, how to fix each one, and exactly what was and was not checked.
+Most small teams ship without a security review, and the problems that hurt them are ordinary: an OTP endpoint with no rate limit in front of an SMS bill, an upload path with no size cap, a table with no row policy, a query built by string concatenation. Ensphere is a skill for agents plus a small Go CLI. Point the agent at your repository and a disposable copy of your app. It learns your stack, decides what needs checking, measures each check through the CLI, proves what matters in the sandbox, and writes a report of what is broken, which controls are missing, how to fix each one, and exactly what was and was not checked.
 
-It runs as a CLI, and it ships as a skill so an AI agent can run the assessment for you.
+It is the review you run before you can afford a penetration test, between the ones you can, and on every release in between. It is not a substitute for one.
 
 ---
 
-## The problem: the options are expensive, noisy, or unverifiable
+## Why Ensphere exists
 
-- **A pentest is expensive and rare.** It is the right tool, and most teams cannot afford it before launch. By the time one happens, the missing rate limiter has been in production for a year.
-- **A scanner is cheap and noisy.** It pattern-matches responses and declares things vulnerable. You spend the afternoon triaging false positives, and it never reads your code, so it cannot tell you that the limiter exists but is keyed on the wrong thing.
-- **Asking an AI to "check my security" gives you an essay.** With no method and no measurements, a model produces a confident list that skips whole categories and ends with "looks good". Nothing in it can be verified after the fact.
+Your agent can already review your security. Ask it to, and it will read your code and produce a confident list. Left to itself that review has three defects. It skips whole categories, because nothing tells it what a complete pass looks like. Nothing it says can be checked afterward, because its claims rest on reading rather than measurement. And you cannot let it send requests at a running system, because it has no notion of scope or risk.
 
-## The idea: the tool produces facts, the agent produces judgments
+Ensphere supplies the three missing pieces: a written method that says what every system must satisfy, a measurement layer whose every observation lands in a hash-chained ledger, and rules the CLI enforces about where a request may go and how far a probe may push. The agent does the thinking. Ensphere makes the thinking complete, checkable, and safe to act on.
+
+---
+
+## How Ensphere works
 
 Ensphere splits the work along one line and holds it there.
 
 - **The CLI is deterministic.** It sends scoped HTTP requests, measures timing, hashes responses, captures headers, counts rows, reads provider configuration through the provider's own CLI, validates scope, redacts secrets, and appends every observation to a hash-chained evidence ledger. It never says "vulnerable" or "safe". A contract test rejects any output field that would carry a verdict.
-- **The agent does the reasoning.** It reads your source and the raw numbers side by side, follows a written methodology, and resolves each claim with a baseline, a probe, and a control that rules out the obvious alternative explanation. Every finding cites an evidence ID that anyone can verify against the ledger.
-- **The methodology is a map, not a script.** A short file lists the roles every system has, whatever it is built on, and the invariant each must satisfy: an entry point has a deliberate authentication state, a query only ever receives user data as a parameter, a billed operation runs behind a limiter keyed on the caller. Checklists for common stacks say where each role lives in that framework and what the idiomatic fix is. A stack with no checklist is assessed from the map.
+- **The agent does the reasoning.** It reads your source and the raw numbers side by side and resolves each claim the same way: a baseline request, the smallest probe that distinguishes the claim, and a control that rules out the obvious alternative explanation. Every finding cites an evidence ID that anyone can verify against the ledger.
+- **The methodology is a floor, not a ceiling.** A short file lists the roles every system has, whatever it is built on, and the invariant each must satisfy: an entry point has a deliberate authentication state, a query only ever receives user data as a parameter, a billed operation runs behind a limiter keyed on the caller. That map guarantees nothing is skipped. Then the agent reads what your particular system is for and writes down what a motivated user of it would go after: the coupon that can be applied twice, the webhook that can be replayed, the price the client is trusted to compute. Each hypothesis is tested like any other check, and the ones that hold up are proven end to end in the sandbox.
 
-The split is the point. Because none of the reasoning lives in the tool, a better model produces a better assessment with no change to Ensphere. And because every claim points at a measurement, the report can be checked by someone who was not in the room.
-
----
-
-## Watch it work
-
-Build once, install the skill, then initialise a workspace inside the project you want to check:
-
-```bash
-ensphere run init \
-  --target "http://localhost:3000" \
-  --in-scope localhost
-```
-
-Now open your agent in that directory and say `ensphere`. From there the agent runs through five phases in one go. It pauses only for things only you can give: the go-ahead to start the sandbox, a login to a provider, a decision about staging. Everything else it records and carries on.
-
-1. **Recon.** It reads the repository, stands up the sandbox with you, seeds it with synthetic tenants, users, and objects, and writes a stack profile: languages, frameworks, data layers, auth provider, hosting, storage, and every service that bills you per call.
-2. **Plan.** The stack profile picks the checklists. The agent decides which sessions apply and lists what it still needs from you: a `wrangler login`, an approved burst count for staging, a missing container runtime.
-3. **Check.** Injection, authentication, authorization and workflow state, cross-site scripting, server-side request forgery, cloud and platform configuration, API controls, and abuse and cost controls. Each check is baseline, probe, control, and each observation lands in the ledger.
-4. **Prove.** In the sandbox, it joins what it found into multi-step chains and runs each one end to end, so a finding that would matter is demonstrated rather than argued.
-5. **Report.** A prioritised fix list, a table of missing controls per service, detailed findings with safe reproduction steps, a "checks executed" section that says exactly what was tested, a "not checked" section that says what was not and why, and a one-page statement you can hand to someone doing due diligence.
-
-You can also drive the CLI by hand. Measure whether an endpoint throttles a burst you have approved:
-
-```bash
-ensphere verify ratelimit --url "https://staging.example.com/api/otp" \
-  --method POST --burst-count 10 --window-sec 10 --in-scope staging.example.com
-```
-
-It records ten status codes, ten timings, and any rate-limit headers. It does not say "rate limit missing". You, or the agent, read the numbers.
-
-Find the places in your source where user input might reach a query, a shell, or an outbound fetch:
-
-```bash
-ensphere scan ./src --category sqli,ssrf,file_upload
-```
-
-Every match is a lead for review, not a finding. Check that nobody has edited an evidence file after the fact:
-
-```bash
-ensphere evidence verify --file ./evidence.jsonl
-```
-
-The full command surface, with every flag, is in [`docs/cli-reference.md`](docs/cli-reference.md).
+Because none of the reasoning lives in the tool, a better model produces a better assessment with no change to Ensphere. And because every claim points at a measurement, the report can be checked by someone who was not in the room.
 
 ---
 
-## Ensphere vs. the alternatives
-
-| | Ensphere | Typical scanner | Manual pentest |
-| --- | --- | --- | --- |
-| Reads your source code | Yes, alongside the live target | No | Sometimes |
-| Who decides what a result means | The agent, with a written method | The tool, by threshold | The tester |
-| Evidence you can re-verify | Hash-chained ledger, cited per finding | A severity label | A PDF |
-| Finds missing controls, not just bugs | Yes, per billed service and storage surface | Rarely | Yes |
-| Will ever say "secure" | Never | Often | No |
-| Cost and cadence | Agent tokens, whenever you like | Subscription, continuous | Thousands, yearly |
-| Proves a multi-step chain end to end | Yes, in a sandbox copy of your app | No | Yes |
-
----
-
-## What you get back
-
-An `ensphere-pentest/` directory in your project with one folder per session. Each holds a plan, an evidence ledger, transcripts, and a report. The final report reads in this order:
-
-1. **Summary.** What the system is, what was assessed, the three to five things to fix first, and the material coverage limits.
-2. **Fix list.** Every confirmed and likely finding by priority, one paragraph each: what, where, why it matters, the fix, how to verify the fix. Missing controls and vulnerabilities are interleaved.
-3. **Missing controls by service.** A table of every service that bills you and every storage surface, with the state of each control: limiter, key, size cap, quota, budget alert.
-4. **Detailed findings.** Observed facts, baseline, probe, control, root cause, safe reproduction steps, citations, remediation.
-5. **Checks executed.** Every check that ran, with the endpoint, identity, and evidence IDs, and the defenses that held under the exact conditions tested. This is what you can show a reader. It is narrow by construction.
-6. **Not checked.** Everything that was skipped or blocked, the missing input, and its effect on the conclusions.
-7. **Scope and method.** Target, environment, dates, checklists loaded, approved request limits, tool versions.
-8. **Coverage appendix.** Every OWASP WSTG category and ASVS chapter, each marked with the evidence for the checks that ran, not tested with the reason, or not covered. The gaps are written down, not implied.
-
-Alongside the report is a one-page **Statement of Assessment**: system, dates, environment, the model and Ensphere versions that did the work, checks executed and not checked, unresolved findings by severity, and the ledger's final hash. It says in plain words that it is a self-assessment by the system owner and not an independent audit. It is the document to attach to a security questionnaire.
-
-The report is written for the developer who has to act on it. It is also the document to hand to a pentester when you can afford one, so their hours go to the hard problems instead of the missing rate limiter.
-
----
-
-## Getting started
+## Running it
 
 ```bash
 git clone https://github.com/srank-org/ensphere.git
@@ -117,7 +43,7 @@ make build            # builds bin/ensphere
 make install-all      # installs the binary to /usr/local/bin and the skill to ~/.claude and ~/.codex
 ```
 
-You'll need **Go 1.26+** to build, and an **agent surface that can load a skill**: Claude Code, Codex, or similar. For platform configuration checks the agent uses the provider's own CLI, so have `aws`, `gcloud`, `az`, `wrangler`, or `supabase` installed and logged in for the platforms you run on. The agent tells you which one it needs and marks the check blocked until you sign in.
+You need **Go 1.26+** to build and an **agent surface that can load a skill**: Claude Code, Codex, or similar. For platform configuration checks the agent uses the provider's own CLI, so have `aws`, `gcloud`, `az`, `wrangler`, or `supabase` installed and logged in for the platforms you run on. The agent tells you which one it needs and marks the check blocked until you sign in.
 
 Then, in the project you want to check:
 
@@ -125,25 +51,77 @@ Then, in the project you want to check:
 ensphere run init --target "http://localhost:3000" --in-scope localhost
 ```
 
-Point `--target` at a **sandbox**: a local instance of your application with synthetic data. The agent will offer to stand one up from your compose file or dev script, check that it is isolated from anything real, and seed the accounts, tenants, and objects the checks need. That is where findings get proven. Add a staging URL when you have one, for the checks a sandbox cannot show: the edge in front of your origin, deployed configuration, the shared rate-limit store. Production is never a target. If you have no way to run the app at all, omit `--target`; the assessment runs from source alone, reports every missing control it can see, and marks every live measurement as not tested.
+Point `--target` at a **sandbox**: a local instance of your application with synthetic data. The agent offers to stand one up from your compose file or dev script, checks that it is isolated from anything real, and seeds the accounts, tenants, and objects the checks need. Add a staging URL for the checks a sandbox cannot show: the edge in front of your origin, deployed configuration, the shared rate-limit store. If you cannot run the app at all, omit `--target`; the assessment runs from source alone and marks every live measurement as not tested.
+
+Now open your agent in that directory and say `ensphere`. It runs five phases in one go and pauses only for things only you can give: the go-ahead to start the sandbox, a login to a provider, a decision about staging.
+
+1. **Recon.** Reads the repository, stands up and seeds the sandbox, writes a stack profile and a role table, and lists the hypotheses specific to your system.
+2. **Plan.** The stack profile picks the checklists. The agent decides which sessions apply and asks for everything it still needs, once.
+3. **Check.** Injection, authentication, authorization and workflow state, cross-site scripting, server-side request forgery, cloud and platform configuration, API controls, abuse and cost controls. Each check is baseline, probe, control, and each observation lands in the ledger.
+4. **Prove.** In the sandbox, joins what it found into multi-step chains and runs each one end to end, so a finding that would matter is demonstrated rather than argued.
+5. **Report.** A prioritised fix list, the missing controls per service, detailed findings with safe reproduction steps, what was checked, what was not and why, and a one-page statement.
+
+You can also drive the CLI by hand. Measure whether an endpoint throttles a burst you have approved:
+
+```bash
+ensphere verify ratelimit --url "https://staging.example.com/api/otp" \
+  --method POST --burst-count 10 --window-sec 10 --in-scope staging.example.com
+```
+
+It records ten status codes, ten timings, and any rate-limit headers. It does not say "rate limit missing". You, or the agent, read the numbers. The full command surface is in [`docs/cli-reference.md`](docs/cli-reference.md).
 
 ---
 
-## For AI agents
+## Running it on every release
 
-Ensphere ships as a skill. `make install-all` copies it to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`; the entry point is [`skills/SKILL.md`](skills/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The runner writes a `next-action.md` handoff so a fresh agent context can resume without losing its place. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
+Nothing in a run needs a person at the keyboard once the inputs are known. The agent collects every input in the planning step and pauses only at five gates, and each gate can be answered in advance in the workspace config: the authorization statement, the sandbox start, seed, and reset commands, the approved burst counts, and who signs. So the natural cadence is a run per release, or nightly, with the report and the statement attached to the release. A run is agent time measured in tens of minutes to a few hours depending on the size of the system, so it is not a pull-request check.
+
+Two outputs are deterministic and safe to gate a pipeline on. The statement command exits non-zero until the report gate passes, and the finding registry lists every unresolved finding with its priority. Compare the missing-controls table with the previous release's, and a control that disappeared shows up as a fact rather than an opinion. The recipe is in [`docs/release-pipeline.md`](docs/release-pipeline.md).
 
 ---
 
-## What it is, and isn't
+## What you get back
 
-- **It proves only against a copy that cannot be hurt.** Proof, including multi-step chains and state changes, happens in a sandbox: a local instance of your app with synthetic data, whose third-party calls go to test keys or stubs. On staging it measures with bounded probes, and a probe that would change state needs explicit authorization and cleanup evidence. Production is never probed. There is no data extraction and no load testing anywhere.
-- **It needs your source.** Ensphere is for the person who owns the system. Source is always in scope. A live target is optional and strongly recommended.
-- **It is not a pentesting firm.** It checks whether every role in your system satisfies its known invariant, then joins what it found into chains and proves them in the sandbox. What it cannot give you is independence: a firm puts its name on the result, and Ensphere's statement is signed by you. What it gives you instead is a report a reader can verify line by line, which is more than most letters offer. Use it before and between pentests, and hand its report to the pentester so their hours go to the hard problems.
-- **It never says "secure".** The report says what was tested, against which assets and roles, with which controls, and what held. A missing signal is never treated as proof that a surface is absent.
+An `ensphere-pentest/` directory in your project, one folder per session, each with its plan, evidence ledger, transcripts, and report. The final report is written for the developer who has to act on it: the three to five things to fix first, a fix list that interleaves vulnerabilities and missing controls by priority, the state of every control on every billed service and storage surface, detailed findings with safe reproduction steps, and a "checks executed" and a "not checked" section copied from the coverage rows, with the reason for each gap. A coverage appendix maps it all to OWASP WSTG and ASVS and marks what no session covers. The full structure is in [Session 09](skills/methodology/09-report.md).
+
+Alongside it is a one-page **Statement of Assessment** derived from the workspace: system, dates, environment, model and Ensphere versions, checks executed and not checked, unresolved findings by severity, and the ledger's final hash. It says in plain words that it is a self-assessment by the system owner and not an independent audit. It is the document to attach to a security questionnaire, and the report is the document to hand a pentester so their hours go to the hard problems.
+
+---
+
+## Compared with the alternatives
+
+| | Ensphere | Typical scanner | Manual pentest |
+| --- | --- | --- | --- |
+| Cost and cadence | Agent time, on every release | Subscription, continuous | Thousands, yearly |
+| Reads your source code | Yes, alongside the live target | No | Sometimes |
+| Who decides what a result means | The agent, with a written method | The tool, by threshold | The tester |
+| Evidence you can re-verify | Hash-chained ledger, cited per finding | A severity label | A PDF |
+| Finds missing controls, not just bugs | Yes, per billed service and storage surface | Rarely | Yes |
+| Proves a multi-step chain end to end | Yes, in a sandbox copy of your app | No | Yes |
+| Independence | None; you sign the statement | None | The firm's name on the result |
+| Will ever say "secure" | Never | Often | No |
+
+---
+
+## Does it work?
+
+Not yet measured. Ensphere is a proof of concept published for review, and a clean run is not a security guarantee. The claims above describe the design. The evaluation protocol in [`skills/evaluation/`](skills/evaluation/README.md) defines what a result would be: blind runs against targets with known ground truth (OWASP Juice Shop, OWASP crAPI, and a small owned fixture), a frozen report before the answers are opened, and a scorecard for found, missed, and unsupported claims. Until those numbers are published here, treat Ensphere as a method to review, not a result to rely on.
+
+---
+
+## Boundaries
+
+- **It proves only against a copy that cannot be hurt.** Proof, including chains and state changes, happens in a sandbox. Staging receives bounded measurement, and a probe that would change state there needs explicit authorization and cleanup evidence. Production is never sent a request; only its provider configuration is read. There is no data extraction and no load testing anywhere.
+- **It needs your source.** Ensphere is for the person who owns the system. Source is always in scope; a live target is optional.
 - **Every request is scoped.** Each verify command requires `--in-scope` and refuses any host outside it, including redirect hops. Rate-limit probes require a burst count you approved; there is no default. Probes carry a risk level, and the default ceiling refuses the higher ones.
-- **The judgment is the model's.** Ensphere holds the method and the measurements steady. The quality of the reasoning is the quality of the agent running it, which is why the methodology files are kept short enough for a mid-tier model to read alongside your code.
-- **It is a proof of concept.** It is published for review and research and is not a supported product. A clean run is not a security guarantee.
+- **It never says "secure".** The report says what was tested, against which assets and roles, with which controls, and what held. A missing signal is never treated as proof that a surface is absent.
+- **The judgment is the model's.** Ensphere holds the method and the measurements steady. The methodology files are kept short enough for a mid-tier model to read alongside your code, and a stronger model finds more.
+
+---
+
+## For agents
+
+`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/SKILL.md`](skills/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The runner writes a `next-action.md` handoff so a fresh context can resume without losing its place. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
 
 ---
 

@@ -35,7 +35,7 @@ Three commitments hold throughout:
 
 ## Who does what
 
-| Area | Ensphere CLI (deterministic) | Analyst (AI agent or human) |
+| Area | Ensphere CLI (deterministic) | Analyst (agent or human) |
 |------|------------------------------|-----------------------------|
 | Scope | Validates every request host against `--in-scope` and refuses everything else. | Decides whether authorization and scope are sufficient to proceed. |
 | Discovery | Scans source for sink patterns, parses OpenAPI specs, records inventories. | Decides what the project is, which stack it runs on, and what needs checking. |
@@ -136,7 +136,11 @@ The only pauses are human gates, where a decision belongs to the operator:
 5. The finished report and statement, after Session 09.
 
 Foresee gates 2 and 4 in Session 01.5 and ask for everything at once, so a
-run that starts with its inputs reaches Session 09 without a question.
+run that starts with its inputs reaches Session 09 without a question. A
+gate whose answer is already in `config.md` is pre-answered: the
+authorization statement, sandbox commands under a `Sandbox` heading,
+approved burst counts and upload sizes, the operator's name. Do not ask
+again; cite the heading. This is how an unattended run reaches Session 09.
 Anything else that would need the operator is recorded as `blocked` or
 `not_tested` and the run goes on.
 
