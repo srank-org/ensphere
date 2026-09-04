@@ -42,7 +42,9 @@ unapproved external service.
 
 CSP absence is not XSS; CSP presence is a defense fact and may affect impact,
 but it does not cure an unsafe render flow. Record the actual policy and tested
-browser behavior.
+browser behavior. The control for a policy or framing header is the same
+request to a static asset or a second route, which shows whether the
+application or the edge sets it.
 
 ## Interpretation and Stop Rules
 

@@ -227,9 +227,10 @@ For each candidate:
 4. Run a **control** that rules out the obvious alternative explanation:
    the same request against a nonexistent object, the same payload with the
    syntactic element neutralised, the same burst from a second identity, the
-   legitimate path through a workflow. The category file names the control
-   for each mechanism. If you cannot name a control, the result is
-   `indicative` at best.
+   legitimate path through a workflow, the same request to a static asset
+   when the claim is about a response header the edge might set. The
+   category file names the control for each mechanism. If you cannot name
+   a control, the result is `indicative` at best.
 5. Repeat only enough to separate signal from noise, caching, or state
    drift. Timing claims need repeated baselines and probes interleaved.
 6. Compare the raw observations, list the plausible alternatives, resolve,

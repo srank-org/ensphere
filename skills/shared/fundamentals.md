@@ -58,7 +58,11 @@ Recon names which product fills each role. The check is the same either way.
 
 Where no family fits, `verify request` sends the request and records it
 under the role you declare, and the control for any family probe is sent
-the same way. The families are conveniences; the cycle is the rule.
+the same way. The families are conveniences; the cycle is the rule. A
+check that reads one response, such as a framing, CSP, CORS, or cookie
+header, still has a real control: the same request to a static asset or a
+second route, which shows whether the header comes from the application or
+from the edge in front of it, and that decides where the fix goes.
 
 ## Turning an invariant into claims
 
