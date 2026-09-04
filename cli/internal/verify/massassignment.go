@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // MassAssignmentConfig holds configuration for mass assignment verification.

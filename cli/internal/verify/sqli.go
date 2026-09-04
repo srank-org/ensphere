@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
-	"github.com/srank/ensphere/internal/payloads"
+	"github.com/srank-org/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/payloads"
 )
 
 const defaultRounds = 3

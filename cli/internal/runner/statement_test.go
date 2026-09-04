@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 func writeStatementReadyWorkspace(t *testing.T) string {

@@ -11,7 +11,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/srank/ensphere/internal/enums"
+	"github.com/srank-org/ensphere/internal/enums"
 )
 
 // seedFS holds the payload seed YAML embedded at build time. The files are a

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 func TestParseHeadersAllowsColonInValue(t *testing.T) {

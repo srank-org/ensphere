@@ -1,6 +1,6 @@
 package main
 
-import "github.com/srank/ensphere/cmd"
+import "github.com/srank-org/ensphere/cmd"
 
 func main() {
 	cmd.Execute()

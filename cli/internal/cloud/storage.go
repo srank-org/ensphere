@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // StorageConfig holds configuration for cloud storage verification.

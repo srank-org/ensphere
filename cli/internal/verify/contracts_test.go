@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srank/ensphere/internal/enums"
+	"github.com/srank-org/ensphere/internal/enums"
 )
 
 // testJWT is a valid 3-part JWT for contract tests requiring JWT parsing.

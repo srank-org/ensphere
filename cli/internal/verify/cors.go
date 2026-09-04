@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // CORSConfig holds configuration for CORS misconfiguration verification.

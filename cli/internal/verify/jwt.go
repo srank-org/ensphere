@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // JWTConfig holds configuration for JWT manipulation verification.

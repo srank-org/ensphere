@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/srank/ensphere/internal/compliance"
+	"github.com/srank-org/ensphere/internal/compliance"
 )
 
 var complianceList bool

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // WebSocketConfig holds configuration for WebSocket verification.

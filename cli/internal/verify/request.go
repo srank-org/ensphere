@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // maxRequestBodyBytes bounds the body a scoped request may carry. Larger

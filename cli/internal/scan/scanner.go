@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/srank/ensphere/internal/evidence"
-	"github.com/srank/ensphere/internal/sinks"
+	"github.com/srank-org/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/sinks"
 )
 
 const (

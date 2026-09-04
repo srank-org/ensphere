@@ -1,4 +1,4 @@
-module github.com/srank/ensphere
+module github.com/srank-org/ensphere
 
 go 1.26.6
 

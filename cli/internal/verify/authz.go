@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // AuthZConfig holds configuration for authorization bypass verification.

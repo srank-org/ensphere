@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/srank/ensphere/internal/enums"
+	"github.com/srank-org/ensphere/internal/enums"
 	"gopkg.in/yaml.v3"
 )
 

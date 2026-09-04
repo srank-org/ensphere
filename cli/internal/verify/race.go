@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // RaceConfig holds configuration for race condition verification.

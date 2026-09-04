@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // NetworkConfig holds configuration for cloud network verification.

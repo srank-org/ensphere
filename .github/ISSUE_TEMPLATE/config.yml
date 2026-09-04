@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security disclosure
-    url: https://github.com/srank-com-my/ensphere/security/policy
+    url: https://github.com/srank-org/ensphere/security/policy
     about: Report sensitive security issues through the private security process.

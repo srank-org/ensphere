@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/srank/ensphere/internal/runner"
+	"github.com/srank-org/ensphere/internal/runner"
 )
 
 var (

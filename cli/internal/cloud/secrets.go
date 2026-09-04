@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // SecretsConfig holds configuration for cloud secrets verification.

@@ -6,7 +6,7 @@ VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo d
 .PHONY: build copy-seeds verify-generated clean install install-all test smoke
 
 build: copy-seeds
-	cd cli && go build -ldflags "-X github.com/srank/ensphere/cmd.version=$(VERSION)" -o ../bin/$(BINARY_NAME) .
+	cd cli && go build -ldflags "-X github.com/srank-org/ensphere/cmd.version=$(VERSION)" -o ../bin/$(BINARY_NAME) .
 
 # copy-seeds mirrors the payload YAML into the payloads package so go:embed can
 # reach it (embed cannot reference files outside the Go module). assets/seeds is

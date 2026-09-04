@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 var errUsage = errors.New("usage error")

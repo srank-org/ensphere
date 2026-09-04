@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/srank/ensphere/internal/callback"
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/callback"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // NoSQLConfig holds configuration for NoSQL injection verification.

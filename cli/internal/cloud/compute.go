@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // ComputeConfig holds configuration for cloud compute verification.

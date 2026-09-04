@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/srank/ensphere/internal/enums"
-	"github.com/srank/ensphere/internal/payloads"
+	"github.com/srank-org/ensphere/internal/enums"
+	"github.com/srank-org/ensphere/internal/payloads"
 )
 
 var (

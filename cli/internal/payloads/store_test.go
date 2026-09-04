@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/srank/ensphere/internal/enums"
+	"github.com/srank-org/ensphere/internal/enums"
 )
 
 // Canary values: these counts are tied to docs (docs/cli-reference.md,

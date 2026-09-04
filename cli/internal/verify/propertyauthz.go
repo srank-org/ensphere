@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // PropertyAuthZConfig holds configuration for property-level authorization verification.

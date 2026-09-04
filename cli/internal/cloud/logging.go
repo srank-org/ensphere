@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // LoggingConfig holds configuration for cloud logging verification.

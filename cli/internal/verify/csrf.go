@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // CSRFConfig holds configuration for CSRF verification.

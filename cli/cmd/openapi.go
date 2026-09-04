@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/srank/ensphere/internal/openapi"
+	"github.com/srank-org/ensphere/internal/openapi"
 )
 
 var (

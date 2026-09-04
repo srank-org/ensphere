@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srank/ensphere/internal/payloads"
+	"github.com/srank-org/ensphere/internal/payloads"
 )
 
 func TestNormalizeSQLiDBEngine(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // RateLimitConfig holds configuration for rate limit measurement.

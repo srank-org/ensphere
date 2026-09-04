@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 const maxUploadSizeBytes = 104857600 // 100 MB

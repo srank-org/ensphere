@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srank/ensphere/internal/verify"
+	"github.com/srank-org/ensphere/internal/verify"
 )
 
 // IAMConfig holds configuration for cloud IAM verification.

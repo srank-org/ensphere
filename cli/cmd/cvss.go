@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/srank/ensphere/internal/cvss"
+	"github.com/srank-org/ensphere/internal/cvss"
 )
 
 var (

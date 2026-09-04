@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // AuthConfig holds configuration for auth bypass verification.

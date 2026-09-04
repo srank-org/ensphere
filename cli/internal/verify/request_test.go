@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 func TestVerifyRequestRecordsStageAndHashes(t *testing.T) {

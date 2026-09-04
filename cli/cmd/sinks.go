@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/srank/ensphere/internal/sinks"
+	"github.com/srank-org/ensphere/internal/sinks"
 )
 
 var sinksCmd = &cobra.Command{

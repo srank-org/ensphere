@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srank/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/evidence"
 )
 
 // ClickjackingConfig holds configuration for clickjacking verification.
