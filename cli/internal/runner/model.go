@@ -105,7 +105,6 @@ type FindingSummary struct {
 	ImportRefs         []string `json:"import_refs,omitempty" yaml:"import_refs,omitempty"`
 	ManualNotes        []string `json:"manual_notes,omitempty" yaml:"manual_notes,omitempty"`
 	EvidenceCategories []string `json:"evidence_categories" yaml:"evidence_categories"`
-	CoverageLabel      string   `json:"coverage_label" yaml:"coverage_label"`
 	Notes              string   `json:"notes,omitempty" yaml:"notes,omitempty"`
 }
 
@@ -124,7 +123,6 @@ type PlanTarget struct {
 	Type                     string                  `json:"type" yaml:"type"`
 	URL                      string                  `json:"url" yaml:"url"`
 	Environment              string                  `json:"environment" yaml:"environment"`
-	CoverageLabel            string                  `json:"coverage_label" yaml:"coverage_label"`
 	ClassificationSource     string                  `json:"classification_source" yaml:"classification_source"`
 	ClassificationConfidence string                  `json:"classification_confidence" yaml:"classification_confidence"`
 	ReconProfilePath         string                  `json:"recon_profile_path,omitempty" yaml:"recon_profile_path,omitempty"`
@@ -140,7 +138,6 @@ type PlanTarget struct {
 type PlanSession struct {
 	Decision      string   `json:"decision" yaml:"decision"`
 	Applicability string   `json:"applicability" yaml:"applicability"`
-	CoverageLabel string   `json:"coverage_label" yaml:"coverage_label"`
 	Reason        string   `json:"reason" yaml:"reason"`
 	EvidenceRefs  []string `json:"evidence_refs,omitempty" yaml:"evidence_refs,omitempty"`
 	RequiredInput []string `json:"required_input,omitempty" yaml:"required_input,omitempty"`
@@ -166,7 +163,6 @@ type PlanSummary struct {
 	Validation       []string          `json:"validation,omitempty"`
 	TargetType       string            `json:"target_type,omitempty"`
 	Environment      string            `json:"environment,omitempty"`
-	CoverageLabel    string            `json:"coverage_label,omitempty"`
 	Checklists       []string          `json:"checklists,omitempty"`
 	SessionDecisions map[string]string `json:"session_decisions,omitempty"`
 }
@@ -175,7 +171,6 @@ type PlanDecisionView struct {
 	SessionKey    string   `json:"session_key"`
 	Decision      string   `json:"decision"`
 	Applicability string   `json:"applicability"`
-	CoverageLabel string   `json:"coverage_label"`
 	Reason        string   `json:"reason"`
 	RequiredInput []string `json:"required_input,omitempty"`
 	Checklists    []string `json:"checklists,omitempty"`
@@ -207,7 +202,6 @@ type StackProfile struct {
 type ReconProfileTarget struct {
 	Type                     string   `json:"type" yaml:"type"`
 	Environment              string   `json:"environment" yaml:"environment"`
-	CoverageLabel            string   `json:"coverage_label,omitempty" yaml:"coverage_label,omitempty"`
 	ClassificationConfidence string   `json:"classification_confidence" yaml:"classification_confidence"`
 	Rationale                []string `json:"rationale" yaml:"rationale"`
 	EvidenceRefs             []string `json:"evidence_refs,omitempty" yaml:"evidence_refs,omitempty"`
@@ -252,7 +246,8 @@ var Sessions = []Session{
 
 // CoverageFile is <session-dir>/coverage.yaml: the machine-read record of
 // every check a session planned and its state. See the contract's "Coverage
-// file" section for the schema.
+// file" section for the schema. A tested row that cites a probe must also
+// cite a baseline and a control from the same ledger; the gate enforces it.
 type CoverageFile struct {
 	Session string        `json:"session" yaml:"session"`
 	Rows    []CoverageRow `json:"rows" yaml:"rows"`
@@ -327,11 +322,10 @@ type StatementDates struct {
 }
 
 type StatementSession struct {
-	ID            string `json:"id" yaml:"id"`
-	Name          string `json:"name" yaml:"name"`
-	Decision      string `json:"decision" yaml:"decision"`
-	CoverageLabel string `json:"coverage_label" yaml:"coverage_label"`
-	State         string `json:"state" yaml:"state"`
+	ID       string `json:"id" yaml:"id"`
+	Name     string `json:"name" yaml:"name"`
+	Decision string `json:"decision" yaml:"decision"`
+	State    string `json:"state" yaml:"state"`
 }
 
 type StatementFindings struct {

@@ -59,13 +59,15 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		issues = append(issues, gateIssue("error", "progress_read_failed", progressPath(workspace), err.Error()))
 	}
 
+	var plan *AssessmentPlan
 	if !fileExists(assessmentPlanPath(workspace)) {
 		issues = append(issues, gateIssue("error", "assessment_plan_missing", assessmentPlanPath(workspace), "assessment-plan.yaml is required before Session 09"))
 	} else {
-		plan, err := ReadAssessmentPlan(assessmentPlanPath(workspace))
+		parsed, err := ReadAssessmentPlan(assessmentPlanPath(workspace))
 		if err != nil {
 			issues = append(issues, gateIssue("error", "assessment_plan_parse_failed", assessmentPlanPath(workspace), err.Error()))
 		} else {
+			plan = parsed
 			for _, problem := range ValidateAssessmentPlan(plan) {
 				issues = append(issues, gateIssue("error", "assessment_plan_invalid", assessmentPlanPath(workspace), problem))
 			}
@@ -76,7 +78,7 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		issues = append(issues, validateSessionReportReadiness(workspace, states)...)
 	}
 	issues = append(issues, validateEvidenceFiles(workspace)...)
-	coverageIssues, coverage := validateCoverageFiles(workspace, states)
+	coverageIssues, coverage := validateCoverageFiles(workspace, states, planDecisions(plan))
 	issues = append(issues, coverageIssues...)
 
 	registryPath := findingRegistryPath(workspace)
@@ -118,12 +120,31 @@ func buildReportGate(workspace string) *ReportGateOutput {
 	}
 }
 
+// planDecisions maps each session id to its plan decision, or nil when there
+// is no readable plan.
+func planDecisions(plan *AssessmentPlan) map[string]string {
+	if plan == nil {
+		return nil
+	}
+	decisions := make(map[string]string, len(plan.Sessions))
+	for _, session := range Sessions {
+		if entry, ok := plan.Sessions[planKeyForSession(session)]; ok {
+			decisions[session.ID] = strings.TrimSpace(entry.Decision)
+		}
+	}
+	return decisions
+}
+
 func validateSessionReportReadiness(workspace string, states map[string]string) []ReportGateIssue {
 	var issues []ReportGateIssue
 	for _, session := range reportRequiredSessions {
 		state := strings.ToUpper(strings.TrimSpace(states[session.ID]))
-		if !isTerminalState(state) {
-			issues = append(issues, gateIssue("error", "session_not_terminal", progressPath(workspace), fmt.Sprintf("Session %s is %s; Session 09 requires sessions 01, 01.5, and 02-08.7 to be DONE, SKIPPED, BLOCKED, or NOT_APPLICABLE", session.ID, state)))
+		if !validWorkflowState(state) {
+			issues = append(issues, gateIssue("error", "session_state_invalid", progressPath(workspace), fmt.Sprintf("Session %s is %q; progress.md states are PENDING, IN_PROGRESS, and DONE", session.ID, state)))
+			continue
+		}
+		if state != stateDone {
+			issues = append(issues, gateIssue("error", "session_not_terminal", progressPath(workspace), fmt.Sprintf("Session %s is %s; Session 09 requires sessions 01, 01.5, and 02-08.7 to be DONE. A session the plan decided skip, not_applicable, or blocked is DONE once its short report.md names that decision", session.ID, state)))
 			continue
 		}
 		reportPath := filepath.Join(workspace, session.Directory, "report.md")
@@ -261,11 +282,6 @@ func validateFindingRegistry(path string) []ReportGateIssue {
 		if !containsRegistryValue(finding.EvidenceCategories, "agent_judgment") {
 			issues = append(issues, gateIssue("error", "finding_agent_judgment_missing", refPath, "finding registry entries require agent_judgment to identify report-layer conclusions"))
 		}
-		if strings.TrimSpace(finding.CoverageLabel) == "" {
-			issues = append(issues, gateIssue("error", "finding_coverage_missing", refPath, "coverage_label is required"))
-		} else if !validCoverageLabel(finding.CoverageLabel) {
-			issues = append(issues, gateIssue("error", "finding_coverage_invalid", refPath, fmt.Sprintf("coverage_label %q is invalid", finding.CoverageLabel)))
-		}
 	}
 	return issues
 }
@@ -373,15 +389,6 @@ func hasErrorIssue(issues []ReportGateIssue) bool {
 		}
 	}
 	return false
-}
-
-func isTerminalState(state string) bool {
-	switch strings.ToUpper(strings.TrimSpace(state)) {
-	case stateDone, stateSkipped, stateBlocked, stateNA:
-		return true
-	default:
-		return false
-	}
 }
 
 func isEmptyFile(path string) bool {

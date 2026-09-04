@@ -42,7 +42,8 @@ assessment plan and the Session 09 report gate. It does not execute AI
 reasoning and has no exploitation command.
 
 Source code is always in scope; a live target (a sandbox or staging) is
-optional. Without --target the draft plan is source_only.`,
+optional. Without --target the draft plan records environment none and limits
+measurement sessions to source review.`,
 }
 
 var runInitCmd = &cobra.Command{

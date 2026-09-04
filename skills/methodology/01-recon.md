@@ -8,22 +8,14 @@ bill per use) and a **surface inventory** (endpoints, inputs, identities,
 objects, renderers, fetchers, storage, infrastructure). Recon never confirms a
 vulnerability.
 
-## Preflight
-
-Confirm and record authorization, the selected deployable target, the source
-path, the live target and its environment if one is in scope, explicit scope
-and exclusions, available test
-identities and tenants, cloud or platform accounts in scope, and collection
-limits. If a repository contains several apps or services, identify the
-selected deployable unit and its direct dependencies. Do not treat the whole
-monorepo as one target.
+## Environment
 
 Source is always available. The live target is a sandbox, a staging
 deployment, or both (contract, Environments). Default to standing up a
 sandbox in Step 2; it is where proof happens. Use staging in addition when
 the project has one, for the edge, platform, and drift checks a sandbox cannot
-show. Without any live target, record `coverage_label: source_only` and
-`environment: none` and continue with source review.
+show. Without any live target, record `environment: none` and continue with
+source review.
 
 ## Step 1: Learn the stack
 
@@ -139,7 +131,6 @@ Write `01-recon/target-profile.yaml`:
 target:
   type: web_app
   environment: sandbox
-  coverage_label: partial
   classification_confidence: high
   rationale:
     - "Next.js app with route handlers and a Supabase backend"

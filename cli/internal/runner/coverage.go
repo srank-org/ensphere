@@ -82,27 +82,40 @@ func (c *CoverageCounts) merge(other CoverageCounts) {
 	c.Total += other.Total
 }
 
-// evidenceIDSet returns the set of evidence IDs recorded in a session ledger.
-// A missing ledger yields an empty set, not an error; the caller decides what
+// evidenceStages returns each evidence ID in a session ledger with its
+// result stage (baseline, probe, payload, control, callback, manual_note). A
+// missing ledger yields an empty map, not an error; the caller decides what
 // that means for the rows that cite it.
-func evidenceIDSet(path string) (map[string]struct{}, error) {
-	ids := make(map[string]struct{})
+func evidenceStages(path string) (map[string]string, error) {
+	stages := make(map[string]string)
 	if !fileExists(path) {
-		return ids, nil
+		return stages, nil
 	}
 	entries, _, err := evidence.ReadAll(path)
 	if err != nil {
 		return nil, err
 	}
 	for _, entry := range entries {
-		ids[strings.TrimSpace(entry.ID)] = struct{}{}
+		stages[strings.TrimSpace(entry.ID)] = strings.TrimSpace(entry.Result)
 	}
-	return ids, nil
+	return stages, nil
+}
+
+// coverageOptional reports whether a DONE session may omit coverage.yaml:
+// only when the plan decided it would run no checks.
+func coverageOptional(decision string) bool {
+	switch strings.TrimSpace(decision) {
+	case decisionSkip, decisionNotApplicable:
+		return true
+	default:
+		return false
+	}
 }
 
 // validateCoverageFiles checks every session's coverage.yaml against the
 // contract and returns the gate issues plus the counts the statement uses.
-func validateCoverageFiles(workspace string, states map[string]string) ([]ReportGateIssue, *CoverageSummary) {
+// decisions maps session ids to plan decisions and may be nil.
+func validateCoverageFiles(workspace string, states map[string]string, decisions map[string]string) ([]ReportGateIssue, *CoverageSummary) {
 	var issues []ReportGateIssue
 	summary := &CoverageSummary{}
 	for _, session := range coverageSessions() {
@@ -113,8 +126,8 @@ func validateCoverageFiles(workspace string, states map[string]string) ([]Report
 			state = strings.ToUpper(strings.TrimSpace(states[session.ID]))
 		}
 		if !fileExists(path) {
-			if state == stateDone {
-				issues = append(issues, gateIssue("error", "coverage_missing", path, fmt.Sprintf("Session %s is DONE but coverage.yaml is missing; every check must be a coverage row", session.ID)))
+			if state == stateDone && !coverageOptional(decisions[session.ID]) {
+				issues = append(issues, gateIssue("error", "coverage_missing", path, fmt.Sprintf("Session %s is DONE but coverage.yaml is missing; every check must be a coverage row (only a session the plan decided skip or not_applicable may omit the file)", session.ID)))
 			}
 			summary.Sessions = append(summary.Sessions, entry)
 			continue
@@ -143,7 +156,7 @@ func validateCoverageRows(workspace string, session Session, path string, file *
 	}
 	idPattern := regexp.MustCompile(`^COV-` + regexp.QuoteMeta(session.ID) + `-[0-9]{3,}$`)
 	ledger := filepath.Join(workspace, session.Directory, "evidence.jsonl")
-	knownIDs, ledgerErr := evidenceIDSet(ledger)
+	stages, ledgerErr := evidenceStages(ledger)
 	if ledgerErr != nil {
 		issues = append(issues, gateIssue("error", "coverage_evidence_read_failed", ledger, ledgerErr.Error()))
 	}
@@ -175,15 +188,20 @@ func validateCoverageRows(workspace string, session Session, path string, file *
 			if !hasNonEmptyString(row.EvidenceIDs) {
 				issues = append(issues, gateIssue("error", "coverage_evidence_missing", refPath, fmt.Sprintf("tested coverage row %s cites no evidence IDs; a check without evidence is not tested", id)))
 			} else if ledgerErr == nil {
+				cited := make(map[string]bool)
 				for _, evidenceID := range row.EvidenceIDs {
 					evidenceID = strings.TrimSpace(evidenceID)
 					if evidenceID == "" {
 						continue
 					}
-					if _, ok := knownIDs[evidenceID]; !ok {
+					stage, ok := stages[evidenceID]
+					if !ok {
 						issues = append(issues, gateIssue("error", "coverage_evidence_unknown", refPath, fmt.Sprintf("coverage row %s cites %s, which is not in %s", id, evidenceID, ledger)))
+						continue
 					}
+					cited[stage] = true
 				}
+				issues = append(issues, validateControlledCitation(refPath, id, cited)...)
 			}
 		default:
 			if strings.TrimSpace(row.Reason) == "" {
@@ -193,6 +211,26 @@ func validateCoverageRows(workspace string, session Session, path string, file *
 		issues = append(issues, validateCitationPaths(workspace, refPath, "transcripts", row.Transcripts)...)
 	}
 	return issues, counts
+}
+
+// validateControlledCitation enforces the contract's controlled-validation
+// rule at the row level: a tested row whose evidence includes a probe (a
+// probe, payload, or callback entry) must also cite a baseline and a control
+// from the same ledger. Rows that cite only manual notes, such as source
+// review, are exempt because no request was sent.
+func validateControlledCitation(refPath, id string, cited map[string]bool) []ReportGateIssue {
+	probed := cited[evidence.ResultProbe] || cited[evidence.ResultPayload] || cited[evidence.ResultCallback]
+	if !probed {
+		return nil
+	}
+	var issues []ReportGateIssue
+	if !cited[evidence.ResultBaseline] {
+		issues = append(issues, gateIssue("error", "coverage_baseline_missing", refPath, fmt.Sprintf("coverage row %s cites a probe but no baseline entry; record the normal request the probe differs from (ensphere verify request --result baseline, or evidence log --result baseline)", id)))
+	}
+	if !cited[evidence.ResultControl] {
+		issues = append(issues, gateIssue("error", "coverage_control_missing", refPath, fmt.Sprintf("coverage row %s cites a probe but no control entry; record the request that rules out the alternative explanation (ensphere verify request --result control, or evidence log --result control)", id)))
+	}
+	return issues
 }
 
 func renderCoverageSummaryMarkdown(summary *CoverageSummary) string {

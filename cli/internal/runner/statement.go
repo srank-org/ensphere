@@ -91,8 +91,12 @@ func BuildStatement(workspace, version string, coverage *CoverageSummary) (*Stat
 	if err != nil {
 		return nil, err
 	}
+	var plan *AssessmentPlan
+	if fileExists(assessmentPlanPath(workspace)) {
+		plan, _ = ReadAssessmentPlan(assessmentPlanPath(workspace))
+	}
 	if coverage == nil {
-		_, coverage = validateCoverageFiles(workspace, states)
+		_, coverage = validateCoverageFiles(workspace, states, planDecisions(plan))
 	}
 	statement := &Statement{
 		EnsphereVersion: version,
@@ -117,10 +121,6 @@ func BuildStatement(workspace, version string, coverage *CoverageSummary) (*Stat
 		Ledgers:    []StatementLedger{},
 	}
 
-	var plan *AssessmentPlan
-	if fileExists(assessmentPlanPath(workspace)) {
-		plan, _ = ReadAssessmentPlan(assessmentPlanPath(workspace))
-	}
 	if plan != nil {
 		statement.Checklists = cleanStrings(plan.Checklists)
 	}
@@ -129,7 +129,6 @@ func BuildStatement(workspace, version string, coverage *CoverageSummary) (*Stat
 		if plan != nil {
 			if decision, ok := plan.Sessions[planKeyForSession(session)]; ok {
 				entry.Decision = decision.Decision
-				entry.CoverageLabel = decision.CoverageLabel
 			}
 		}
 		statement.Sessions = append(statement.Sessions, entry)
@@ -290,10 +289,10 @@ func renderStatementMarkdown(s *Statement) string {
 	b.WriteString(fmt.Sprintf("- **Generated**: %s\n\n", s.GeneratedAt))
 
 	b.WriteString("## Sessions\n\n")
-	b.WriteString("| Session | Name | Decision | Coverage label | State |\n")
-	b.WriteString("|---------|------|----------|----------------|-------|\n")
+	b.WriteString("| Session | Name | Decision | State |\n")
+	b.WriteString("|---------|------|----------|-------|\n")
 	for _, session := range s.Sessions {
-		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n", session.ID, escapeMarkdownCell(session.Name), orNone(session.Decision, "-"), orNone(session.CoverageLabel, "-"), orNone(session.State, "-")))
+		b.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", session.ID, escapeMarkdownCell(session.Name), orNone(session.Decision, "-"), orNone(session.State, "-")))
 	}
 	b.WriteString("\n## Checks\n\n")
 	t := s.Coverage.Totals

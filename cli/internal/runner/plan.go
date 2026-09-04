@@ -23,13 +23,6 @@ const (
 	applicabilityApplicable    = "applicable"
 	applicabilityUncertain     = "uncertain"
 	applicabilityNotApplicable = "not_applicable"
-
-	coverageFull       = "full"
-	coveragePartial    = "partial"
-	coverageBlocked    = "blocked"
-	coverageSourceOnly = "source_only"
-	coverageClientOnly = "client_only"
-	coverageCloudOnly  = "cloud_only"
 )
 
 var planSessionKeys = []string{
@@ -128,7 +121,6 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	if len(scope) == 0 {
 		scope = []string{cfg.InScope}
 	}
-	coverage := targetCoverageLabel(targetType, liveTarget)
 	if cfg.InScope == "" {
 		scope = []string{"All network-reachable endpoints of the target application"}
 	}
@@ -144,10 +136,6 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	var stack *StackProfile
 	if profile != nil && validTargetType(profile.Target.Type) {
 		targetType = normalizeTargetType(profile.Target.Type)
-		coverage = targetCoverageLabel(targetType, liveTarget)
-		if validCoverageLabel(profile.Target.CoverageLabel) {
-			coverage = profile.Target.CoverageLabel
-		}
 		classificationSource = "01-recon/target-profile.yaml"
 		classificationConfidence = strings.TrimSpace(profile.Target.ClassificationConfidence)
 		rationale = append([]string{}, profile.Target.Rationale...)
@@ -183,7 +171,6 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 			Type:                     targetType,
 			URL:                      cfg.TargetURL,
 			Environment:              environment,
-			CoverageLabel:            coverage,
 			ClassificationSource:     classificationSource,
 			ClassificationConfidence: classificationConfidence,
 			ReconProfilePath:         profilePathForPlan(workspace, profile),
@@ -283,12 +270,6 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 	if !validTargetType(plan.Target.Type) {
 		problems = append(problems, fmt.Sprintf("target.type %q is invalid", plan.Target.Type))
 	}
-	if plan.Target.URL == "" && !coverageAllowsNoLiveTarget(plan.Target.CoverageLabel) {
-		problems = append(problems, "target.url is required unless target.coverage_label is source_only, client_only, or cloud_only")
-	}
-	if !validCoverageLabel(plan.Target.CoverageLabel) {
-		problems = append(problems, fmt.Sprintf("target.coverage_label %q is invalid", plan.Target.CoverageLabel))
-	}
 	problems = append(problems, validatePlanEnvironment(plan.Target.Environment, plan.Target.URL)...)
 	if plan.Target.ClassificationConfidence != "" && !validClassificationConfidence(plan.Target.ClassificationConfidence) {
 		problems = append(problems, fmt.Sprintf("target.classification_confidence %q is invalid", plan.Target.ClassificationConfidence))
@@ -330,9 +311,6 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 		}
 		if !validApplicability(session.Applicability) {
 			problems = append(problems, fmt.Sprintf("sessions.%s.applicability %q is invalid", key, session.Applicability))
-		}
-		if !validCoverageLabel(session.CoverageLabel) {
-			problems = append(problems, fmt.Sprintf("sessions.%s.coverage_label %q is invalid", key, session.CoverageLabel))
 		}
 		if strings.TrimSpace(session.Reason) == "" {
 			problems = append(problems, fmt.Sprintf("sessions.%s.reason is required", key))
@@ -384,9 +362,6 @@ func ValidateReconTargetProfile(profile *ReconTargetProfile) []string {
 		problems = append(problems, "recon target profile target.environment is required")
 	} else if !validEnvironment(environment) {
 		problems = append(problems, fmt.Sprintf("recon target profile target.environment %q is invalid", profile.Target.Environment))
-	}
-	if profile.Target.CoverageLabel != "" && !validCoverageLabel(profile.Target.CoverageLabel) {
-		problems = append(problems, fmt.Sprintf("recon target profile target.coverage_label %q is invalid", profile.Target.CoverageLabel))
 	}
 	if strings.TrimSpace(profile.Target.ClassificationConfidence) == "" {
 		problems = append(problems, "recon target profile target.classification_confidence is required")
@@ -484,7 +459,6 @@ func loadPlanSummary(workspace string) *PlanSummary {
 		Validation:       validation,
 		TargetType:       plan.Target.Type,
 		Environment:      plan.Target.Environment,
-		CoverageLabel:    plan.Target.CoverageLabel,
 		Checklists:       plan.Checklists,
 		SessionDecisions: decisions,
 	}
@@ -510,7 +484,6 @@ func planDecisionForSession(workspace string, session *Session) (*PlanDecisionVi
 		SessionKey:    session.Directory,
 		Decision:      entry.Decision,
 		Applicability: entry.Applicability,
-		CoverageLabel: entry.CoverageLabel,
 		Reason:        entry.Reason,
 		RequiredInput: entry.RequiredInput,
 		Checklists:    entry.Checklists,
@@ -623,31 +596,30 @@ func parseConfigMarkdown(text string) InitConfig {
 // environment tier recorded by Session 01 in the recon target profile, which is
 // empty until that file exists.
 func draftSessionDecision(key, targetType, profileEnvironment string, liveTarget bool, cloud []string, hasCredentials bool) PlanSession {
-	baseCoverage := targetCoverageLabel(targetType, liveTarget)
 	if key == "08.7-chains" {
-		return draftChainsDecision(profileEnvironment, baseCoverage)
+		return draftChainsDecision(profileEnvironment)
 	}
 	switch targetType {
 	case "cloud_only":
 		if key == "07-cloud" {
-			return planSession(decisionRun, applicabilityApplicable, coverageCloudOnly, "Cloud-only target; cloud/Kubernetes/IaC checks are the primary workflow.", nil)
+			return planSession(decisionRun, applicabilityApplicable, "Cloud-only target; cloud/Kubernetes/IaC checks are the primary workflow.", nil)
 		}
 		if key == "08.5-abuse" {
-			return planSession(decisionLimited, applicabilityApplicable, coverageCloudOnly, "Cloud-only target; check platform-side rate, quota, and spend controls only.", nil)
+			return planSession(decisionLimited, applicabilityApplicable, "Cloud-only target; check platform-side rate, quota, and spend controls only.", nil)
 		}
-		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageCloudOnly, "Cloud-only target has no app HTTP surface in config. Session 01.5 should revise if Recon discovers one.", nil)
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, "Cloud-only target has no app HTTP surface in config. Session 01.5 should revise if Recon discovers one.", nil)
 	case "mobile_client_offline", "desktop_or_extension_client", "library_or_cli":
-		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Configured target type is client/library/CLI-only; server-side sessions are not applicable unless a backend is added to scope.", nil)
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, "Configured target type is client/library/CLI-only; server-side sessions are not applicable unless a backend is added to scope.", nil)
 	case "static_site":
-		return draftStaticSiteDecision(key, baseCoverage, cloud)
+		return draftStaticSiteDecision(key, cloud)
 	case "mobile_client_remote_backend":
-		return draftMobileRemoteDecision(key, baseCoverage, hasCredentials, cloud)
+		return draftMobileRemoteDecision(key, hasCredentials, cloud)
 	case "api_backend":
-		return draftAPIBackendDecision(key, baseCoverage, hasCredentials, cloud)
+		return draftAPIBackendDecision(key, liveTarget, hasCredentials, cloud)
 	case "web_app":
-		return draftWebAppDecision(key, baseCoverage, hasCredentials, cloud)
+		return draftWebAppDecision(key, liveTarget, hasCredentials, cloud)
 	default:
-		return draftAutoDecision(key, baseCoverage, hasCredentials, cloud)
+		return draftAutoDecision(key, liveTarget, hasCredentials, cloud)
 	}
 }
 
@@ -659,155 +631,166 @@ func applyReconProfileDecisions(plan *AssessmentPlan, profile *ReconTargetProfil
 	signals := profile.Signals
 	if boolPtrValue(signals.MonorepoAmbiguous) {
 		for _, key := range planSessionKeys {
-			plan.Sessions[key] = planSession(decisionBlocked, applicabilityUncertain, coverageBlocked, "Recon target profile marked the repository or deployment ambiguous. Choose one deployable before category testing.", []string{"Selected deployable or service boundary."})
+			plan.Sessions[key] = planSession(decisionBlocked, applicabilityUncertain, "Recon target profile marked the repository or deployment ambiguous. Choose one deployable before category testing.", []string{"Selected deployable or service boundary."})
 		}
 		return
 	}
 	if targetType == "mobile_client_remote_backend" && (len(profile.BackendInventory) == 0 || boolPtrIsFalse(signals.APISurface)) {
 		for _, key := range []string{"02-injection", "03-auth", "04-authz", "06-ssrf", "08-api", "08.5-abuse"} {
-			plan.Sessions[key] = planSession(decisionBlocked, applicabilityApplicable, coverageBlocked, "Mobile client target references a remote-backend workflow, but Recon did not provide a backend/API inventory.", []string{"Backend/API base URL inventory with source and evidence references."})
+			plan.Sessions[key] = planSession(decisionBlocked, applicabilityApplicable, "Mobile client target references a remote-backend workflow, but Recon did not provide a backend/API inventory.", []string{"Backend/API base URL inventory with source and evidence references."})
 		}
 	}
 	if targetType == "static_site" && boolPtrIsFalse(signals.APISurface) && len(profile.BackendInventory) == 0 {
-		plan.Sessions["08-api"] = planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Recon target profile found no API/backend inventory for this static/client-only target.", nil)
+		plan.Sessions["08-api"] = planSession(decisionNotApplicable, applicabilityNotApplicable, "Recon target profile found no API/backend inventory for this static/client-only target.", nil)
 	}
 	if boolPtrIsFalse(signals.Authentication) {
-		plan.Sessions["03-auth"] = planSession(decisionNotApplicable, applicabilityNotApplicable, plan.Target.CoverageLabel, "Recon target profile found no authentication mechanism in scope.", nil)
-		plan.Sessions["04-authz"] = planSession(decisionNotApplicable, applicabilityNotApplicable, plan.Target.CoverageLabel, "Recon target profile found no authentication, role, tenant, or ownership boundary in scope.", nil)
+		plan.Sessions["03-auth"] = planSession(decisionNotApplicable, applicabilityNotApplicable, "Recon target profile found no authentication mechanism in scope.", nil)
+		plan.Sessions["04-authz"] = planSession(decisionNotApplicable, applicabilityNotApplicable, "Recon target profile found no authentication, role, tenant, or ownership boundary in scope.", nil)
 	}
 	if boolPtrValue(signals.AuthorizationBoundaries) && !hasCredentials {
-		plan.Sessions["04-authz"] = planSession(decisionBlocked, applicabilityApplicable, coverageBlocked, "Recon target profile found authorization boundaries, but required test accounts are missing.", []string{"At least two users, roles, tenants, or owned resources for authorization coverage."})
+		plan.Sessions["04-authz"] = planSession(decisionBlocked, applicabilityApplicable, "Recon target profile found authorization boundaries, but required test accounts are missing.", []string{"At least two users, roles, tenants, or owned resources for authorization coverage."})
 	}
 	if boolPtrIsFalse(signals.OutboundFetchSurface) {
-		plan.Sessions["06-ssrf"] = planSession(decisionNotApplicable, applicabilityNotApplicable, plan.Target.CoverageLabel, "Recon target profile found no outbound request sinks, webhook fetchers, importers, proxying, or URL-controlled fetch behavior.", nil)
+		plan.Sessions["06-ssrf"] = planSession(decisionNotApplicable, applicabilityNotApplicable, "Recon target profile found no outbound request sinks, webhook fetchers, importers, proxying, or URL-controlled fetch behavior.", nil)
 	}
 	if boolPtrValue(signals.CloudSurface) && len(cloud) == 0 {
-		plan.Sessions["07-cloud"] = planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Recon target profile found cloud/IaC surface, but cloud scope or credentials were not configured.", []string{"Confirm cloud assets and provide authorized provider credentials or IaC paths."})
+		plan.Sessions["07-cloud"] = planSession(decisionLimited, applicabilityApplicable, "Recon target profile found cloud/IaC surface, but cloud scope or credentials were not configured.", []string{"Confirm cloud assets and provide authorized provider credentials or IaC paths."})
 	}
 	if boolPtrValue(signals.BillingExposedSurface) || boolPtrValue(signals.StorageSurface) || (profile.Stack != nil && (len(profile.Stack.BillingExposedServices) > 0 || len(profile.Stack.Storage) > 0)) {
-		plan.Sessions["08.5-abuse"] = planSession(decisionRun, applicabilityApplicable, plan.Target.CoverageLabel, "Recon target profile lists billing-exposed services or storage surface; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
+		plan.Sessions["08.5-abuse"] = planSession(decisionRun, applicabilityApplicable, "Recon target profile lists billing-exposed services or storage surface; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
 	}
 }
 
 // draftChainsDecision drafts Session 08.7. Chains are proven end to end, so the
 // draft only runs when Session 01 recorded a sandbox environment.
-func draftChainsDecision(profileEnvironment, coverage string) PlanSession {
+func draftChainsDecision(profileEnvironment string) PlanSession {
 	if profileEnvironment == "sandbox" {
-		return planSession(decisionRun, applicabilityApplicable, coverage, "Sandbox environment recorded; chain and workflow candidates are collected from Sessions 02 to 08.5 and this decision is re-confirmed after 08.5.", []string{"At least one likely finding, unresolved chain, or workflow candidate from Sessions 02 to 08.5."})
+		return planSession(decisionRun, applicabilityApplicable, "Sandbox environment recorded; chain and workflow candidates are collected from Sessions 02 to 08.5 and this decision is re-confirmed after 08.5.", []string{"At least one likely finding, unresolved chain, or workflow candidate from Sessions 02 to 08.5."})
 	}
-	return planSession(decisionBlocked, applicabilityUncertain, coverageBlocked, "Session 08.7 proves chains end to end and runs only in a sandbox environment. Record environment: sandbox in 01-recon/target-profile.yaml or report chains as risk scenarios.", []string{"environment: sandbox in 01-recon/target-profile.yaml"})
+	return planSession(decisionBlocked, applicabilityUncertain, "Session 08.7 proves chains end to end and runs only in a sandbox environment. Record environment: sandbox in 01-recon/target-profile.yaml or report chains as risk scenarios.", []string{"environment: sandbox in 01-recon/target-profile.yaml"})
 }
 
-func abuseDecision(coverage string) PlanSession {
-	return planSession(decisionRun, applicabilityApplicable, coverage, "Every server component has endpoints that can be abused for cost or resource consumption; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
+func abuseDecision() PlanSession {
+	return planSession(decisionRun, applicabilityApplicable, "Every server component has endpoints that can be abused for cost or resource consumption; measure limiters, caps, and quotas.", []string{"Operator-approved burst counts and upload sizes per endpoint."})
 }
 
-func draftWebAppDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
+// liveTargetDecision drafts a category session as run when a live target
+// exists and limited when the assessment is source only, so the reason
+// records where the measurement rows will come from.
+func liveTargetDecision(liveTarget bool, reason string, required []string) PlanSession {
+	if liveTarget {
+		return planSession(decisionRun, applicabilityApplicable, reason, required)
+	}
+	return planSession(decisionLimited, applicabilityApplicable, reason+" No live target: source review only; every measurement row resolves not_tested.", required)
+}
+
+func draftWebAppDecision(key string, liveTarget, hasCredentials bool, cloud []string) PlanSession {
 	switch key {
 	case "02-injection", "05-xss", "06-ssrf", "08-api":
-		return planSession(decisionRun, applicabilityApplicable, coverage, "Web application target; Recon/Session 01.5 should refine exact attack surface.", []string{"01-recon/report.md"})
+		return liveTargetDecision(liveTarget, "Web application target; Recon/Session 01.5 should refine exact attack surface.", []string{"01-recon/report.md"})
 	case "08.5-abuse":
-		return abuseDecision(coverage)
+		return abuseDecision()
 	case "03-auth":
-		return planSession(decisionRun, applicabilityApplicable, coverage, "Web application target may include authentication. Measure auth surface and document if none exists.", []string{"01-recon/report.md"})
+		return liveTargetDecision(liveTarget, "Web application target may include authentication. Measure auth surface and document if none exists.", []string{"01-recon/report.md"})
 	case "04-authz":
 		if hasCredentials {
-			return planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Authorization testing depends on role/object boundaries; supplied credentials allow initial coverage but Session 01.5 should confirm role matrix.", []string{"At least two roles or two owned accounts for full authz coverage."})
+			return planSession(decisionLimited, applicabilityApplicable, "Authorization testing depends on role/object boundaries; supplied credentials allow initial coverage but Session 01.5 should confirm role matrix.", []string{"At least two roles or two owned accounts for full authz coverage."})
 		}
-		return planSession(decisionBlocked, applicabilityApplicable, coverageBlocked, "Authorization testing requires authenticated test accounts and role/object context.", []string{"Authenticated accounts for at least one role; two roles or tenants for full authz coverage."})
+		return planSession(decisionBlocked, applicabilityApplicable, "Authorization testing requires authenticated test accounts and role/object context.", []string{"Authenticated accounts for at least one role; two roles or tenants for full authz coverage."})
 	case "07-cloud":
 		return cloudDecision(cloud)
 	default:
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Session applicability requires Recon evidence.", nil)
+		return planSession(decisionUncertain, applicabilityUncertain, "Session applicability requires Recon evidence.", nil)
 	}
 }
 
-func draftAPIBackendDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
+func draftAPIBackendDecision(key string, liveTarget, hasCredentials bool, cloud []string) PlanSession {
 	switch key {
 	case "02-injection", "06-ssrf", "08-api":
-		return planSession(decisionRun, applicabilityApplicable, coverage, "API backend target; server-side input and protocol surface should be measured.", []string{"01-recon/report.md"})
+		return liveTargetDecision(liveTarget, "API backend target; server-side input and protocol surface should be measured.", []string{"01-recon/report.md"})
 	case "08.5-abuse":
-		return abuseDecision(coverage)
+		return abuseDecision()
 	case "03-auth":
-		return planSession(decisionRun, applicabilityApplicable, coverage, "API backend may use tokens, API keys, OAuth, or session cookies. Measure identity surface and document if none exists.", []string{"01-recon/report.md"})
+		return liveTargetDecision(liveTarget, "API backend may use tokens, API keys, OAuth, or session cookies. Measure identity surface and document if none exists.", []string{"01-recon/report.md"})
 	case "04-authz":
 		if hasCredentials {
-			return planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Authorization testing depends on object ownership, roles, or tenants; credentials permit initial coverage.", []string{"Second account or role for full horizontal/vertical coverage."})
+			return planSession(decisionLimited, applicabilityApplicable, "Authorization testing depends on object ownership, roles, or tenants; credentials permit initial coverage.", []string{"Second account or role for full horizontal/vertical coverage."})
 		}
-		return planSession(decisionBlocked, applicabilityApplicable, coverageBlocked, "Authorization testing requires authenticated API credentials and object context.", []string{"Authenticated API credentials and at least two owned resources or roles."})
+		return planSession(decisionBlocked, applicabilityApplicable, "Authorization testing requires authenticated API credentials and object context.", []string{"Authenticated API credentials and at least two owned resources or roles."})
 	case "05-xss":
-		return planSession(decisionSkip, applicabilityNotApplicable, coveragePartial, "API backend target has no rendered browser surface in config. Run only if Recon finds rendered HTML, WebViews, or client UI in scope.", nil)
+		return planSession(decisionSkip, applicabilityNotApplicable, "API backend target has no rendered browser surface in config. Run only if Recon finds rendered HTML, WebViews, or client UI in scope.", nil)
 	case "07-cloud":
 		return cloudDecision(cloud)
 	default:
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Session applicability requires Recon evidence.", nil)
+		return planSession(decisionUncertain, applicabilityUncertain, "Session applicability requires Recon evidence.", nil)
 	}
 }
 
-func draftStaticSiteDecision(key, coverage string, cloud []string) PlanSession {
+func draftStaticSiteDecision(key string, cloud []string) PlanSession {
 	switch key {
 	case "05-xss":
-		return planSession(decisionLimited, applicabilityApplicable, coverageClientOnly, "Static/client site can still have DOM XSS or client exposure issues.", nil)
+		return planSession(decisionLimited, applicabilityApplicable, "Static/client site can still have DOM XSS or client exposure issues.", nil)
 	case "08-api":
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Static sites may call remote APIs or forms; Session 01 should inventory backend endpoints before deciding.", []string{"Backend/API URL inventory from Recon."})
+		return planSession(decisionUncertain, applicabilityUncertain, "Static sites may call remote APIs or forms; Session 01 should inventory backend endpoints before deciding.", []string{"Backend/API URL inventory from Recon."})
 	case "08.5-abuse":
-		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Static/client-only target has no server component to abuse for cost or resource consumption.", nil)
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, "Static/client-only target has no server component to abuse for cost or resource consumption.", nil)
 	case "07-cloud":
 		return cloudDecision(cloud)
 	default:
-		return planSession(decisionNotApplicable, applicabilityNotApplicable, coverageClientOnly, "Static/client-only target has no configured server-side surface for this session.", nil)
+		return planSession(decisionNotApplicable, applicabilityNotApplicable, "Static/client-only target has no configured server-side surface for this session.", nil)
 	}
 }
 
-func draftMobileRemoteDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
+func draftMobileRemoteDecision(key string, hasCredentials bool, cloud []string) PlanSession {
 	switch key {
 	case "02-injection", "03-auth", "06-ssrf", "08-api":
-		return planSession(decisionLimited, applicabilityApplicable, coveragePartial, "Mobile client with remote backend; coverage depends on extracted backend endpoints and authorized API access.", []string{"Backend endpoint inventory from client traffic or source."})
+		return planSession(decisionLimited, applicabilityApplicable, "Mobile client with remote backend; coverage depends on extracted backend endpoints and authorized API access.", []string{"Backend endpoint inventory from client traffic or source."})
 	case "08.5-abuse":
-		return abuseDecision(coveragePartial)
+		return abuseDecision()
 	case "04-authz":
 		required := []string{"At least two test users or roles for backend authorization coverage."}
 		decision := decisionBlocked
-		label := coverageBlocked
 		if hasCredentials {
 			decision = decisionLimited
-			label = coveragePartial
 		}
-		return planSession(decision, applicabilityApplicable, label, "Remote backend authorization coverage depends on supplied accounts and object ownership context.", required)
+		return planSession(decision, applicabilityApplicable, "Remote backend authorization coverage depends on supplied accounts and object ownership context.", required)
 	case "05-xss":
-		return planSession(decisionLimited, applicabilityApplicable, coverageClientOnly, "Mobile clients may include WebViews or rendered remote content; Session 01.5 should decide whether XSS or client exposure review applies.", nil)
+		return planSession(decisionLimited, applicabilityApplicable, "Mobile clients may include WebViews or rendered remote content; Session 01.5 should decide whether XSS or client exposure review applies.", nil)
 	case "07-cloud":
 		return cloudDecision(cloud)
 	default:
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Session applicability requires Recon evidence.", nil)
+		return planSession(decisionUncertain, applicabilityUncertain, "Session applicability requires Recon evidence.", nil)
 	}
 }
 
-func draftAutoDecision(key, coverage string, hasCredentials bool, cloud []string) PlanSession {
-	if key == "07-cloud" && len(cloud) > 0 {
+func draftAutoDecision(key string, liveTarget, hasCredentials bool, cloud []string) PlanSession {
+	if key == "07-cloud" {
 		return cloudDecision(cloud)
 	}
 	if key == "08.5-abuse" {
-		return abuseDecision(coverage)
+		return abuseDecision()
 	}
 	if key == "04-authz" && !hasCredentials {
-		return planSession(decisionUncertain, applicabilityUncertain, coveragePartial, "Target type is auto and no auth context is configured. Session 01.5 should classify before deciding.", []string{"Target classification and account matrix."})
+		return planSession(decisionUncertain, applicabilityUncertain, "Target type is auto and no auth context is configured. Session 01.5 should classify before deciding.", []string{"Target classification and account matrix."})
 	}
-	return planSession(decisionUncertain, applicabilityUncertain, coverage, "Target type is auto. Session 01 and Session 01.5 must classify before deciding final applicability.", []string{"Recon target classification."})
+	reason := "Target type is auto. Session 01 and Session 01.5 must classify before deciding final applicability."
+	if !liveTarget {
+		reason += " No live target: source review only."
+	}
+	return planSession(decisionUncertain, applicabilityUncertain, reason, []string{"Recon target classification."})
 }
 
 func cloudDecision(cloud []string) PlanSession {
 	if len(cloud) == 0 {
-		return planSession(decisionSkip, applicabilityNotApplicable, coveragePartial, "Cloud scope is none in config. Write a skipped-session report unless Recon finds cloud/IaC assets in scope.", nil)
+		return planSession(decisionSkip, applicabilityNotApplicable, "Cloud scope is none in config. Write a skipped-session report unless Recon finds cloud/IaC assets in scope.", nil)
 	}
-	return planSession(decisionRun, applicabilityApplicable, coverageFull, "Cloud scope is configured; run provider/Kubernetes/IaC checks that are authorized and credentialed.", []string{"Cloud provider credentials or IaC files for full coverage."})
+	return planSession(decisionRun, applicabilityApplicable, "Cloud scope is configured; run provider/Kubernetes/IaC checks that are authorized and credentialed.", []string{"Cloud provider credentials or IaC files for full coverage."})
 }
 
-func planSession(decision, applicability, coverage, reason string, required []string) PlanSession {
+func planSession(decision, applicability, reason string, required []string) PlanSession {
 	return PlanSession{
 		Decision:      decision,
 		Applicability: applicability,
-		CoverageLabel: coverage,
 		Reason:        reason,
 		EvidenceRefs:  []string{"config.md"},
 		RequiredInput: required,
@@ -835,31 +818,6 @@ func normalizeTargetType(value string) string {
 		return value
 	}
 	return "auto"
-}
-
-// targetCoverageLabel derives the draft coverage label. Source is always
-// available to an Ensphere assessment; a live target is optional. Without one
-// the draft is source_only and every measurement row starts not_tested.
-func targetCoverageLabel(targetType string, liveTarget bool) string {
-	switch targetType {
-	case "cloud_only":
-		return coverageCloudOnly
-	case "static_site", "mobile_client_remote_backend", "mobile_client_offline", "desktop_or_extension_client", "library_or_cli":
-		return coverageClientOnly
-	}
-	if !liveTarget {
-		return coverageSourceOnly
-	}
-	return coverageFull
-}
-
-func coverageAllowsNoLiveTarget(label string) bool {
-	switch label {
-	case coverageSourceOnly, coverageClientOnly, coverageCloudOnly:
-		return true
-	default:
-		return false
-	}
 }
 
 func parseList(value string) []string {
@@ -963,17 +921,16 @@ func validEnvironment(value string) bool {
 	}
 }
 
-// validatePlanEnvironment checks target.environment against target.url. none is
-// only recorded when there is no live target; sandbox and staging name a live
-// deployment and therefore require a URL.
+// validatePlanEnvironment checks target.environment against target.url. The
+// tier is the plan's only statement about whether a live target exists: none
+// is recorded when there is no live target and requires an empty URL; sandbox
+// and staging name a live deployment and require one.
 func validatePlanEnvironment(environment, url string) []string {
 	environment = strings.TrimSpace(environment)
 	url = strings.TrimSpace(url)
 	switch {
 	case environment == "":
-		if url != "" {
-			return []string{"target.environment is required when target.url is set"}
-		}
+		return []string{"target.environment is required: sandbox, staging, or none"}
 	case !validEnvironment(environment):
 		return []string{fmt.Sprintf("target.environment %q is invalid", environment)}
 	case environment == "none":
@@ -986,15 +943,6 @@ func validatePlanEnvironment(environment, url string) []string {
 		}
 	}
 	return nil
-}
-
-func validCoverageLabel(value string) bool {
-	switch value {
-	case coverageFull, coveragePartial, coverageBlocked, coverageSourceOnly, coverageClientOnly, coverageCloudOnly:
-		return true
-	default:
-		return false
-	}
 }
 
 func reconTargetProfilePath(workspace string) string {

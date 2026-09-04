@@ -5,18 +5,16 @@
 Resolve whether controlled input reaches a script-capable rendering context
 without the required context-specific encoding or sanitization.
 
-## Preflight and Coverage
+## Candidate Generation
 
-Build a matrix of input/source × storage path × renderer × output context ×
-browser/runtime × identity/role. Include reflected, stored, and DOM flows plus
+Candidates are input/source × storage path × renderer × output context ×
+browser/runtime × identity/role, across reflected, stored, and DOM flows and
 HTML/attribute/URL/JavaScript/CSS/markdown/email/PDF contexts only where they
 exist.
 
-Record the intended encoder/sanitizer, CSP and Trusted Types facts, template
-auto-escaping, client framework behavior, and who can create and view the
-content. Use synthetic markers and owned test content.
-
-## Candidate Generation
+For each, record the intended encoder/sanitizer, CSP and Trusted Types
+facts, template auto-escaping, client framework behavior, and who can create
+and view the content. Use synthetic markers and owned test content.
 
 Source review traces input to the exact render context and all transformations.
 A sink-pattern match is a lead until reachability and attacker control are
@@ -54,9 +52,5 @@ extension/devtool artifacts. Stop once the context is shown safe for the tested
 input or benign execution is observed. Do not escalate to cookie theft,
 session use, or any real-user impact for proof.
 
-## Report
-
-Write `05-xss/report.md` with the render-context rows from `coverage.yaml`, source/data
-flows, safe witness and cleanup, browser and policy context, resolved findings,
-tested defenses, unresolved contexts, remediation and validation criteria, and
-evidence citations.
+The session report records the browser and policy context and the safe
+witness and its cleanup for each resolved flow.

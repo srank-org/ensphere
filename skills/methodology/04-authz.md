@@ -5,9 +5,9 @@
 Assess object-level, function-level, property-level, tenant, and workflow
 authorization using explicitly supplied identities and owned test objects.
 
-## Preflight and Coverage
+## Candidate Generation
 
-Create an authorization matrix:
+Candidates are the rows of an authorization matrix:
 
 | Identity/role | Tenant | Object owner | Operation | Property/state | Expected result | Coverage |
 |---------------|--------|--------------|-----------|----------------|-----------------|----------|
@@ -26,8 +26,6 @@ checklist name the idioms to trace.
 Use two or more controlled accounts/tenants and paired owned test objects when
 the boundary requires them. If these fixtures are unavailable, do not substitute
 real users' identifiers; mark the affected rows blocked.
-
-## Candidate Generation
 
 Source review traces authorization from entry point through middleware,
 service, data access, serializers, and async consumers. Record whether checks
@@ -50,6 +48,11 @@ For each candidate:
    state as applicable.
 5. For writes, mutate only a benign canary field on owned fixtures and restore
    it. Verify cleanup.
+
+`ensphere verify idor`, `authz`, `propertyauthz`, and `rls` cover the shapes
+they name. For anything else, including workflow transitions below, send each
+request with `ensphere verify request` and label it `--result baseline`,
+`probe`, or `control`.
 
 Do not enumerate other users' objects, read sensitive fields for proof, modify
 unauthorized records, or invoke destructive business actions. Outside a
@@ -100,10 +103,5 @@ index rather than pursuing them here.
 - Stop after the narrow subject-object-operation claim is resolved. Do not
   broaden to unrelated roles or objects merely to strengthen proof.
 
-## Report
-
-Write `04-authz/report.md` with the tested authorization matrix, fixture and
-cleanup record, resolved findings, tested defenses, unresolved boundaries,
-baseline/probe/control evidence, root causes, impact, remediation and validation
-criteria, and citations. State exactly which roles/tenants were and were not
-covered.
+The session report states exactly which roles and tenants were and were not
+covered, with the fixture and cleanup record.

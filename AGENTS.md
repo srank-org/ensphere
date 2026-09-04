@@ -90,13 +90,26 @@ conventions.
 - Every verify command requires `--in-scope`. Scope failures exit 2, runtime
   failures exit 3.
 - There is one assessment mode. Source is always in scope; a live target is
-  optional (`run init` without `--target` yields a `source_only` draft plan).
+  optional (`run init` without `--target` yields a draft plan with
+  `environment: none` whose measurement sessions are limited to source review).
   Do not reintroduce a black-box or live-only axis.
 - Live targets are `sandbox` or `staging` (`target.environment`). Production
   is never probed; only its provider configuration is read. Session 08.7
   (chains) runs only in a sandbox.
 - Technique and vuln-type names describe what is measured, not the outcome
   (`rate_limit_burst`, not `rate_limit_bypass`).
+- Do not add a verify family whose request shape `verify request` can
+  already send. Families exist for measurements that are fiddly by hand
+  (a race barrier, interleaved timing, a burst with header capture, the RLS
+  two-tenant check). Anything else is a recipe in the methodology.
+- The vocabulary is small on purpose: coverage row states, session
+  decisions, and three progress states (`PENDING`, `IN_PROGRESS`, `DONE`).
+  There is no coverage label; the environment tier says whether a live
+  target exists and row counts say what was covered. Do not add a parallel
+  state or label.
+- The report gate enforces the baseline, probe, control cycle: a `tested`
+  row that cites a probe must cite a baseline and a control. Keep that
+  rule in the gate, not only in prose.
 - Payloads live in `assets/seeds/*.yaml`; enum values are validated at load
   time against `cli/internal/enums/enums.go`. Risk 4 and 5 payloads must not
   read credentials or execute code.
@@ -104,7 +117,12 @@ conventions.
 ## Editing the skill
 
 - `skills/shared/contract.md` is the only place a rule is stated. Category
-  files add procedure and reference it; they never restate it.
+  files add procedure and reference it; they never restate it. A
+  methodology file has no Preflight or Report section; the session
+  lifecycle in the contract covers both.
+- Write for a frontier model. State the principle where the judgment is the
+  analyst's and the exact rule where the CLI or the gate enforces it. Do not
+  add procedure a capable model would follow unprompted.
 - Every checklist item has the four lines: title and why, Look for, Measure,
   Fix. Every `ensphere` command in a checklist must exist with those flags.
 - Checks are stack-agnostic and belong in `fundamentals.md` or a session
@@ -113,10 +131,11 @@ conventions.
   the map in `skills/methodology/01.5-session-plan.md` and a row in
   `skills/checklists/index.md`.
 - Keep methodology files under about 1,000 words and checklists under about
-  1,300. A mid-tier model has to read them alongside the target's code.
+  1,300. The model reads them alongside the target's code, and what costs
+  it is concept load, not tokens: every distinct rule must earn its place.
   `skills/SKILL.md`, `skills/shared/contract.md`, and
-  `skills/shared/fundamentals.md` are the exception: they are read once at
-  the start, and completeness matters more than length.
+  `skills/shared/fundamentals.md` are read once at the start, and
+  completeness matters more than length there.
 
 ## Do not
 
@@ -129,6 +148,9 @@ conventions.
   report is a self-assessment.
 - Add a production environment tier. Live targets are `sandbox` or
   `staging` only.
+- Grow `cvss`, `compliance`, `scan`, `openapi`, or `cloud` without a
+  measured gap. They are frozen until a benchmark shows a frontier model
+  needs them.
 - Edit `CLAUDE.md`. It is `@AGENTS.md` so Claude Code and other harnesses
   read one file; change `AGENTS.md`.
 

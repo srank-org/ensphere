@@ -241,6 +241,22 @@ type GraphQLMeasurements struct {
 	ResponseSnippet      string       `json:"response_snippet,omitempty"`
 }
 
+// RequestMeasurements holds the record of one analyst-constructed scoped
+// request. Result is the role the analyst declared (baseline, probe, or
+// control) and EvidenceID is the ledger entry the coverage row can cite.
+type RequestMeasurements struct {
+	Method            string      `json:"method"`
+	URL               string      `json:"url"`
+	Result            string      `json:"result"`
+	DeclaredRisk      int         `json:"declared_risk"`
+	RequestBodyBytes  int         `json:"request_body_bytes"`
+	RequestHash       string      `json:"request_hash"`
+	RedirectsFollowed bool        `json:"redirects_followed"`
+	Round             RoundResult `json:"round"`
+	ResponseSnippet   string      `json:"response_snippet,omitempty"`
+	EvidenceID        string      `json:"evidence_id,omitempty"`
+}
+
 // RaceMeasurements holds race condition probe measurements.
 type RaceMeasurements struct {
 	Concurrency  int           `json:"concurrency"`

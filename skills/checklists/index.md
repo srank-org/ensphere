@@ -44,7 +44,9 @@ Everything else is covered by the fundamentals.
 - Sections by concern; the **Rate limiting and abuse** section is mandatory
   for application frameworks.
 - Every `ensphere` command must exist with the flags shown. Check
-  `cli/cmd/verify_<name>.go` before citing.
+  `cli/cmd/verify_<name>.go` before citing. When no family fits, write the
+  Measure line as `ensphere verify request` with `--result` naming the
+  request's role; never invent a family.
 - No load testing, no exploitation, no secret retrieval in any Measure line.
 - Add the stack values to the map above and in
   `methodology/01.5-session-plan.md`.

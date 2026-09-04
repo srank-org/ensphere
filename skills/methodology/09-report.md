@@ -62,7 +62,6 @@ findings:
       - "Same-tenant owner request still succeeds"
     evidence_ids: [EVID-042]
     transcripts: ["04-authz/transcripts/VULN-001.md"]
-    coverage_label: partial
   - id: CTRL-001
     kind: missing_control
     title: "No rate limit on OTP send"
@@ -84,7 +83,6 @@ findings:
       - "The 6th request in 60s for one phone number returns 429 with Retry-After"
     evidence_ids: [EVID-088, EVID-089]
     transcripts: ["08.5-abuse/transcripts/CTRL-001.md"]
-    coverage_label: partial
 ```
 
 `kind` is `vulnerability` or `missing_control`. Status values are

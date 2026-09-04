@@ -26,6 +26,8 @@ var ValidVulnTypes = map[string]bool{
 	"property_authz": true, "api_inventory": true, "mass_assignment": true,
 	// Rate and size limits — verification probes only (no payloads)
 	"rate_limit": true, "limits": true,
+	// One analyst-constructed scoped request — verification probe only (no payloads)
+	"request": true,
 	// Transport-level — compliance mapping and verification probes (no payloads)
 	"websocket": true, "grpc": true,
 }
@@ -88,7 +90,8 @@ var ValidTechniques = map[string]bool{
 	"frame_header_check": true,
 	// Rate and size limit measurement techniques
 	"rate_limit_burst": true, "account_enumeration": true,
-	"pagination": true, "upload_size": true, "response_size": true,
+	"scoped_request": true,
+	"pagination":     true, "upload_size": true, "response_size": true,
 	// DOM clobbering (XSS variant)
 	"dom_clobbering": true,
 	// WebSocket techniques

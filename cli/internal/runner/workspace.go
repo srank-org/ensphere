@@ -8,13 +8,15 @@ import (
 	"time"
 )
 
+// Workflow states in progress.md. DONE means the session report is written
+// and its coverage file reconciled; a session the plan decided not to run is
+// DONE once its short report names that decision. Why a session ran no
+// checks lives in the plan decision, not in a parallel state here.
 const (
 	defaultWorkspace = "ensphere-pentest"
 	statePending     = "PENDING"
-	stateSkipped     = "SKIPPED"
+	stateInProgress  = "IN_PROGRESS"
 	stateDone        = "DONE"
-	stateBlocked     = "BLOCKED"
-	stateNA          = "NOT_APPLICABLE"
 )
 
 func DefaultWorkspace() string { return defaultWorkspace }
@@ -179,9 +181,8 @@ func renderNextAction(action *NextAction) string {
 - **Session Key**: %s
 - **Decision**: %s
 - **Applicability**: %s
-- **Coverage Label**: %s
 - **Reason**: %s
-`, action.PlanDecision.SessionKey, action.PlanDecision.Decision, action.PlanDecision.Applicability, action.PlanDecision.CoverageLabel, action.PlanDecision.Reason)
+`, action.PlanDecision.SessionKey, action.PlanDecision.Decision, action.PlanDecision.Applicability, action.PlanDecision.Reason)
 		if len(action.PlanDecision.RequiredInput) > 0 {
 			planBlock += "- **Required Input**:\n"
 			for _, item := range action.PlanDecision.RequiredInput {
@@ -202,9 +203,10 @@ func renderNextAction(action *NextAction) string {
 	}
 	instruction := `Open the Ensphere skill, read the methodology file above and the checklists
 listed for this session, and run the session against the configured target.
-Keep evidence factual, update progress when the session completes, then run
-ensphere run next and continue with the next session unless a human gate
-applies.`
+A session the plan decided skip, not_applicable, or blocked writes a short
+report.md naming that decision. Keep evidence factual, mark the session DONE
+in progress.md when its report is written, then run ensphere run next and
+continue with the next session unless a human gate applies.`
 	return fmt.Sprintf(`# Next Action
 
 ## Session
@@ -276,16 +278,24 @@ func cleanStrings(values []string) []string {
 
 func nextSession(states map[string]string) *Session {
 	for _, session := range Sessions {
-		state := strings.ToUpper(states[session.ID])
-		switch state {
-		case stateDone, stateSkipped, stateBlocked, stateNA:
+		if strings.ToUpper(strings.TrimSpace(states[session.ID])) == stateDone {
 			continue
-		default:
-			s := session
-			return &s
 		}
+		s := session
+		return &s
 	}
 	return nil
+}
+
+// validWorkflowState reports whether value is one of the three progress.md
+// states.
+func validWorkflowState(value string) bool {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case statePending, stateInProgress, stateDone:
+		return true
+	default:
+		return false
+	}
 }
 
 func fileExists(path string) bool {

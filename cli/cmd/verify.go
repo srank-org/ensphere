@@ -12,6 +12,7 @@ measurements (status, timing, hashes, headers, counts); it never contains a
 verdict. Every subcommand requires --in-scope.
 
 Available subcommands:
+  request         Send one analyst-constructed request through scope and the ledger
   sqli            Verify SQL injection (blind_time, blind_boolean, error_based)
   xss             Verify reflected cross-site scripting
   idor            Verify insecure direct object reference

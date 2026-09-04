@@ -22,6 +22,20 @@ type probeContract struct {
 }
 
 var contracts = []probeContract{
+	{name: "request", risk: 3,
+		callOutOfScope: func() (*ProbeResult, error) {
+			return VerifyRequest(RequestConfig{URL: "http://evil.example.com/api", Method: "GET", Result: "probe",
+				ProbeConfig: ProbeConfig{InScope: []string{"safe.example.com"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callLowRisk: func() (*ProbeResult, error) {
+			return VerifyRequest(RequestConfig{URL: "http://localhost/api", Method: "GET", Result: "probe",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 1, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+		callBadConfig: func() (*ProbeResult, error) {
+			return VerifyRequest(RequestConfig{URL: "http://localhost/api", Method: "GET", Result: "verdict",
+				ProbeConfig: ProbeConfig{InScope: []string{"localhost"}, MaxRisk: 0, ThrottleMs: 0, TimeoutSec: 5}})
+		},
+	},
 	{name: "sqli", risk: 3,
 		callOutOfScope: func() (*ProbeResult, error) {
 			return VerifySQLi(SQLiConfig{URL: "http://evil.example.com/api", Param: "id", Technique: "blind_time", Method: "GET", Boundary: "single_quote",
@@ -470,6 +484,7 @@ func TestContracts_NoForbiddenJudgmentJSONFields(t *testing.T) {
 	types := []interface{}{
 		ProbeResult{},
 		RoundResult{},
+		RequestMeasurements{},
 		SQLiTimeMeasurements{},
 		SQLiBooleanMeasurements{},
 		SQLiErrorMeasurements{},

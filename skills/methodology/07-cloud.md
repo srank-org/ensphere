@@ -9,26 +9,25 @@ retrieve secrets, or modify resources.
 The shared workflow and this file override any broader example in a provider
 appendix.
 
-## Preflight and Scope Inventory
+## Scope and Collection
 
-Record the exact authorized:
-
-- providers and account/project/subscription/tenant identifiers;
-- regions, clusters, namespaces, registries, repositories, and environments;
-- principals/credentials and their intended read-only role;
-- IaC roots, state/backend availability, images/manifests, and scanner artifacts;
-- prohibited APIs, data classes, production restrictions, and request limits.
+Record the exact authorized providers and account/project/subscription/tenant
+identifiers; regions, clusters, namespaces, registries, repositories, and
+environments; principals/credentials and their intended read-only role; IaC
+roots, state/backend availability, images/manifests, and scanner artifacts;
+and prohibited APIs, data classes, production restrictions, and request
+limits.
 
 Validate the active provider/cluster identity before collecting facts. Never
 infer scope from whichever credentials happen to be installed.
 
-Create `coverage.yaml` rows for identity/policy, storage, network exposure,
+Coverage rows cover identity/policy, storage, network exposure,
 compute/serverless, containers/Kubernetes, encryption/key management, logging
-and monitoring, secrets configuration metadata, backups/recovery, and IaC drift.
-Track each provider/region/cluster separately.
+and monitoring, secrets configuration metadata, backups/recovery, and IaC
+drift, one set per provider/region/cluster.
 
 If cloud surface exists but authorized read access is absent, run only the IaC
-or supplied-artifact lane and label live coverage blocked/source-only. Missing
+or supplied-artifact lane and mark the live rows `blocked`. Missing
 credentials do not make cloud security not applicable.
 
 ### Missing tooling
@@ -40,8 +39,6 @@ the provider appendix (for example `wrangler login`, `supabase link
 authenticate on the operator's behalf without permission. Record every
 affected check as `blocked` with the named prerequisite, continue with the
 source/IaC lane, and re-run the live lane once the operator confirms.
-
-## Collection Lanes
 
 ### Provider and Kubernetes metadata
 
@@ -79,7 +76,8 @@ For each candidate, state a narrow policy/configuration claim and compare:
 - an expected secure configuration or known in-scope control.
 
 Where provider policy simulation APIs are available, simulate the exact action
-and resource without performing it. Label simulations as simulations.
+and resource without performing it. Label simulations as simulations, in the
+evidence and in the report.
 
 For public storage or content exposure, prefer configuration and policy facts.
 Only when the operator supplies a non-sensitive canary object and expressly
@@ -113,19 +111,6 @@ the provider request limit is reached, identity/scope changes, required data
 would be sensitive, or the next action would mutate state or execute an
 escalation. Preserve unavailable regions/services as coverage gaps.
 
-## Report
-
-Write `07-cloud/report.md` with:
-
-1. exact provider/account/region/cluster and identity scope;
-2. `coverage.yaml` summary and unavailable services/regions;
-3. evidence provenance and any operator-supplied scanner output used as leads;
-4. resolved configuration/policy findings with evidence strength and confidence;
-5. tested controls and effective-policy facts;
-6. source/live drift;
-7. simulated permission paths, clearly labeled;
-8. attack paths versus unverified risk scenarios;
-9. remediation, validation criteria, and evidence index.
-
-Never publish secret values, account credentials, object content, tokens, or
-personal data.
+The session report names the exact provider/account/region/cluster and
+identity scope, and never publishes secret values, account credentials,
+object content, tokens, or personal data.

@@ -18,7 +18,7 @@ It is the review you run before you can afford a penetration test, between the o
 
 Your agent can already review your security. Ask it to, and it will read your code and produce a confident list. Left to itself that review has three defects. It skips whole categories, because nothing tells it what a complete pass looks like. Nothing it says can be checked afterward, because its claims rest on reading rather than measurement. And you cannot let it send requests at a running system, because it has no notion of scope or risk.
 
-Ensphere supplies the three missing pieces: a written method that says what every system must satisfy, a measurement layer whose every observation lands in a hash-chained ledger, and rules the CLI enforces about where a request may go and how far a probe may push. The agent does the thinking. Ensphere makes the thinking complete, checkable, and safe to act on.
+Ensphere supplies the three missing pieces: a written method that says what every system must satisfy, a measurement layer that records every request in a ledger the report cites, and rules the CLI enforces about where a request may go and how far a probe may push. The agent does the thinking. Ensphere makes the thinking complete, checkable, and safe to act on.
 
 ---
 
@@ -26,8 +26,8 @@ Ensphere supplies the three missing pieces: a written method that says what ever
 
 Ensphere splits the work along one line and holds it there.
 
-- **The CLI is deterministic.** It sends scoped HTTP requests, measures timing, hashes responses, captures headers, counts rows, reads provider configuration through the provider's own CLI, validates scope, redacts secrets, and appends every observation to a hash-chained evidence ledger. It never says "vulnerable" or "safe". A contract test rejects any output field that would carry a verdict.
-- **The agent does the reasoning.** It reads your source and the raw numbers side by side and resolves each claim the same way: a baseline request, the smallest probe that distinguishes the claim, and a control that rules out the obvious alternative explanation. Every finding cites an evidence ID that anyone can verify against the ledger.
+- **The CLI is deterministic.** It sends scoped HTTP requests, measures timing, hashes responses, captures headers, counts rows, reads provider configuration through the provider's own CLI, validates scope, redacts secrets, and appends every observation to an evidence ledger. It never says "vulnerable" or "safe". A contract test rejects any output field that would carry a verdict.
+- **The agent does the reasoning.** It reads your source and the raw numbers side by side and resolves each claim the same way: a baseline request, the smallest probe that distinguishes the claim, and a control that rules out the obvious alternative explanation. Every finding cites evidence IDs in the ledger, and the report gate refuses a check that has a probe but no baseline or control behind it.
 - **The methodology is a floor, not a ceiling.** A short file lists the roles every system has, whatever it is built on, and the invariant each must satisfy: an entry point has a deliberate authentication state, a query only ever receives user data as a parameter, a billed operation runs behind a limiter keyed on the caller. That map guarantees nothing is skipped. Then the agent reads what your particular system is for and writes down what a motivated user of it would go after: the coupon that can be applied twice, the webhook that can be replayed, the price the client is trusted to compute. Each hypothesis is tested like any other check, and the ones that hold up are proven end to end in the sandbox.
 
 Because none of the reasoning lives in the tool, a better model produces a better assessment with no change to Ensphere. And because every claim points at a measurement, the report can be checked by someone who was not in the room.
@@ -95,7 +95,7 @@ Alongside it is a one-page **Statement of Assessment** derived from the workspac
 | Cost and cadence | Agent time, on every release | Subscription, continuous | Thousands, yearly |
 | Reads your source code | Yes, alongside the live target | No | Sometimes |
 | Who decides what a result means | The agent, with a written method | The tool, by threshold | The tester |
-| Evidence you can re-verify | Hash-chained ledger, cited per finding | A severity label | A PDF |
+| Evidence you can re-verify | Every request in a ledger, cited per finding | A severity label | A PDF |
 | Finds missing controls, not just bugs | Yes, per billed service and storage surface | Rarely | Yes |
 | Proves a multi-step chain end to end | Yes, in a sandbox copy of your app | No | Yes |
 | Independence | None; you sign the statement | None | The firm's name on the result |
@@ -121,7 +121,7 @@ Not yet measured. Ensphere is a proof of concept published for review, and a cle
 
 ## For agents
 
-`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/SKILL.md`](skills/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The runner writes a `next-action.md` handoff so a fresh context can resume without losing its place. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
+`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/SKILL.md`](skills/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The workspace is the protocol between sessions: an orchestrator can run recon, planning, and the report itself and dispatch each check session to a fresh subagent with a short brief, and a harness without subagents runs the same files in one context and resumes from `next-action.md` after a context loss. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
 
 ---
 

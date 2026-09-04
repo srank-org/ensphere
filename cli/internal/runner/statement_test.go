@@ -33,9 +33,13 @@ func writeStatementReadyWorkspace(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("open ledger: %v", err)
 	}
-	entry, err := writer.WriteEntry(evidence.NewEntry("sqli", "blind_boolean", "https://example.com/search", "q", 200, "12ms", "probe", "fixture probe"))
-	if err != nil {
-		t.Fatalf("write evidence: %v", err)
+	var ids []string
+	for _, stage := range []string{"baseline", "probe", "control"} {
+		entry, err := writer.WriteEntry(evidence.NewEntry("sqli", "blind_boolean", "https://example.com/search", "q", 200, "12ms", stage, "fixture "+stage))
+		if err != nil {
+			t.Fatalf("write evidence: %v", err)
+		}
+		ids = append(ids, entry.ID)
 	}
 	if err := writer.Close(); err != nil {
 		t.Fatalf("close ledger: %v", err)
@@ -47,7 +51,7 @@ rows:
     check: "sql_predicate_control"
     identity: "[TENANT_A_USER]"
     state: tested
-    evidence_ids: [`+entry.ID+`]
+    evidence_ids: [`+strings.Join(ids, ", ")+`]
   - id: COV-02-002
     surface: "POST /import"
     check: "xml_entity_handling"
@@ -69,7 +73,7 @@ func TestRunStatementWritesFilesAndDetectsDrift(t *testing.T) {
 	if !gate.Ready {
 		t.Fatalf("expected ready gate, got %+v", gate.Issues)
 	}
-	if gate.Coverage == nil || gate.Coverage.Totals.Tested != 1 || gate.Coverage.Totals.NotApplicable != 1 || gate.Coverage.Totals.NotTested != 3 {
+	if gate.Coverage == nil || gate.Coverage.Totals.Tested != 1 || gate.Coverage.Totals.NotApplicable != 1 || gate.Coverage.Totals.NotTested != 5 || gate.Coverage.Totals.Blocked != 2 {
 		t.Fatalf("unexpected coverage totals: %+v", gate.Coverage)
 	}
 	if gate.StatementState != "missing" {
@@ -92,7 +96,7 @@ func TestRunStatementWritesFilesAndDetectsDrift(t *testing.T) {
 		"Claude Fable 5.1 via Claude Code",
 		"VULN-001",
 		"test-version",
-		"| 02 | 02-injection/evidence.jsonl | 1 | true |",
+		"| 02 | 02-injection/evidence.jsonl | 3 | true |",
 	} {
 		if !strings.Contains(string(md), want) {
 			t.Fatalf("statement.md missing %q:\n%s", want, md)
@@ -241,5 +245,52 @@ rows:
 	}
 	if !strings.Contains(string(raw), "## Coverage") {
 		t.Fatalf("gate markdown missing coverage table:\n%s", raw)
+	}
+}
+
+func TestRunReportRequiresBaselineAndControlForProbedRows(t *testing.T) {
+	workspace := writeStatementReadyWorkspace(t)
+	ledger := filepath.Join(workspace, "08-api", "evidence.jsonl")
+	writer, err := evidence.NewWriter(ledger)
+	if err != nil {
+		t.Fatalf("open ledger: %v", err)
+	}
+	probe, err := writer.WriteEntry(evidence.NewEntry("request", "scoped_request", "https://example.com/items", "", 200, "9ms", "probe", "canary property"))
+	if err != nil {
+		t.Fatalf("write probe: %v", err)
+	}
+	note, err := writer.WriteEntry(evidence.NewEntry("source_review", "manual", "https://example.com/items", "", 0, "", "manual_note", "handler at api/items.ts:40 spreads the body into the update"))
+	if err != nil {
+		t.Fatalf("write note: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close ledger: %v", err)
+	}
+	writeCoverageFile(t, workspace, "08", `session: "08"
+rows:
+  - id: COV-08-001
+    surface: "PATCH /items/{id}"
+    check: "mass_assignment"
+    identity: "[TENANT_A_USER]"
+    state: tested
+    evidence_ids: [`+probe.ID+`]
+  - id: COV-08-002
+    surface: "PATCH /items/{id}"
+    check: "body_spread_source_review"
+    identity: "[TENANT_A_USER]"
+    state: tested
+    evidence_ids: [`+note.ID+`]
+`)
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "coverage_baseline_missing") || !hasIssue(gate.Issues, "coverage_control_missing") {
+		t.Fatalf("expected a probe-only row to need baseline and control, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+	for _, issue := range gate.Issues {
+		if strings.HasSuffix(issue.Path, "#rows[1]") {
+			t.Fatalf("a source-review row citing only a manual note must not need baseline or control: %+v", issue)
+		}
 	}
 }

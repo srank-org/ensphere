@@ -49,12 +49,13 @@ contracts directly.
 | `cmd/helpers_test.go` | cmd | Command helper behavior: header parsing and verify exit-code mapping |
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
 | `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, and the statement refusal exit code |
-| `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only coverage, report contracts, and evidence/citation gates |
-| `runner/statement_test.go` | runner | Coverage file validation codes, statement generation, stable inputs digest, and stale or edited statement detection |
+| `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only drafting, report contracts, the three progress states, which sessions may omit coverage.yaml, and evidence/citation gates |
+| `runner/statement_test.go` | runner | Coverage file validation codes, the baseline/probe/control citation rule, statement generation, stable inputs digest, and stale or edited statement detection |
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |
 | `verify/probe_test.go` | verify | Core infrastructure (CheckScope, CheckMaxRisk, HTTPProbe) |
 | `verify/sqli_test.go` | verify | SQLi DB engine normalization and DB-specific payload selection |
-| `verify/contracts_test.go` | verify | Safety gate contracts for all 32 probes (scope, max-risk, technique validation, forbidden judgment JSON tags) |
+| `verify/contracts_test.go` | verify | Safety gate contracts for all 33 probes (scope, max-risk, technique validation, forbidden judgment JSON tags) |
+| `verify/request_test.go` | verify | Scoped request: stage and hashes recorded in the ledger, redirect handling, role/method/body/risk validation |
 | `verify/integration_injection_test.go` | verify | Integration: sqli, xss, cmdi, lfi, ssti, xxe, nosql, csvinjection, ldap, xpath, fileupload |
 | `verify/integration_auth_test.go` | verify | Integration: auth, authz, rls, jwt, cors, csrf, idor, massassignment, countJSONRows |
 | `verify/integration_infra_test.go` | verify | Integration: ssrf, redirect, protopollution, graphql, cachepoisoning |

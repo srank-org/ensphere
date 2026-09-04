@@ -5,12 +5,14 @@
 Assess identity establishment and session lifecycle controls using supplied
 accounts and bounded, reversible checks.
 
-## Preflight and Coverage
+## Candidate Generation
 
-Build a matrix covering applicable login, logout, registration, verification,
+Candidates cover the applicable login, logout, registration, verification,
 password reset/change, MFA enrollment/challenge/recovery, OAuth/OIDC/SSO, API
-keys, session cookies, refresh/access tokens, device/session management, and
-account recovery flows.
+key, session cookie, refresh/access token, device/session management, and
+account recovery flows. For each flow record endpoint, identity/role, tenant,
+credential type, state transition, expected control, and the test account it
+needs.
 
 Open the checklists the plan assigned to this session first; they name the
 auth provider's specific settings (for example `supabase-rls.md` covers
@@ -18,16 +20,13 @@ Supabase Auth configuration, `nextjs-app-router.md` covers middleware
 matchers and Server Actions). Rate limiting on login, signup, reset, and OTP
 is measured in Session 08.5; record the endpoints here and hand them over.
 
-For each flow record endpoint, identity/role, tenant, credential type, state
-transition, expected control, required test account, and coverage state. Use
-owned test accounts. If a role, MFA device, IdP tenant, mail channel, or recovery
-factor is unavailable, mark the specific flow not tested or blocked.
+Use owned test accounts only. If a role, MFA device, IdP tenant, mail channel,
+or recovery factor is unavailable, the specific flow's row is `blocked` with
+that prerequisite.
 
-## Candidate Generation
-
-Source review should trace credential verification, token validation,
-session issuance/rotation/revocation, reset-token generation/storage/use,
-OAuth state/nonce/PKCE handling, MFA enforcement, and error handling. Cite
+Source review traces credential verification, token validation, session
+issuance/rotation/revocation, reset-token generation/storage/use, OAuth
+state/nonce/PKCE handling, MFA enforcement, and error handling. Cite
 reachable source and configuration.
 
 Live-target candidates come from observed flow behavior, not assumptions about
@@ -38,7 +37,10 @@ UI text alone, or treat cookie flags as proof of session compromise.
 
 ## Controlled Validation
 
-Use the shared baseline/probe/control cycle with owned accounts:
+Use the shared baseline/probe/control cycle with owned accounts. `ensphere
+verify auth` and `ensphere verify jwt` cover the token shapes they name;
+send any other flow step with `ensphere verify request` and label its role
+with `--result`.
 
 - compare valid, invalid, expired, revoked, replayed, and context-mismatched
   tokens only where each case is safely constructible;
@@ -60,8 +62,8 @@ For timing claims, use randomized/interleaved repeated observations and report
 the distribution and noise. There is no universal millisecond threshold.
 
 Positive controls are required where a negative result could mean the test was
-misconfigured—for example, demonstrate that the valid test token/account works
-before interpreting a rejected variant.
+misconfigured: demonstrate that the valid test token/account works before
+interpreting a rejected variant.
 
 ## Interpretation and Stop Rules
 
@@ -71,10 +73,6 @@ control is demonstrated or contradicted, the account/request limit is reached,
 or further work would require guessing, unrelated identities, or greater
 impact.
 
-## Report
-
-Write `03-auth/report.md` with the `coverage.yaml` summary, account/role limitations,
-resolved findings, baseline/probe/control evidence, tested defenses, token and
-session lifecycle facts, unresolved flows, evidence index, and remediation
-validation criteria. Never include live tokens, passwords, reset links, or
-personal data.
+The session report records token and session lifecycle facts alongside the
+findings. Never include live tokens, passwords, reset links, or personal data
+in it.

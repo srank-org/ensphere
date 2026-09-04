@@ -6,22 +6,17 @@ Resolve injection candidates across the server-side input flows selected by the
 assessment plan. Prove the narrow parser or data-flow claim without extracting
 sensitive data or escalating impact.
 
-## Preflight and Coverage
-
-- Read the recon input/sink inventory, the Session 01.5 decision, and the
-  checklists the plan assigned to this session (for example
-  `prisma-drizzle.md` names the ORM's raw-query sinks; `go-net-http.md` names
-  `database/sql` and `os/exec` idioms). Checklist items are the candidates
-  for this stack; the rules below say how to validate them.
-- Confirm target, identity/role, parser or runtime assumptions, request limits,
-  test data, and evidence path.
-- Build a matrix of endpoint × input × parser/sink × identity × candidate type.
-- Include SQL/NoSQL query construction, OS commands, templates, paths/files,
-  XML/external entities, object deserialization, LDAP/XPath, and response-header
-  construction only where recon shows relevant surface.
-- Mark each row planned, tested, not tested, blocked, or not applicable.
-
 ## Candidate Generation
+
+Read the recon input/sink inventory and the checklists the plan assigned to
+this session (for example `prisma-drizzle.md` names the ORM's raw-query sinks;
+`go-net-http.md` names `database/sql` and `os/exec` idioms). Checklist items
+are the candidates for this stack; the rules below say how to validate them.
+
+Candidates are endpoint × input × parser/sink × identity × claim type, and
+include SQL/NoSQL query construction, OS commands, templates, paths/files,
+XML/external entities, object deserialization, LDAP/XPath, and response-header
+construction only where recon shows relevant surface.
 
 Source candidates require a cited source-to-sink flow, including validation,
 encoding, parameterization, allowlists, and reachability in the selected
@@ -36,7 +31,9 @@ query predicate rather than remaining data.”
 ## Controlled Validation
 
 Use the shared baseline/probe/control cycle. Keep the request method, identity,
-state, and non-test fields stable.
+state, and non-test fields stable. Where no verify family fits the input shape,
+send the baseline, probe, and control with `ensphere verify request` and label
+each with `--result`.
 
 Choose only mechanism-specific observations:
 
@@ -75,15 +72,3 @@ or escalate to command execution for proof.
 - Stop when the narrow claim is supported/contradicted, the request limit is
   reached, target behavior becomes unstable, or the next step only increases
   impact.
-
-## Report
-
-Write `02-injection/report.md` with:
-
-1. scope, environment, `coverage.yaml` summary, and limits;
-2. each resolved finding with claim, source/data flow, baseline/probe/control,
-   observed facts, alternatives considered, status, evidence strength,
-   confidence, impact, remediation, validation criteria, and citations;
-3. tested defenses and the exact flows they covered;
-4. unresolved candidates and missing inputs;
-5. evidence index.

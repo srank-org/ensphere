@@ -8,58 +8,78 @@ description: Defensive security assessment of a system you own or are authorized
 > Ensphere produces verifiable facts. The analyst produces all security
 > judgments.
 
-Ensphere is a defensive checker. You are helping a developer find weaknesses
-and missing controls in their own system: injection, broken authentication
-or authorization, exposed storage, and endpoints that let an attacker spam
-the server or run up the bill. You prove findings only in a sandbox copy
-that cannot be hurt, never extract real data, and never send a probe to
-production. The deliverable is a report the developer can act on line by
-line and a one-page statement they can hand to someone doing due diligence.
+You are helping a developer find weaknesses and missing controls in their
+own system: injection, broken authentication or authorization, exposed
+storage, and endpoints that let an attacker spam the server or run up the
+bill. You prove findings only in a sandbox copy that cannot be hurt, never
+extract real data, and never send a probe to production. The deliverable is
+a report the developer can act on line by line and a one-page statement
+they can hand to someone doing due diligence.
 
-Read two files once before the first session, and return to them when a
+Read two files once before the first session and return to them when a
 rule is in doubt:
 
 - [shared/contract.md](shared/contract.md) holds every rule: scope,
   environments, pacing, evidence, findings, coverage, reporting. Nothing in
   this file or any methodology overrides it.
 - [shared/fundamentals.md](shared/fundamentals.md) is the stack-agnostic
-  map of roles every system has and the invariant each must satisfy. That
-  map is what you check. Stack checklists only translate it into a
-  framework's idioms and are accelerators, never prerequisites.
+  map of roles every system has, the invariant each must satisfy, and the
+  six questions that turn the map into hypotheses about this system. That
+  map is what you check. Stack checklists translate it into a framework's
+  idioms and are accelerators, never prerequisites.
 
 ## How an assessment works
 
 1. **Learn the project (Session 01).** Read the repository and, when there
-   is one, the running target. Identify languages, frameworks, data layers,
-   auth provider, hosting, storage, edge, and every third-party service that
-   bills per call. Write the role table from the fundamentals, inventory
-   the attack surface, and write `01-recon/target-profile.yaml` with its
-   `stack` block. Then write `01-recon/hypotheses.md`: what a motivated
-   user of this exact system would go after, as the fundamentals' Beyond
-   the map section describes. Stand up the sandbox as
+   is one, the running target. Write the stack profile, the role table from
+   the fundamentals, the attack-surface inventory, and
+   `01-recon/hypotheses.md`. Stand up the sandbox as
    [shared/sandbox.md](shared/sandbox.md) describes.
-2. **Plan from the stack (Session 01.5).** Map the detected stack to
-   checklist files with the table in
-   [methodology/01.5-session-plan.md](methodology/01.5-session-plan.md).
+2. **Plan from the stack (Session 01.5).** Map the stack to checklist files
+   with the table in [methodology/01.5-session-plan.md](methodology/01.5-session-plan.md).
    Decide every session with cited evidence, list every input the run will
    need, and ask for all of it at once. Run `ensphere run plan`.
 3. **Check (Sessions 02 to 08.5).** Each session opens its methodology plus
    the checklists the plan assigned to it, writes its `coverage.yaml`, and
-   resolves every row, including the hypotheses assigned to it, with
-   baseline, probe, control. The methodology and
-   the fundamentals say what to check; a checklist, when one exists, says
-   where that lives in this framework and the idiomatic fix.
+   resolves every row, including its hypotheses, with baseline, probe,
+   control.
 4. **Prove (Session 08.7).** In the sandbox only, join the `likely`
-   findings and workflow candidates into chains and run each end to end,
-   so the report separates observed paths from hypothetical ones.
+   findings and workflow candidates into chains and run each end to end.
 5. **Report (Session 09).** Findings, missing controls with concrete fixes,
    what was checked and held, what was not checked and why. `ensphere run
    report` is the gate; `ensphere run statement` writes the statement.
 
 Sessions 01, 01.5, and 09 always run. Sessions 02 to 08.7 run when the plan
 says they apply. The whole run is continuous; you stop only at the human
-gates the contract names (Pacing), and you present the result once, after
-Session 09.
+gates the contract names, and you present the result once, after Session
+09: the three to five things to fix first, the unresolved findings by
+severity, the material coverage limits, where the report and statement are,
+and that the statement is the operator's to sign.
+
+## Orchestration
+
+The workspace is the protocol. Every session reads its inputs from files
+and writes its outputs to files, so sessions do not need to share a
+context. When your harness can run subagents, use this shape:
+
+- **The orchestrator** runs Sessions 01, 01.5, and 09 itself and holds only
+  the plan, the role table, the hypotheses, and each session's report. It
+  never loads a session's transcripts or ledger.
+- **Each check session** runs in a fresh agent with a brief that names its
+  methodology file, its assigned checklists, the contract and fundamentals,
+  `config.md`, `01-recon/report.md`, `01-recon/hypotheses.md`,
+  `01-recon/sandbox.md`, and the previous session report. The agent writes
+  the session directory and returns the path to its report.
+- **Source review runs in parallel; live probes run in series.** Sessions
+  share one sandbox, and a burst in one corrupts a timing measurement in
+  another. Dispatch source-only work concurrently and serialize any session
+  that sends requests, or give each its own sandbox.
+- **Session 08.7** runs after every check session has reported, because it
+  joins their edges.
+
+Without subagents, run the sessions in one context in order and rely on
+`next-action.md` and `checkpoint.md` to resume after a context loss. The
+files are the same either way.
 
 ## Start or resume
 
@@ -74,11 +94,9 @@ When the user says `ensphere` or names a session:
 3. If the workspace contains several deployable applications, confirm which
    one is the target. Do not assess the whole monorepo silently.
 4. State the environment: the source path and the live target's tier,
-   `sandbox` or `staging`, as the contract defines them. The sandbox is
-   where proof happens; offer to stand one up if there is none. Without a
-   live target the coverage label is `source_only` and every measurement
-   row is `not_tested`; source review and missing-control findings still
-   proceed.
+   `sandbox` or `staging`. The sandbox is where proof happens; offer to
+   stand one up if there is none. Without a live target the tier is `none`
+   and source review still proceeds.
 5. Resume from the session's `coverage.yaml` and checkpoint. Do not repeat
    a completed probe.
 
@@ -120,11 +138,10 @@ First-run inputs, collected once:
 | 09 | [Report](methodology/09-report.md) | Finding registry, report, evidence appendix, coverage appendix, statement. |
 
 Checklists live in [checklists/](checklists/index.md) and exist for the
-most common stacks only. Every item has four lines: what and why, Look for,
-Measure, Fix. A stack with no checklist is assessed from the fundamentals
-and your own knowledge of it; it is never `blocked` for that reason.
-[shared/coverage-map.md](shared/coverage-map.md) maps sessions to WSTG and
-ASVS for the report's coverage appendix and names what no session covers.
+most common stacks only. A stack with no checklist is assessed from the
+fundamentals and your own knowledge of it; it is never `blocked` for that
+reason. [shared/coverage-map.md](shared/coverage-map.md) maps sessions to
+WSTG and ASVS for the report's coverage appendix.
 
 ## Workspace
 
@@ -133,7 +150,7 @@ ASVS for the report's coverage appendix and names what no session covers.
 ```text
 ensphere-pentest/
   config.md                 target, scope, identities, limits, assessor, operator, authorization
-  progress.md               one workflow state per session
+  progress.md               PENDING, IN_PROGRESS, or DONE per session
   assessment-plan.yaml      written by run plan, mirrored into 01.5-session-plan/
   next-action.md            handoff written by run next; read it first on resume
   agent-prompt.md           the prompt a fresh context should start from
@@ -142,7 +159,7 @@ ensphere-pentest/
   02-injection/ ... 08.7-chains/
     plan.md                 scope, limits, candidates
     coverage.yaml           every check and its state; validated by the gate
-    evidence.jsonl          this session's hash-chained ledger
+    evidence.jsonl          this session's ledger
     transcripts/            manual observations, one file per candidate or chain
     artifacts/              captured files, screenshots, exports
     checkpoint.md           present only during a long operation
@@ -155,52 +172,38 @@ ensphere-pentest/
     statement.yaml, .md     written by run statement; the operator signs statement.md
 ```
 
-Before a long operation write `checkpoint.md` with the `coverage.yaml`
-position, completed and remaining candidates, evidence paths and chain
-state, and request counters, so a run that loses its context resumes
-rather than restarts. Delete it when the session report is written. Update
-`progress.md` only after the report is written.
-
 ## Using the CLI
 
-`ensphere help` and each subcommand's `--help` are the source of truth for
-syntax. Every verify command requires `--in-scope`; scope failures exit 2,
-runtime failures exit 3, and a refusal is never worked around.
+`ensphere help` and each subcommand's `--help` are the source of truth.
+Every verify command requires `--in-scope`; scope failures exit 2, runtime
+failures exit 3, and a refusal is never worked around. Three commands do
+most of the work:
 
-- `ensphere run init | status | next | plan | report | statement` manage
-  the workspace. `run next` writes the handoff for the next session;
-  `run report` is the Session 09 gate; `run statement` writes the
-  Statement of Assessment once the gate passes.
-- `ensphere scan` finds sink candidates in source by category. A match is a
-  lead, not a finding. `ensphere sinks` lists the patterns it uses.
-- `ensphere openapi` inventories an OpenAPI spec for the entry-point table.
-- `ensphere payloads` selects controlled inputs by family, technique, and
-  risk. Presence in the corpus does not make a payload appropriate for this
-  scope.
-- `ensphere verify <family>` records a measurement: baseline, probe, and
-  control values into the session ledger. Read the raw values yourself. The
-  families are listed in the fundamentals' role-to-session table.
-- `ensphere verify limits` and `ensphere verify ratelimit` measure caps and
-  limiters with operator-approved sizes and burst counts only.
-- `ensphere callback` runs the local out-of-band listener Session 06 uses.
-- `ensphere evidence log` records manual observations into the same ledger;
-  `ensphere evidence verify` checks the chain before a session ends.
-- `ensphere cloud <area>` reads provider configuration through the provider
-  CLI, read-only. If the CLI is missing or logged out, tell the operator
-  what to run and mark the rows `blocked`.
-- `ensphere cvss` scores a vector after you decide the metrics;
-  `ensphere compliance` maps a category to control frameworks. Both are
-  optional and neither produces a judgment.
+- `ensphere verify request` sends one request you construct, labelled
+  `--result baseline`, `probe`, or `control`, and records it in the
+  session ledger. Use it for every shape no family anticipates and for the
+  control of every family probe. Its output carries the evidence id.
+- `ensphere verify <family>` runs a fixed measurement that is fiddly to do
+  by hand: `race` with a start barrier, `ratelimit` with header capture,
+  `limits`, `rls`, the timing families, and the rest listed in the
+  fundamentals under "Where each role is checked".
+- `ensphere evidence log` records an observation that is not a request
+  (a source citation, a database row after a chain step) into the ledger,
+  and `ensphere evidence verify` checks the chain before a session ends.
 
-If a checklist command conflicts with the approved scope, the risk ceiling,
-or a stop rule, do not run it; record the row `blocked` with the reason.
+`ensphere run` manages the workspace, `scan` and `openapi` produce leads
+and inventories, `payloads` selects controlled inputs by risk, `callback`
+runs the out-of-band listener, `cloud` reads provider configuration
+read-only, and `cvss` and `compliance` are optional. If a checklist command
+conflicts with the approved scope, the risk ceiling, or a stop rule, do not
+run it; record the row `blocked` with the reason.
 
 ## Habits that make the report worth reading
 
 - Read the source before probing. Most candidates come from a file and
   line; the live target confirms the consequence.
 - One narrow claim at a time, always with a baseline and a control. A
-  number without both is not evidence.
+  number without both is not evidence, and the gate will say so.
 - Name things by role. "The limiter on the OTP send" says more than the
   middleware's package name, and the fix follows from the role.
 - The map is the floor. After the role table, ask what a motivated user of
@@ -214,37 +217,3 @@ or a stop rule, do not run it; record the row `blocked` with the reason.
   rests on.
 - Tell the operator what is missing once, in the Needs-from-you list, with
   the exact command. Then continue with everything else.
-
-## Ending a session
-
-1. Resolve every planned candidate or record why it is `not_tested`.
-2. Reconcile `coverage.yaml` with the work actually done: no `planned`
-   rows remain, every `tested` row cites evidence that exists in this
-   session's ledger, every other resolved row has a reason.
-3. Verify cited paths and run `ensphere evidence verify` on the ledger.
-4. Write the session report, ending with the **Needs from you** list.
-5. Mark the session terminal in `progress.md`, run `ensphere run next`, and
-   continue with the next session. Stop only at a human gate.
-
-## Ending the assessment
-
-Session 09 runs no new probe. In order:
-
-1. `ensphere run report`; fix every error in the workspace file it names,
-   and carry every warning into the limitations.
-2. Write `finding-registry.yaml`, `report.md`, and `evidence-appendix.md` as
-   the Session 09 methodology describes. The "checks executed" and "not
-   checked" sections copy coverage rows; their counts equal the gate's.
-3. `ensphere run report` again, then `ensphere run statement`. Never edit
-   the statement; regenerate it.
-4. Mark Session 09 `DONE` and present to the operator: the three to five
-   things to fix first, the unresolved findings by severity, the material
-   coverage limits, where the report and statement are, and that the
-   statement is theirs to sign.
-
-The contract's Reporting section is the full list of report rules. The ones
-most often broken: no uncited finding or missing control; no broad
-"secure" or "safe" claim; no scanner severity presented as Ensphere
-severity; no attack path presented as observed unless every edge has
-evidence; no certification language; every missing control with a concrete
-fix for this stack.

@@ -37,8 +37,11 @@ plan.
 - Scope validation precedes every verify request and every redirect hop.
   A host outside `--in-scope` is refused with exit 2.
 - The default maximum risk is 3. Each verify family carries a fixed risk;
-  SQLi also selects payload records by risk. Risk 4 and 5 payloads never read
+  SQLi also selects payload records by risk; `verify request` carries the
+  risk the analyst declares with `--risk`. Risk 4 and 5 payloads never read
   credentials or execute code.
+- `verify request` accepts a body of at most 256 KiB and a fixed method
+  list, and follows redirects only when asked.
 - The default inter-probe throttle is 500 ms where a probe uses standard
   throttling.
 - Rate-limit measurement requires an explicit `--burst-count`; there is no
@@ -141,11 +144,14 @@ filled in later by editing `config.md`.
 config.
 
 Source is always in scope; a live target is optional. Without `--target` the
-draft plan carries `coverage_label: source_only` and `environment: none`;
-`target.url` may be empty only when the coverage label is `source_only`,
-`client_only`, or `cloud_only`. `sandbox` and `staging` require a URL. The
-chains session drafts as `run` only when the recon target profile records
-`environment: sandbox`; otherwise it drafts `blocked`.
+draft plan carries `environment: none` and drafts each measurement session
+`limited` with a reason that says source review only. `target.environment`
+is required: `none` requires an empty `target.url`, and `sandbox` and
+`staging` require one. The environment tier is the plan's only statement
+about whether a live target exists; there is no separate coverage label.
+The chains session drafts as `run` only when the recon target profile
+records `environment: sandbox`; otherwise it drafts `blocked`. The cloud
+session drafts `skip` when `--cloud` is `none`.
 
 `run plan` writes `assessment-plan.yaml` and mirrors it to
 `01.5-session-plan/assessment-plan.yaml` when no plan exists. Existing plans are
@@ -165,36 +171,45 @@ assessment.
 kind: `VULN-001` for a vulnerability, `CTRL-001` for a missing control.
 `cvss_v4` is optional and, when present, must be a `CVSS:4.0/` vector; a CVSS
 vector on a `missing_control` finding is reported as a warning because CVSS is
-only meaningful for a vulnerability. The gate blocks report readiness when
-required session reports are missing, planned sessions are not terminal,
-`assessment-plan.yaml` is missing or invalid, evidence hash-chain verification
-fails, or the finding registry contains uncited findings, missing required
-finding fields, invalid or duplicate finding ids, missing or invalid finding
-kinds, invalid statuses (`confirmed`, `likely`, `informational`,
-`not_supported`, `not_tested`), inconsistent evidence strength, missing CVSS v4
-vectors for vulnerability findings, invalid confidence/severity/priority values,
-invalid evidence categories, invalid coverage labels, missing or unsafe
-transcript/artifact/cleanup paths, or an incomplete final report and evidence
-appendix.
+only meaningful for a vulnerability. `progress.md` holds one of three states per session: `PENDING`,
+`IN_PROGRESS`, or `DONE`. `DONE` means the session report is written; a
+session the plan decided `skip`, `not_applicable`, or `blocked` is `DONE`
+once its short report names that decision. Any other value is a gate
+error. The gate blocks report readiness when a session from 01 to 08.7 is
+not `DONE`, a session report is missing or empty, `assessment-plan.yaml` is
+missing or invalid, evidence chain verification fails, or the finding
+registry contains uncited findings, missing required finding fields,
+invalid or duplicate finding ids, missing or invalid finding kinds, invalid
+statuses (`confirmed`, `likely`, `informational`, `not_supported`,
+`not_tested`), inconsistent evidence strength, invalid
+confidence/severity/priority values, invalid evidence categories, missing or
+unsafe transcript/artifact/cleanup paths, or an incomplete final report and
+evidence appendix.
 
 The gate also reads every session's `coverage.yaml` (Sessions 02 through
 08.7; Recon and the plan carry none). A `DONE` session without the file is
-an error. Each row needs an id of the form `COV-<session>-NNN`, a `surface`,
-a `check`, and a `state` of `planned`, `tested`, `not_tested`, `blocked`, or
-`not_applicable`. A `planned` row blocks the report. A `tested` row must cite
-`evidence_ids` that exist in that session's `evidence.jsonl`; every other
-resolved state needs a `reason`. `identity`, `transcripts`, `checklist`,
-and `hypothesis` (the `HYP-NNN` recon hypothesis the row resolves) are
-optional; the gate checks transcript paths and records the rest. The gate output carries a `coverage` block
-with counts per session and in total, and `report-gate.md` renders the same
-table. Those counts are the only source for the report's "checks executed"
-and "not checked" numbers.
+an error unless the plan decided that session `skip` or `not_applicable`.
+Each row needs an id of the form `COV-<session>-NNN`, a `surface`, a
+`check`, and a `state` of `planned`, `tested`, `not_tested`, `blocked`, or
+`not_applicable`. A `planned` row blocks the report. A `tested` row must
+cite `evidence_ids` that exist in that session's `evidence.jsonl`, and when
+any cited entry is a `probe`, `payload`, or `callback` the row must also
+cite a `baseline` entry and a `control` entry from the same ledger
+(`coverage_baseline_missing`, `coverage_control_missing`); a row that cites
+only `manual_note` entries, such as a source-review row, is exempt. Every
+other resolved state needs a `reason`. `identity`, `transcripts`,
+`checklist`, and `hypothesis` (the `HYP-NNN` recon hypothesis the row
+resolves) are optional; the gate checks transcript paths and records the
+rest. The gate output carries a `coverage` block with counts per session
+and in total, and `report-gate.md` renders the same table. Those counts are
+the only source for the report's "checks executed" and "not checked"
+numbers; there is no analyst-chosen coverage label.
 
 `run statement` derives `09-report/statement.yaml` and
 `09-report/statement.md`, the one-page Statement of Assessment, from the
 workspace alone: target, environment, source path, platforms, assessor and
-operator from `config.md`; every session's plan decision, coverage label, and
-progress state; the coverage counts above; finding counts by kind, status,
+operator from `config.md`; every session's plan decision and progress
+state; the coverage counts above; finding counts by kind, status,
 and severity with the unresolved findings listed; each ledger's entry count,
 chain validity, and final hash; the earliest and latest evidence timestamps;
 and the Ensphere version. Nothing is typed by the caller. The command exits 2
@@ -239,11 +254,13 @@ ensphere verify ssrf --url "https://target/fetch" --param url --callback-url "ht
 ensphere verify auth --url "https://target/api/admin" --token "valid-token" --technique alg_none --in-scope target
 ensphere verify authz --url "https://target/api/admin" --low-token "user-token" --high-token "admin-token" --in-scope target
 ensphere verify ratelimit --url "https://target/api/login" --method POST --burst-count 10 --window-sec 10 --in-scope target
+ensphere verify request --url "https://target/api/orders/42/refund" --method POST --result control --note "nonexistent order" --in-scope target
 ```
 
 Supported probe families:
 
 ```text
+request,
 auth, authz, cachepoisoning, clickjacking, cmdi, cors, csrf,
 csvinjection, fileupload, graphql, grpc, headerinjection, idor,
 jwt, ldap, lfi, limits, massassignment, nosql, propertyauthz,
@@ -251,12 +268,24 @@ protopollution, race, ratelimit, redirect, rls, sqli, ssrf, ssti,
 websocket, xpath, xss, xxe
 ```
 
+Two kinds of family exist. **Primitives** do something that is fiddly or
+error-prone to reproduce by hand: `request` (any shape, labelled with its
+role), `race` (a start barrier), `ratelimit` (a bounded burst with header
+capture), `limits`, `rls`, the interleaved timing families (`sqli
+blind_time`, `cmdi`, `nosql where_time`), and the transport families.
+**Presets** send a fixed request shape that `verify request` could send
+equally well (`cors`, `clickjacking`, `redirect`, `headerinjection`,
+`csrf`, and similar); they exist for convenience and are frozen. Do not add
+a family whose request shape `verify request` can already send; write a
+recipe in the methodology instead.
+
 Every HTTP-based family accepts `--url`; most also accept `--method` (and
 `--param` where a single parameter is targeted). Beyond the shared probe flags
 and those common ones, each family's distinctive flags are:
 
 | Family | Distinctive flags |
 |--------|-------------------|
+| `request` | `--body`, `--result` (required), `--note`, `--risk`, `--follow-redirects` |
 | `auth` | `--token`, `--technique` |
 | `authz` | `--low-token`, `--high-token` |
 | `cachepoisoning` | `--technique` |
@@ -289,6 +318,38 @@ and those common ones, each family's distinctive flags are:
 | `xpath` | `--param`, `--technique` |
 | `xss` | `--param`, `--payload` |
 | `xxe` | `--technique` |
+
+### request
+
+```bash
+ensphere verify request --url "http://localhost:3000/api/orders/42/refund" --method POST \
+  --header "Authorization: Bearer [TENANT_A_USER]" --result baseline --note "legitimate refund" --in-scope localhost
+ensphere verify request --url "http://localhost:3000/api/orders/42/refund" --method POST \
+  --header "Authorization: Bearer [TENANT_A_USER]" --result probe --note "second refund of the same order" --in-scope localhost
+ensphere verify request --url "http://localhost:3000/api/orders/99999/refund" --method POST \
+  --header "Authorization: Bearer [TENANT_A_USER]" --result control --note "nonexistent order" --in-scope localhost
+```
+
+Vuln type `request`, technique `scoped_request`. Sends one request the
+analyst constructs and records it in the ledger with the role the analyst
+declares. `--result` is required and must be `baseline`, `probe`, or
+`control`; the report gate uses those stages to check that every probed
+coverage row also cites a baseline and a control. `--method` is one of
+GET, HEAD, POST, PUT, PATCH, DELETE, or OPTIONS. `--body` is limited to
+256 KiB; larger bodies belong to `verify limits`. `--risk` (1 to 5,
+default 3) is the analyst's declared payload risk and is checked against
+`--max-risk` like any family's fixed risk. Redirects are not followed unless
+`--follow-redirects` is set, and every hop is scope-checked. `--note` is
+stored, redacted, in the ledger entry.
+
+Output `request_measurements` carries `method`, `url`, `result`,
+`declared_risk`, `request_body_bytes`, `request_hash`,
+`redirects_followed`, one `round` (status, elapsed, body hash and length,
+and the response headers lowercased with `set-cookie`, `authorization`,
+and `www-authenticate` values replaced by `[REDACTED]`), a bounded redacted
+`response_snippet`, and `evidence_id`, the ledger entry written for this
+request, so the coverage row can cite it directly. The ledger entry carries
+the request hash (of method, URL, and body) and the response hash.
 
 ### Injection and template families
 
@@ -491,13 +552,22 @@ Flags for `evidence query`:
 The writer assigns stable `EVID-XXX` IDs at write time, rejects missing,
 malformed, or duplicate IDs when continuing a ledger, serializes concurrent
 writers with a lock file, redacts supported secret forms, and records
-`prev_hash` and `hash` on every row so `evidence verify` can detect
-tampering. Finding judgments belong in reports and registries, never in
-evidence rows. The `result` field is a factual stage only:
+`prev_hash` and `hash` on every row so `evidence verify` can detect a
+ledger that was edited or truncated after the fact. The chain is an
+integrity check on the file, not a proof of what was measured: the operator
+runs the measurements and signs the statement. Finding judgments belong in
+reports and registries, never in evidence rows. The `result` field is a
+factual stage only:
 
 ```text
 baseline, probe, payload, control, callback, manual_note
 ```
+
+The report gate reads these stages: a `tested` coverage row that cites a
+`probe`, `payload`, or `callback` entry must also cite a `baseline` and a
+`control`. Verify families write `baseline` and `probe` entries themselves;
+record a control with `verify request --result control` or `evidence log
+--result control`.
 
 ## Scan
 

@@ -90,7 +90,7 @@ func TestRunPlanWritesDraftAndStatusSummary(t *testing.T) {
 	if !out.Written || !out.Valid {
 		t.Fatalf("expected written valid plan, got written=%v valid=%v validation=%v", out.Written, out.Valid, out.Validation)
 	}
-	if out.Plan.Target.Type != "api_backend" || out.Plan.Target.CoverageLabel != coverageFull {
+	if out.Plan.Target.Type != "api_backend" {
 		t.Fatalf("unexpected target summary: %+v", out.Plan.Target)
 	}
 	if out.Plan.Target.Environment != "sandbox" {
@@ -207,7 +207,6 @@ func TestRunPlanUsesReconTargetProfileForClientOnlyTarget(t *testing.T) {
 	profile := `target:
   type: mobile_client_offline
   environment: sandbox
-  coverage_label: client_only
   classification_confidence: high
   rationale:
     - "Session 01 found only Android client code and no configured backend URL."
@@ -342,7 +341,7 @@ func TestRunPlanBlocksChainsForStagingEnvironment(t *testing.T) {
 		t.Fatalf("expected valid plan, validation=%v", out.Validation)
 	}
 	chains := out.Plan.Sessions["08.7-chains"]
-	if chains.Decision != decisionBlocked || chains.CoverageLabel != coverageBlocked {
+	if chains.Decision != decisionBlocked {
 		t.Fatalf("expected chains blocked outside a sandbox, got %+v", chains)
 	}
 	if len(chains.RequiredInput) != 1 || chains.RequiredInput[0] != "environment: sandbox in 01-recon/target-profile.yaml" {
@@ -354,10 +353,9 @@ func TestValidateAssessmentPlanChecksEnvironmentAgainstTargetURL(t *testing.T) {
 	base := func() *AssessmentPlan {
 		return &AssessmentPlan{
 			Target: PlanTarget{
-				Type:          "web_app",
-				URL:           "https://sandbox.example.com",
-				Environment:   "sandbox",
-				CoverageLabel: coverageFull,
+				Type:        "web_app",
+				URL:         "https://sandbox.example.com",
+				Environment: "sandbox",
 			},
 		}
 	}
@@ -365,22 +363,21 @@ func TestValidateAssessmentPlanChecksEnvironmentAgainstTargetURL(t *testing.T) {
 		name        string
 		url         string
 		environment string
-		coverage    string
 		want        string
 	}{
-		{name: "sandbox with url", url: "https://sandbox.example.com", environment: "sandbox", coverage: coverageFull},
-		{name: "invalid value", url: "https://sandbox.example.com", environment: "production", coverage: coverageFull, want: `target.environment "production" is invalid`},
-		{name: "missing with url", url: "https://sandbox.example.com", environment: "", coverage: coverageFull, want: "target.environment is required when target.url is set"},
-		{name: "none with url", url: "https://sandbox.example.com", environment: "none", coverage: coverageFull, want: "target.environment none is only valid when target.url is empty"},
-		{name: "staging without url", url: "", environment: "staging", coverage: coverageSourceOnly, want: "target.environment staging requires a non-empty target.url"},
-		{name: "none without url", url: "", environment: "none", coverage: coverageSourceOnly},
+		{name: "sandbox with url", url: "https://sandbox.example.com", environment: "sandbox"},
+		{name: "invalid value", url: "https://sandbox.example.com", environment: "production", want: `target.environment "production" is invalid`},
+		{name: "missing with url", url: "https://sandbox.example.com", environment: "", want: "target.environment is required"},
+		{name: "missing without url", url: "", environment: "", want: "target.environment is required"},
+		{name: "none with url", url: "https://sandbox.example.com", environment: "none", want: "target.environment none is only valid when target.url is empty"},
+		{name: "staging without url", url: "", environment: "staging", want: "target.environment staging requires a non-empty target.url"},
+		{name: "none without url", url: "", environment: "none"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			plan := base()
 			plan.Target.URL = tc.url
 			plan.Target.Environment = tc.environment
-			plan.Target.CoverageLabel = tc.coverage
 			problems := strings.Join(ValidateAssessmentPlan(plan), "\n")
 			if tc.want == "" {
 				if strings.Contains(problems, "target.environment") {
@@ -549,7 +546,6 @@ findings:
     evidence_categories:
       - ensphere_measurement
       - agent_judgment
-    coverage_label: full
 `
 	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
 		t.Fatalf("write registry: %v", err)
@@ -585,7 +581,6 @@ findings:
     business_impact: Test business impact
     remediation: Add the control
     validation_criteria: [Unauthorized control is denied]
-    coverage_label: full
     evidence_categories:
       - ensphere_measurement
       - agent_judgment
@@ -624,7 +619,6 @@ findings:
     evidence_strength: direct
     severity: severe
     priority: P1
-    coverage_label: broad
     evidence_categories:
       - scanner_says_so
     evidence_ids:
@@ -642,7 +636,6 @@ findings:
 		"finding_confidence_invalid",
 		"finding_severity_invalid",
 		"finding_evidence_category_invalid",
-		"finding_coverage_invalid",
 	} {
 		if !hasIssue(gate.Issues, code) {
 			t.Fatalf("expected %s in issues %+v", code, gate.Issues)
@@ -730,7 +723,6 @@ findings:
     security_impact: Unbounded SMS sends at the owner's cost
     remediation: Add a shared-store limiter keyed on phone number and IP
     validation_criteria: [Sixth request in 60s returns 429]
-    coverage_label: partial
     evidence_categories:
       - source_review
       - ensphere_measurement
@@ -939,7 +931,6 @@ findings:
     evidence_strength: direct
     severity: high
     priority: P3
-    coverage_label: full
     evidence_categories:
       - ensphere_measurement
     evidence_ids:
@@ -977,7 +968,6 @@ findings:
     evidence_strength: direct
     severity: high
     priority: P3
-    coverage_label: full
     evidence_categories:
       - ensphere_measurement
     transcripts:
@@ -1008,14 +998,14 @@ func writeReportReadyWorkspace(t *testing.T, workspace string) {
 | 01 | Recon | DONE | |
 | 01.5 | Plan | DONE | |
 | 02 | Injection | DONE | |
-| 03 | Authentication | SKIPPED | No authentication mechanism |
-| 04 | Authorization | BLOCKED | Missing second account |
-| 05 | Cross-Site Scripting | NOT_APPLICABLE | API only |
+| 03 | Authentication | DONE | plan: not_applicable |
+| 04 | Authorization | DONE | plan: blocked, missing second account |
+| 05 | Cross-Site Scripting | DONE | plan: skip |
 | 06 | Server-Side Request Forgery | DONE | |
-| 07 | Cloud and Platform | SKIPPED | No cloud scope |
+| 07 | Cloud and Platform | DONE | plan: skip |
 | 08 | API Security | DONE | |
 | 08.5 | Abuse and Cost Controls | DONE | |
-| 08.7 | Chains and Workflows | BLOCKED | No sandbox environment |
+| 08.7 | Chains and Workflows | DONE | plan: blocked, no sandbox |
 | 09 | Report | PENDING | |
 `
 	if err := os.WriteFile(filepath.Join(workspace, "progress.md"), []byte(progress), 0644); err != nil {
@@ -1030,7 +1020,11 @@ func writeReportReadyWorkspace(t *testing.T, workspace string) {
 			t.Fatalf("write report %s: %v", path, err)
 		}
 	}
-	for _, id := range []string{"02", "06", "08", "08.5"} {
+	// Every DONE session carries a coverage file except 07, whose draft
+	// decision is skip (cloud scope none); the gate lets a skipped session
+	// omit the file. Sessions 04 and 08.7 draft as blocked and list their
+	// rows as blocked.
+	for _, id := range []string{"02", "03", "05", "06", "08", "08.5"} {
 		writeCoverageFile(t, workspace, id, fmt.Sprintf(`session: "%s"
 rows:
   - id: COV-%s-001
@@ -1041,7 +1035,82 @@ rows:
     reason: "fixture workspace"
 `, id, id))
 	}
+	for _, id := range []string{"04", "08.7"} {
+		writeCoverageFile(t, workspace, id, fmt.Sprintf(`session: "%s"
+rows:
+  - id: COV-%s-001
+    surface: "GET /fixture"
+    check: "fixture_control"
+    identity: anonymous
+    state: blocked
+    reason: "plan decision blocked"
+`, id, id))
+	}
 	writeSession09Artifacts(t, workspace)
+}
+
+func TestRunReportLetsOnlySkippedSessionsOmitCoverage(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	if _, err := RunPlan(workspace, false); err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	writeReportReadyWorkspace(t, workspace)
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report: %v", err)
+	}
+	if !gate.Ready || hasIssue(gate.Issues, "coverage_missing") {
+		t.Fatalf("expected the skipped cloud session to omit coverage.yaml, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(workspace, "assessment-plan.yaml"))
+	if err != nil {
+		t.Fatalf("read plan: %v", err)
+	}
+	edited := strings.Replace(string(raw), "decision: skip", "decision: blocked", 1)
+	if edited == string(raw) {
+		t.Fatalf("expected a skip decision in the draft plan:\n%s", raw)
+	}
+	if err := os.WriteFile(filepath.Join(workspace, "assessment-plan.yaml"), []byte(edited), 0644); err != nil {
+		t.Fatalf("write plan: %v", err)
+	}
+	gate, err = RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "coverage_missing") {
+		t.Fatalf("expected a blocked session without coverage.yaml to fail, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+}
+
+func TestRunReportRejectsProgressStatesOutsideTheThree(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
+		t.Fatalf("init workspace: %v", err)
+	}
+	if _, err := RunPlan(workspace, false); err != nil {
+		t.Fatalf("run plan: %v", err)
+	}
+	writeReportReadyWorkspace(t, workspace)
+	progressPath := filepath.Join(workspace, "progress.md")
+	raw, err := os.ReadFile(progressPath)
+	if err != nil {
+		t.Fatalf("read progress: %v", err)
+	}
+	edited := strings.Replace(string(raw), "| 05 | Cross-Site Scripting | DONE | plan: skip |", "| 05 | Cross-Site Scripting | SKIPPED | |", 1)
+	if err := os.WriteFile(progressPath, []byte(edited), 0644); err != nil {
+		t.Fatalf("write progress: %v", err)
+	}
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "session_state_invalid") {
+		t.Fatalf("expected SKIPPED to be rejected, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
 }
 
 func writeCoverageFile(t *testing.T, workspace, sessionID, content string) {
@@ -1095,7 +1164,6 @@ func writeValidFindingRegistry(t *testing.T, workspace string, ids ...string) {
 		b.WriteString("    business_impact: Test business impact\n")
 		b.WriteString("    remediation: Add the control\n")
 		b.WriteString("    validation_criteria: [Unauthorized control is denied]\n")
-		b.WriteString("    coverage_label: full\n")
 		b.WriteString("    evidence_categories:\n")
 		b.WriteString("      - ensphere_measurement\n")
 		b.WriteString("      - agent_judgment\n")
@@ -1149,22 +1217,25 @@ func TestRunPlanWithoutLiveTargetIsSourceOnly(t *testing.T) {
 	if !out.Written || !out.Valid {
 		t.Fatalf("expected written valid source-only plan, got written=%v valid=%v validation=%v", out.Written, out.Valid, out.Validation)
 	}
-	if out.Plan.Target.URL != "" || out.Plan.Target.CoverageLabel != coverageSourceOnly {
-		t.Fatalf("expected empty url and source_only coverage, got %+v", out.Plan.Target)
+	if out.Plan.Target.URL != "" {
+		t.Fatalf("expected empty url without a live target, got %+v", out.Plan.Target)
 	}
 	if out.Plan.Target.Environment != "none" {
 		t.Fatalf("expected none environment without a live target, got %q", out.Plan.Target.Environment)
 	}
+	if out.Plan.Sessions["02-injection"].Decision != decisionLimited || !strings.Contains(out.Plan.Sessions["02-injection"].Reason, "No live target") {
+		t.Fatalf("expected source-only draft to limit measurement sessions, got %+v", out.Plan.Sessions["02-injection"])
+	}
 	plan := *out.Plan
-	plan.Target.CoverageLabel = coverageFull
+	plan.Target.Environment = "sandbox"
 	problems := ValidateAssessmentPlan(&plan)
 	found := false
 	for _, problem := range problems {
-		if strings.Contains(problem, "target.url is required") {
+		if strings.Contains(problem, "requires a non-empty target.url") {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatalf("expected target.url validation error for full coverage without a URL, got %v", problems)
+		t.Fatalf("expected environment validation error for a live tier without a URL, got %v", problems)
 	}
 }

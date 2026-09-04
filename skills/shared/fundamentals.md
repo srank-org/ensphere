@@ -41,10 +41,10 @@ Recon names which product fills each role. The check is the same either way.
 | Entry point | 01 inventories, 08 measures | `ensphere openapi`; `verify graphql`, `verify grpc`, `verify websocket` for protocol surface |
 | Parser | 02, 08, 08.5 | `verify xxe`, `verify protopollution`, `verify limits` (body size) |
 | Query construction | 02 | `verify sqli`, `verify nosql`, `verify cmdi`, `verify ssti`, `verify lfi`, `verify ldap`, `verify xpath`, `verify headerinjection` |
-| Identity | 03 | `verify auth`, `verify jwt`, `verify csrf`, manual flows logged with `evidence log` |
+| Identity | 03 | `verify auth`, `verify jwt`, `verify csrf`; every other flow step sent with `verify request` under its role |
 | Cryptographic operation | 03 | Source review; `verify jwt` for algorithm and signature handling |
 | Authorization decision | 04 | `verify authz`, `verify idor`, `verify rls`, `verify propertyauthz` |
-| Workflow | 04 (transitions), 08.7 (chains) | Manual transitions logged with `evidence log`; `verify massassignment`; `verify race` for concurrent transitions |
+| Workflow | 04 (transitions), 08.7 (chains) | Each transition sent with `verify request` as baseline, probe, or control; `verify massassignment`; `verify race` for concurrent transitions |
 | Data store | 04, 07f, 08.5 | `verify rls`, `verify limits` (pagination), `cloud` reads of grants and policies |
 | Object storage | 07, 08.5 | `verify fileupload`, `verify limits` (upload size), `cloud` reads of bucket policy |
 | Render context | 05 | `verify xss`, `verify csvinjection` |
@@ -55,6 +55,10 @@ Recon names which product fills each role. The check is the same either way.
 | Secret | 01, 07 | Source review of env handling, client bundles, and git history; `cloud secrets` metadata |
 | Audit trail | 07 | `cloud logging`; source review of auth and admin paths |
 | Platform configuration | 07 and its appendices | `ensphere cloud <provider>` read-only |
+
+Where no family fits, `verify request` sends the request and records it
+under the role you declare, and the control for any family probe is sent
+the same way. The families are conveniences; the cycle is the rule.
 
 ## Turning an invariant into claims
 
