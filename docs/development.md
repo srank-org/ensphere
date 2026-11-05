@@ -17,6 +17,9 @@ Allowed in code:
 - Redact secrets
 - Calculate CVSS from fixed user-supplied metrics
 - Map to compliance frameworks
+- Validate the system map and the invariants, and run a declared invariant
+- Ask git which files changed and which commit the tree is at
+- Check, read-only, that a run's prerequisites are in place
 
 Not allowed in code:
 

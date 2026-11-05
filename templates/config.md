@@ -5,8 +5,9 @@
 - (Leave URL empty for a source-only assessment. A disposable local instance is the preferred live target.)
 - Source path: ./
 - Target type: auto | web_app | api_backend | static_site | mobile_client_remote_backend | mobile_client_offline | desktop_or_extension_client | cloud_only | library_or_cli
-- Cloud / platform: none | aws | gcp | azure | kubernetes | cloudflare | supabase | (comma-separated if multiple)
+- Cloud: none | aws | gcp | azure | kubernetes | cloudflare | supabase | (comma-separated if multiple)
 - Environment: sandbox | staging | none (sandbox is a local disposable instance with synthetic data; production is never a live target)
+- (For a delta run add `- Delta since: <commit of the previous assessment>`; `ensphere run init --delta-since` writes it, and `run plan` then skips every session no changed surface owns.)
 
 ## Sandbox
 - Start: (exact command that starts the disposable local instance, e.g. docker compose -f compose.sandbox.yml up -d --wait)

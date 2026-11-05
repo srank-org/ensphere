@@ -51,7 +51,10 @@ diff, and SARIF contracts directly.
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
 | `cmd/invariants_test.go` | cmd | Subprocess cases for invariants validate (valid, invalid, missing directory, surfaces from the map) and run (happy path and `--out`, enforced failure exit, `--only`, usage exits) |
 | `cmd/map_test.go` | cmd | Subprocess cases for map validate (valid, invalid, unreadable), map changed in a temporary git repository with its `invariants_affected` list, and `invariants run --since` marking the invariant whose surface changed or refusing without a map |
-| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, scope list validation and default, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, the statement refusal exit code, run diff, run sarif, run doctor, and the hook commands |
+| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, scope list validation and default, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, the statement refusal exit code, run diff, run sarif, run doctor |
+| `cmd/hook_test.go` | cmd | Subprocess cases for the hook commands: pre-tool-use allow, deny, and no opinion, session-start context, a verify command refused outside the workspace-approved scope, malformed scope lists, and sandbox flags approving guard commands |
+| `runner/hook_test.go` | runner | Workspace discovery precedence and absence, the session-start context, sandbox commands read only from the ## Sandbox section, init writing them |
+| `runner/scope_test.go` | runner | Scope list parsing, the default scope from the target host, and the workspace-approved scope check |
 | `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only drafting, report contracts, the three progress states, which sessions may omit coverage.yaml, and evidence/citation gates |
 | `runner/statement_test.go` | runner | Coverage file validation codes, the baseline/probe/control citation rule, statement generation in YAML, Markdown, and JSON, stable inputs digest, and stale, edited, or missing-JSON statement detection |
 | `guard/guard_test.go` | guard | Hook guard classification: allow for ensphere and approved sandbox commands, deny for raw network tools, inline-code interpreters, wrappers, substitutions, and constructs the scanner cannot follow, no opinion otherwise |
@@ -88,6 +91,7 @@ diff, and SARIF contracts directly.
 | `payloads/golden_test.go` | payloads | Golden reproduction: the YAML store's query output matches the captured per-vuln-type fixtures byte-for-byte |
 | `scan/scanner_test.go` | scan | Regex pattern-match scanner: matches, no matches, excludes, absence rules, extension overrides, sorting, redaction |
 | `sinks/query_test.go` | sinks | Embedded sink loader, invalid category, and regex compile validation |
+| `cvss/v40_test.go` | cvss | CVSS v4.0 scoring, macro-vector lookup, vector string rendering, invalid inputs |
 | `compliance/query_test.go` | compliance | Mapping list, valid lookup, invalid vuln type, no-mapping behavior |
 | `cvss/v40_test.go` | cvss | CVSS v4.0 scoring, macro-vector lookup, vector string, invalid inputs |
 | `cloud/exec_test.go` | cloud | Provider CLI runner: installed check, exit codes, output capture |

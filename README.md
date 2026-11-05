@@ -129,7 +129,7 @@ Not yet measured. Ensphere is a proof of concept published for review, and a cle
 - **It needs your source.** Ensphere is for the person who owns the system. Source is always in scope; a live target is optional.
 - **Every request is scoped.** Each verify command requires `--in-scope` and refuses any host outside it, including redirect hops. Rate-limit probes require a burst count you approved; there is no default. Probes carry a risk level, and the default ceiling refuses the higher ones.
 - **It never says "secure".** The report says what was tested, against which assets and roles, with which controls, and what held. A missing signal is never treated as proof that a surface is absent.
-- **The judgment is the model's.** Ensphere holds the method and the measurements steady. The methodology files are kept short enough for a mid-tier model to read alongside your code, and a stronger model finds more.
+- **The judgment is the model's.** Ensphere holds the method and the measurements steady. The methodology files are written for a frontier model and kept short enough to read alongside your code; a stronger model finds more.
 
 ---
 

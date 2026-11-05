@@ -1,7 +1,5 @@
 # Payload Seed Index
 
-Last updated: 2026-06-07
-
 Payload seeds are YAML source files embedded into the `ensphere` binary. `make
 build` mirrors these files into `cli/internal/payloads/data/` (the copy
 `go:embed` reads, since embed cannot reach files outside the Go module) and the
