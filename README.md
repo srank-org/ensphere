@@ -82,7 +82,7 @@ Three outputs are deterministic and safe to gate a pipeline on. The statement co
 
 ## What you get back
 
-An `ensphere-pentest/` directory in your project, one folder per session, each with its plan, evidence ledger, transcripts, and report. The final report is written for the developer who has to act on it: the three to five things to fix first, a fix list that interleaves vulnerabilities and missing controls by priority, the state of every control on every billed service and storage surface, detailed findings with safe reproduction steps, and a "checks executed" and a "not checked" section copied from the coverage rows, with the reason for each gap. A coverage appendix maps it all to OWASP WSTG and ASVS and marks what no session covers. The full structure is in [Session 09](skills/methodology/09-report.md).
+An `ensphere-pentest/` directory in your project, one folder per session, each with its plan, evidence ledger, transcripts, and report. The final report is written for the developer who has to act on it: the three to five things to fix first, a fix list that interleaves vulnerabilities and missing controls by priority, the state of every control on every billed service and storage surface, detailed findings with safe reproduction steps, and a "checks executed" and a "not checked" section copied from the coverage rows, with the reason for each gap. A coverage appendix maps it all to OWASP WSTG and ASVS and marks what no session covers. The full structure is in [Session 09](skills/ensphere/methodology/09-report.md).
 
 Alongside it is a one-page **Statement of Assessment** derived from the workspace: system, dates, environment, model and Ensphere versions, checks executed and not checked, unresolved findings by severity, and the ledger's final hash. It says in plain words that it is a self-assessment by the system owner and not an independent audit. It is the document to attach to a security questionnaire, and the report is the document to hand a pentester so their hours go to the hard problems.
 
@@ -105,7 +105,7 @@ Alongside it is a one-page **Statement of Assessment** derived from the workspac
 
 ## Does it work?
 
-Not yet measured. Ensphere is a proof of concept published for review, and a clean run is not a security guarantee. The claims above describe the design. The evaluation protocol in [`skills/evaluation/`](skills/evaluation/README.md) defines what a result would be: blind runs against targets with known ground truth (OWASP Juice Shop, OWASP crAPI, and a small owned fixture), a frozen report before the answers are opened, and a scorecard for found, missed, and unsupported claims. Until those numbers are published here, treat Ensphere as a method to review, not a result to rely on.
+Not yet measured. Ensphere is a proof of concept published for review, and a clean run is not a security guarantee. The claims above describe the design. The evaluation protocol in [`docs/evaluation/`](docs/evaluation/README.md) defines what a result would be: blind runs against targets with known ground truth (OWASP Juice Shop, OWASP crAPI, and a small owned fixture), a frozen report before the answers are opened, and a scorecard for found, missed, and unsupported claims. Until those numbers are published here, treat Ensphere as a method to review, not a result to rely on.
 
 ---
 
@@ -121,7 +121,7 @@ Not yet measured. Ensphere is a proof of concept published for review, and a cle
 
 ## For agents
 
-`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/SKILL.md`](skills/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The workspace is the protocol between sessions: an orchestrator can run recon, planning, and the report itself and dispatch each check session to a fresh subagent with a short brief, and a harness without subagents runs the same files in one context and resumes from `next-action.md` after a context loss. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
+`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/ensphere/SKILL.md`](skills/ensphere/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The workspace is the protocol between sessions: an orchestrator can run recon, planning, and the report itself and dispatch each check session to a fresh subagent with a short brief, and a harness without subagents runs the same files in one context and resumes from `next-action.md` after a context loss. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
 
 ---
 

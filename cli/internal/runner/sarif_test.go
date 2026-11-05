@@ -50,7 +50,7 @@ func TestRunSARIFExportsReportableFindings(t *testing.T) {
 			t.Fatalf("rule %d is %s, want %s", i, rule.ID, wantRules[i])
 		}
 	}
-	if rule := run.Tool.Driver.Rules[0]; rule.Name != "MissingControlAbuseAndCost" || !strings.HasSuffix(rule.HelpURI, "skills/methodology/08.5-abuse.md") {
+	if rule := run.Tool.Driver.Rules[0]; rule.Name != "MissingControlAbuseAndCost" || !strings.HasSuffix(rule.HelpURI, "skills/ensphere/methodology/08.5-abuse.md") {
 		t.Fatalf("unexpected abuse rule: %+v", rule)
 	}
 

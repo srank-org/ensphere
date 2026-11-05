@@ -24,7 +24,7 @@ GitHub Actions runs on every push and on pull requests. The workflow uses `go-ve
 
 ## Generated Artifacts
 
-Payload seeds are embedded directly as YAML. `make copy-seeds` (run automatically by `make build`) mirrors `assets/seeds/*.yaml` into `cli/internal/payloads/data/`, which is the copy `go:embed` reads at compile time — Go embed cannot reach files outside the module, so the copy is the only generated artifact. `make verify-generated` re-runs the copy, confirms the copied seeds are tracked, and checks for Git drift in `cli/internal/payloads/data/`. The seed YAML is parsed once on first use, applying each file's `defaults` block and validating every enum value against `cli/internal/enums`. Checklists are Markdown under `skills/checklists/` and are not embedded in the binary.
+Payload seeds are embedded directly as YAML. `make copy-seeds` (run automatically by `make build`) mirrors `assets/seeds/*.yaml` into `cli/internal/payloads/data/`, which is the copy `go:embed` reads at compile time — Go embed cannot reach files outside the module, so the copy is the only generated artifact. `make verify-generated` re-runs the copy, confirms the copied seeds are tracked, and checks for Git drift in `cli/internal/payloads/data/`. The seed YAML is parsed once on first use, applying each file's `defaults` block and validating every enum value against `cli/internal/enums`. Checklists are Markdown under `skills/ensphere/checklists/` and are not embedded in the binary.
 
 Golden fixtures in `cli/internal/payloads/testdata/` capture a representative `ensphere payloads` query per vulnerability type; a test asserts the YAML store reproduces each byte-for-byte. If payload counts change, update the canary tests and docs together.
 

@@ -62,7 +62,7 @@ install_to() {
 
   rm -rf "$skill_dir"
   mkdir -p "$skill_dir"
-  cp -R "$SCRIPT_DIR/skills/." "$skill_dir/"
+  cp -R "$SCRIPT_DIR/skills/ensphere/." "$skill_dir/"
 
   local file_count
   file_count=$(find "$skill_dir" -name "*.md" | wc -l | tr -d ' ')
@@ -81,8 +81,8 @@ uninstall_from() {
 }
 
 # Verify source files exist
-if [ ! -f "$SCRIPT_DIR/skills/SKILL.md" ]; then
-  echo "Error: skills/SKILL.md not found. Run this script from the ensphere repo root." >&2
+if [ ! -f "$SCRIPT_DIR/skills/ensphere/SKILL.md" ]; then
+  echo "Error: skills/ensphere/SKILL.md not found. Run this script from the ensphere repo root." >&2
   exit 1
 fi
 

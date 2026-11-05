@@ -164,5 +164,5 @@ benchmark run shows a gap they fill.
 - Keep [../index.md](../index.md) and folder-local indexes current when
   adding or retiring major docs, seeds, checklists, or benchmark runbooks.
 - Put CLI details in [cli-reference.md](cli-reference.md).
-- Put agent workflow rules in [../skills/shared/contract.md](../skills/shared/contract.md) and runner semantics in [cli-reference.md](cli-reference.md).
+- Put agent workflow rules in [../skills/ensphere/shared/contract.md](../skills/ensphere/shared/contract.md) and runner semantics in [cli-reference.md](cli-reference.md).
 - Update [testing.md](testing.md) when test inventory, gates, or drift checks change.

@@ -8,13 +8,13 @@ Fast orientation for agents and contributors.
 |------|------|
 | What Ensphere is and how to run it | [README.md](README.md) |
 | Rules for working on the code and the skill | [AGENTS.md](AGENTS.md) |
-| The agent skill entry point | [skills/SKILL.md](skills/SKILL.md) |
-| The one rulebook every session follows | [skills/shared/contract.md](skills/shared/contract.md) |
-| What gets checked, independent of stack | [skills/shared/fundamentals.md](skills/shared/fundamentals.md) |
-| How the sandbox is built and isolated | [skills/shared/sandbox.md](skills/shared/sandbox.md) |
-| How sessions map to WSTG and ASVS | [skills/shared/coverage-map.md](skills/shared/coverage-map.md) |
-| How to benchmark a methodology change | [skills/evaluation/README.md](skills/evaluation/README.md) |
-| Which checklist a stack loads | [skills/methodology/01.5-session-plan.md](skills/methodology/01.5-session-plan.md) |
+| The agent skill entry point | [skills/ensphere/SKILL.md](skills/ensphere/SKILL.md) |
+| The one rulebook every session follows | [skills/ensphere/shared/contract.md](skills/ensphere/shared/contract.md) |
+| What gets checked, independent of stack | [skills/ensphere/shared/fundamentals.md](skills/ensphere/shared/fundamentals.md) |
+| How the sandbox is built and isolated | [skills/ensphere/shared/sandbox.md](skills/ensphere/shared/sandbox.md) |
+| How sessions map to WSTG and ASVS | [skills/ensphere/shared/coverage-map.md](skills/ensphere/shared/coverage-map.md) |
+| How to benchmark a methodology change | [docs/evaluation/README.md](docs/evaluation/README.md) |
+| Which checklist a stack loads | [skills/ensphere/methodology/01.5-session-plan.md](skills/ensphere/methodology/01.5-session-plan.md) |
 | CLI commands and flags | [docs/cli-reference.md](docs/cli-reference.md) |
 | Running it from a release pipeline | [docs/release-pipeline.md](docs/release-pipeline.md) |
 
@@ -22,19 +22,19 @@ Fast orientation for agents and contributors.
 
 | Path | Purpose |
 |------|---------|
-| [skills/](skills/) | Skill, contract, methodology, checklists, evaluation protocol |
+| [skills/](skills/) | The Ensphere skill: entry point, contract, methodology, checklists |
 | [cli/cmd/](cli/cmd/) | Cobra command layer |
 | [cli/internal/](cli/internal/) | Deterministic business logic |
 | [assets/seeds/](assets/seeds/) | YAML payload sources |
-| [docs/](docs/) | CLI reference, release pipeline, development, testing |
+| [docs/](docs/) | CLI reference, release pipeline, development, testing, benchmark protocol |
 | [templates/](templates/) | Workspace configuration and CI workflow templates |
 
 ## Folder indexes
 
 | Area | Index |
 |------|-------|
-| Methodology | [skills/methodology/index.md](skills/methodology/index.md) |
-| Checklists | [skills/checklists/index.md](skills/checklists/index.md) |
+| Methodology | [skills/ensphere/methodology/index.md](skills/ensphere/methodology/index.md) |
+| Checklists | [skills/ensphere/checklists/index.md](skills/ensphere/checklists/index.md) |
 | Payload seeds | [assets/seeds/index.md](assets/seeds/index.md) |
 | Templates | [templates/index.md](templates/index.md) |
 

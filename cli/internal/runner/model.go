@@ -185,7 +185,7 @@ type ReconTargetProfile struct {
 }
 
 // StackProfile records which product fills each role from
-// skills/shared/fundamentals.md. Values are free-form lowercase identifiers.
+// skills/ensphere/shared/fundamentals.md. Values are free-form lowercase identifiers.
 type StackProfile struct {
 	Languages              []string `json:"languages,omitempty" yaml:"languages,omitempty"`
 	Frameworks             []string `json:"frameworks,omitempty" yaml:"frameworks,omitempty"`
@@ -230,18 +230,18 @@ type TargetSignals struct {
 }
 
 var Sessions = []Session{
-	{ID: "01", Name: "Recon", Methodology: "skills/methodology/01-recon.md", Directory: "01-recon"},
-	{ID: "01.5", Name: "Plan", Methodology: "skills/methodology/01.5-session-plan.md", Directory: "01.5-session-plan"},
-	{ID: "02", Name: "Injection", Methodology: "skills/methodology/02-injection.md", Directory: "02-injection"},
-	{ID: "03", Name: "Authentication", Methodology: "skills/methodology/03-auth.md", Directory: "03-auth"},
-	{ID: "04", Name: "Authorization", Methodology: "skills/methodology/04-authz.md", Directory: "04-authz"},
-	{ID: "05", Name: "Cross-Site Scripting", Methodology: "skills/methodology/05-xss.md", Directory: "05-xss"},
-	{ID: "06", Name: "Server-Side Request Forgery", Methodology: "skills/methodology/06-ssrf.md", Directory: "06-ssrf"},
-	{ID: "07", Name: "Cloud and Platform", Methodology: "skills/methodology/07-cloud.md", Directory: "07-cloud"},
-	{ID: "08", Name: "API Security", Methodology: "skills/methodology/08-api.md", Directory: "08-api"},
-	{ID: "08.5", Name: "Abuse and Cost Controls", Methodology: "skills/methodology/08.5-abuse.md", Directory: "08.5-abuse"},
-	{ID: "08.7", Name: "Chains and Workflows", Methodology: "skills/methodology/08.7-chains.md", Directory: "08.7-chains"},
-	{ID: "09", Name: "Report", Methodology: "skills/methodology/09-report.md", Directory: "09-report"},
+	{ID: "01", Name: "Recon", Methodology: "methodology/01-recon.md", Directory: "01-recon"},
+	{ID: "01.5", Name: "Plan", Methodology: "methodology/01.5-session-plan.md", Directory: "01.5-session-plan"},
+	{ID: "02", Name: "Injection", Methodology: "methodology/02-injection.md", Directory: "02-injection"},
+	{ID: "03", Name: "Authentication", Methodology: "methodology/03-auth.md", Directory: "03-auth"},
+	{ID: "04", Name: "Authorization", Methodology: "methodology/04-authz.md", Directory: "04-authz"},
+	{ID: "05", Name: "Cross-Site Scripting", Methodology: "methodology/05-xss.md", Directory: "05-xss"},
+	{ID: "06", Name: "Server-Side Request Forgery", Methodology: "methodology/06-ssrf.md", Directory: "06-ssrf"},
+	{ID: "07", Name: "Cloud and Platform", Methodology: "methodology/07-cloud.md", Directory: "07-cloud"},
+	{ID: "08", Name: "API Security", Methodology: "methodology/08-api.md", Directory: "08-api"},
+	{ID: "08.5", Name: "Abuse and Cost Controls", Methodology: "methodology/08.5-abuse.md", Directory: "08.5-abuse"},
+	{ID: "08.7", Name: "Chains and Workflows", Methodology: "methodology/08.7-chains.md", Directory: "08.7-chains"},
+	{ID: "09", Name: "Report", Methodology: "methodology/09-report.md", Directory: "09-report"},
 }
 
 // CoverageFile is <session-dir>/coverage.yaml: the machine-read record of

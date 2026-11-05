@@ -21,14 +21,14 @@ const (
 var sourcePathLocation = regexp.MustCompile(`^([^\s:]+)(?::([0-9]+)(?::([0-9]+))?)?$`)
 
 var categoryMethodology = map[string]string{
-	"injection":      "skills/methodology/02-injection.md",
-	"authentication": "skills/methodology/03-auth.md",
-	"authorization":  "skills/methodology/04-authz.md",
-	"xss":            "skills/methodology/05-xss.md",
-	"ssrf":           "skills/methodology/06-ssrf.md",
-	"cloud":          "skills/methodology/07-cloud.md",
-	"api":            "skills/methodology/08-api.md",
-	"abuse_and_cost": "skills/methodology/08.5-abuse.md",
+	"injection":      "skills/ensphere/methodology/02-injection.md",
+	"authentication": "skills/ensphere/methodology/03-auth.md",
+	"authorization":  "skills/ensphere/methodology/04-authz.md",
+	"xss":            "skills/ensphere/methodology/05-xss.md",
+	"ssrf":           "skills/ensphere/methodology/06-ssrf.md",
+	"cloud":          "skills/ensphere/methodology/07-cloud.md",
+	"api":            "skills/ensphere/methodology/08-api.md",
+	"abuse_and_cost": "skills/ensphere/methodology/08.5-abuse.md",
 }
 
 type sarifLog struct {
@@ -250,7 +250,7 @@ func sarifRuleFor(id string, finding FindingSummary) sarifRule {
 	kind, category := normalizeText(finding.Kind), normalizeText(finding.Category)
 	methodology, ok := categoryMethodology[category]
 	if !ok {
-		methodology = "skills/shared/contract.md"
+		methodology = "skills/ensphere/shared/contract.md"
 	}
 	return sarifRule{
 		ID:               id,

@@ -17,7 +17,7 @@ import (
 )
 
 // statementSentence is the fixed closing sentence of the Statement of
-// Assessment. It is quoted verbatim in skills/methodology/09-report.md.
+// Assessment. It is quoted verbatim in skills/ensphere/methodology/09-report.md.
 const statementSentence = "This is a self-assessment performed by the system owner with Ensphere. It is not an independent audit, attestation, or certification."
 
 const statementDigestPrefix = "Inputs digest: "

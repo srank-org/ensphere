@@ -14,7 +14,7 @@ checked, plus a one-page self-assessment statement.
 
 When asked what Ensphere is, how it works, or how to use it: `README.md` is
 the narrative for people, `docs/cli-reference.md` is the command surface,
-`skills/SKILL.md` is how an assessment runs, and `skills/shared/contract.md`
+`skills/ensphere/SKILL.md` is how an assessment runs, and `skills/ensphere/shared/contract.md`
 is the rulebook every session follows. `index.md` maps the rest.
 
 ## Design principle
@@ -44,14 +44,14 @@ command and never probes production.
 
 | Path | Purpose |
 |------|---------|
-| `skills/SKILL.md` | Agent entry point |
-| `skills/shared/contract.md` | The one rulebook: scope, evidence, findings, stop rules |
-| `skills/shared/fundamentals.md` | Stack-agnostic map of roles, invariants, and generic fixes; the checks themselves |
-| `skills/shared/sandbox.md` | How to build, isolate, seed, and reset the sandbox where proof happens |
-| `skills/shared/coverage-map.md` | Sessions mapped to WSTG categories and ASVS chapters, with the gaps named |
-| `skills/methodology/` | Sessions 01, 01.5, 02 to 08, 08.5, 08.7, 09, plus cloud appendices 07a to 07f |
-| `skills/checklists/` | Stack-specific checklists; the plan maps stack values to these files |
-| `skills/evaluation/` | Blind benchmark protocol for methodology changes |
+| `skills/ensphere/SKILL.md` | Agent entry point |
+| `skills/ensphere/shared/contract.md` | The one rulebook: scope, evidence, findings, stop rules |
+| `skills/ensphere/shared/fundamentals.md` | Stack-agnostic map of roles, invariants, and generic fixes; the checks themselves |
+| `skills/ensphere/shared/sandbox.md` | How to build, isolate, seed, and reset the sandbox where proof happens |
+| `skills/ensphere/shared/coverage-map.md` | Sessions mapped to WSTG categories and ASVS chapters, with the gaps named |
+| `skills/ensphere/methodology/` | Sessions 01, 01.5, 02 to 08, 08.5, 08.7, 09, plus cloud appendices 07a to 07f |
+| `skills/ensphere/checklists/` | Stack-specific checklists; the plan maps stack values to these files |
+| `docs/evaluation/` | Blind benchmark protocol for methodology changes |
 | `cli/cmd/` | Cobra commands, one file per command, flags only |
 | `cli/internal/verify/` | Measurement probes and the shared scoped HTTP layer |
 | `cli/internal/evidence/` | Hash-chained JSONL ledger, redaction, locking |
@@ -117,7 +117,7 @@ conventions.
 
 ## Editing the skill
 
-- `skills/shared/contract.md` is the only place a rule is stated. Category
+- `skills/ensphere/shared/contract.md` is the only place a rule is stated. Category
   files add procedure and reference it; they never restate it. A
   methodology file has no Preflight or Report section; the session
   lifecycle in the contract covers both.
@@ -129,13 +129,13 @@ conventions.
 - Checks are stack-agnostic and belong in `fundamentals.md` or a session
   methodology. A checklist only translates them for one common stack; add
   one only when many users run that stack, and then add its stack values to
-  the map in `skills/methodology/01.5-session-plan.md` and a row in
-  `skills/checklists/index.md`.
+  the map in `skills/ensphere/methodology/01.5-session-plan.md` and a row in
+  `skills/ensphere/checklists/index.md`.
 - Keep methodology files under about 1,000 words and checklists under about
   1,300. The model reads them alongside the target's code, and what costs
   it is concept load, not tokens: every distinct rule must earn its place.
-  `skills/SKILL.md`, `skills/shared/contract.md`, and
-  `skills/shared/fundamentals.md` are read once at the start, and
+  `skills/ensphere/SKILL.md`, `skills/ensphere/shared/contract.md`, and
+  `skills/ensphere/shared/fundamentals.md` are read once at the start, and
   completeness matters more than length there.
 
 ## Do not
@@ -165,10 +165,10 @@ conventions.
 | Running it from a release pipeline | docs/release-pipeline.md |
 | Development guide | docs/development.md |
 | Test inventory | docs/testing.md |
-| Skill entry point | skills/SKILL.md |
-| Contract | skills/shared/contract.md |
-| Sandbox | skills/shared/sandbox.md |
-| Coverage map | skills/shared/coverage-map.md |
-| Benchmark protocol | skills/evaluation/README.md |
-| Methodology index | skills/methodology/index.md |
-| Checklist index | skills/checklists/index.md |
+| Skill entry point | skills/ensphere/SKILL.md |
+| Contract | skills/ensphere/shared/contract.md |
+| Sandbox | skills/ensphere/shared/sandbox.md |
+| Coverage map | skills/ensphere/shared/coverage-map.md |
+| Benchmark protocol | docs/evaluation/README.md |
+| Methodology index | skills/ensphere/methodology/index.md |
+| Checklist index | skills/ensphere/checklists/index.md |

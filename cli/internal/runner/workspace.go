@@ -192,7 +192,7 @@ func renderNextAction(action *NextAction) string {
 		if len(action.PlanDecision.Checklists) > 0 {
 			planBlock += "- **Checklists**:\n"
 			for _, item := range action.PlanDecision.Checklists {
-				planBlock += fmt.Sprintf("  - skills/checklists/%s.md\n", item)
+				planBlock += fmt.Sprintf("  - checklists/%s.md\n", item)
 			}
 		}
 	} else if len(action.PlanValidation) > 0 {
@@ -201,7 +201,8 @@ func renderNextAction(action *NextAction) string {
 			planBlock += fmt.Sprintf("- %s\n", issue)
 		}
 	}
-	instruction := `Open the Ensphere skill, read the methodology file above and the checklists
+	instruction := `Open the Ensphere skill; the methodology and checklist paths above are
+relative to its directory. Read the methodology file and the checklists
 listed for this session, and run the session against the configured target.
 A session the plan decided skip, not_applicable, or blocked writes a short
 report.md naming that decision. Keep evidence factual, mark the session DONE

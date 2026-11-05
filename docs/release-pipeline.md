@@ -4,7 +4,7 @@ An Ensphere run needs no one at the keyboard once its inputs are known. This
 page is the recipe for running it from a release pipeline: what to prepare,
 what to run, what to gate on, and what to publish. It assumes the CLI and
 skill are installed on the runner and that the project has a sandbox it can
-start from a compose file or a dev script (`skills/shared/sandbox.md`).
+start from a compose file or a dev script (`skills/ensphere/shared/sandbox.md`).
 `templates/github-workflow.yml` is the same recipe as a GitHub Actions
 workflow; copy it into the project and fill in the placeholders.
 

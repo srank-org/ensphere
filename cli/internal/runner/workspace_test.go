@@ -906,7 +906,7 @@ func TestNextActionListsSessionChecklists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read next action: %v", err)
 	}
-	if !strings.Contains(string(rendered), "skills/checklists/prisma-drizzle.md") {
+	if !strings.Contains(string(rendered), "checklists/prisma-drizzle.md") {
 		t.Fatalf("next-action does not list the checklist:\n%s", rendered)
 	}
 }

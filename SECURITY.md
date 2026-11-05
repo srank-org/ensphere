@@ -39,7 +39,7 @@ own process, not to this repository.
 Do not commit credentials, tokens, sandbox fixtures containing real data,
 evidence ledgers, or assessment workspaces. `ensphere-pentest/` and
 `evidence.jsonl` are ignored by default. The sandbox must never contain
-production data; `skills/shared/sandbox.md` states the isolation check.
+production data; `skills/ensphere/shared/sandbox.md` states the isolation check.
 
 ## Dependency monitoring
 
