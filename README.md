@@ -119,7 +119,7 @@ Alongside it is a one-page **Statement of Assessment** derived from the workspac
 
 ## Does it work?
 
-Not yet measured. Ensphere is a proof of concept published for review, and a clean run is not a security guarantee. The claims above describe the design. The evaluation protocol in [`docs/evaluation/`](docs/evaluation/README.md) defines what a result would be: blind runs against targets with known ground truth (OWASP Juice Shop, OWASP crAPI, and a small owned fixture), a frozen report before the answers are opened, and a scorecard for found, missed, and unsupported claims. Until those numbers are published here, treat Ensphere as a method to review, not a result to rely on.
+Not yet measured against a real system. Ensphere is a proof of concept published for review, and a clean run is not a security guarantee. The deterministic half, the runner, the gate, the statement, the map, and the invariants, is driven end to end through the real binary in CI with no model, so what the tool enforces is proven; what the method finds is not. The claims above describe the design. The evaluation protocol in [`docs/evaluation/`](docs/evaluation/README.md) defines what a result would be: blind runs against targets with known ground truth (OWASP Juice Shop, OWASP crAPI, and a small owned fixture), a frozen report before the answers are opened, and a scorecard for found, missed, and unsupported claims. Until those numbers are published here, treat Ensphere as a method to review, not a result to rely on.
 
 ---
 
