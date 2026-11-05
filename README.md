@@ -8,6 +8,8 @@
 
 **A security review of the system you own, run by your agent on every release.**
 
+Your agent can already read your code for security holes. Ensphere makes it prove them: every claim is a measured request you can replay, every fix leaves a check your CI runs on every pull request, and nothing is ever called "secure".
+
 Most small teams ship without a security review, and the problems that hurt them are ordinary: an OTP endpoint with no rate limit in front of an SMS bill, an upload path with no size cap, a table with no row policy, a query built by string concatenation. Ensphere is a skill for agents plus a small Go CLI. Point the agent at your repository and a disposable copy of your app. It learns your stack, decides what needs checking, measures each check through the CLI, proves what matters in the sandbox, and writes a report of what is broken, which controls are missing, how to fix each one, and exactly what was and was not checked.
 
 It is the review you run before you can afford a penetration test, between the ones you can, and on every release in between. It is not a substitute for one.
@@ -22,15 +24,37 @@ Ensphere supplies the three missing pieces: a written method that says what ever
 
 ---
 
+## Who does what
+
+Ensphere is a tool for the agent. The skill, the method, and the binary are written for a model: exact flags, JSON output, rules stated once. The agent runs every session, sends every request, writes every file, and fixes what the gate rejects.
+
+The person who owns the system does five things, each one because it cannot be delegated:
+
+- **Authorizes the run** and names the repository and the sandbox. Ownership is never inferred from repository access.
+- **Approves the sandbox commands and the request limits** by writing them into the workspace config. Those are the only commands the guard lets through without asking, and a burst runs only with a count the owner wrote down.
+- **Answers a blocker** the agent is not allowed to decide, such as a state change on staging.
+- **Reviews the pull request** that carries the system map and the invariants, like any other code review.
+- **Signs the statement.** A model cannot sign anything, and the statement says so.
+
+---
+
 ## How Ensphere works
 
-Ensphere splits the work along one line and holds it there.
+A run is nine sessions. Each one reads its inputs from files in the workspace and writes its outputs to files, so a session can run in a fresh subagent with no shared memory, and a run that loses its context resumes from the workspace.
 
-- **The CLI is deterministic.** It sends scoped HTTP requests, measures timing, hashes responses, captures headers, counts rows, reads provider configuration through the provider's own CLI, validates scope, redacts secrets, and appends every observation to an evidence ledger. It never says "vulnerable" or "safe". A contract test rejects any output field that would carry a verdict.
-- **The agent does the reasoning.** It reads your source and the raw numbers side by side and resolves each claim the same way: a baseline request, the smallest probe that distinguishes the claim, and a control that rules out the obvious alternative explanation. Every finding cites evidence IDs in the ledger, and the report gate refuses a check that has a probe but no baseline or control behind it.
-- **The methodology is a floor, not a ceiling.** A short file lists the roles every system has, whatever it is built on, and the invariant each must satisfy: an entry point has a deliberate authentication state, a query only ever receives user data as a parameter, a billed operation runs behind a limiter keyed on the caller. That map guarantees nothing is skipped. Then the agent reads what your particular system is for and writes down what a motivated user of it would go after: the coupon that can be applied twice, the webhook that can be replayed, the price the client is trusted to compute. Each hypothesis is tested like any other check, and the ones that hold up are proven end to end in the sandbox.
+1. **Recon.** The agent reads the source and the running sandbox and writes what it learned: a stack profile, a table that maps every surface to its role (the login route is an entry point, the invoice route is an authorization decision, the OTP send is a billed operation), the hypotheses specific to this system, and the system map in `.ensphere/surfaces.yaml`, which names the files that implement each surface and the sessions that own its checks.
+2. **Plan.** `ensphere run plan` drafts a decision for every session from the config. The agent corrects the draft from what recon found and asks the owner, once, for everything the run still needs.
+3. **Checks.** Injection, authentication, authorization, cross-site scripting, server-side request forgery, cloud configuration, API controls, abuse and cost controls. Every check follows one loop. The agent writes a coverage row before it probes: the surface, the check, the identity, `planned`. Then it resolves the row with three requests, all through the CLI, labelled `baseline`, `probe`, and `control`:
 
-Because none of the reasoning lives in the tool, a better model produces a better assessment with no change to Ensphere. And because every claim points at a measurement, the report can be checked by someone who was not in the room.
+   ```bash
+   ensphere verify request --url "http://localhost:3000/api/invoices/INV-B"      --header "Authorization: Bearer [TENANT_A]" --result probe      --note "tenant A reads tenant B's invoice" --in-scope localhost
+   ```
+
+   The CLI checks the URL against the approved scope, sends the request, and appends status, timing, headers, and body hash to the session's `evidence.jsonl`, each entry chained to the previous one by hash. It returns the evidence id and no opinion. The agent reads the three results beside the source, decides what they mean, and writes the row as `tested` with the three ids. A few measurements that are fiddly by hand have their own commands: a rate-limit burst with header capture, a race with a start barrier, an upload-size probe, a two-tenant row-policy check. There is no other way for the agent to send a request; while a workspace exists, the plugin's guard refuses `curl` and every other raw network tool.
+4. **Prove.** In the sandbox only, the agent joins the likely findings into multi-step chains and runs each one end to end, resetting the sandbox with the approved command between attempts, so a finding that would matter is demonstrated rather than argued.
+5. **Report.** The agent writes the finding registry, the report, and the evidence appendix, and promotes every finding's validation criteria and every defense that held into `.ensphere/invariants/`. Then `ensphere run report` runs the gate: every session done, every `tested` row citing a baseline, a probe, and a control that exist in the ledger, every finding cited with valid fields, every open finding promoted to an invariant, every ledger's chain intact, and the source tree still at the commit the run began on. A failure names the file. When the gate passes, `ensphere run statement` derives the one-page statement from the workspace, and refuses to run otherwise.
+
+The line Ensphere holds is this: the binary does only what can be done the same way every time (send, measure, hash, refuse, count, compare, gate), and the agent does everything that needs judgment (what to check, what a number means, how severe it is, what the fix is). Neither can do the other's job, and the gate is where they meet. Because none of the reasoning lives in the tool, a better model produces a better assessment with no change to Ensphere, and because every claim points at a measurement, the report can be checked by someone who was not in the room.
 
 ---
 
@@ -64,15 +88,9 @@ ensphere run init --target "http://localhost:3000" --in-scope localhost
 
 Point `--target` at a **sandbox**: a local instance of your application with synthetic data. The agent offers to stand one up from your compose file or dev script, checks that it is isolated from anything real, and seeds the accounts, tenants, and objects the checks need. Add a staging URL for the checks a sandbox cannot show: the edge in front of your origin, deployed configuration, the shared rate-limit store. If you cannot run the app at all, omit `--target`; the assessment runs from source alone and marks every live measurement as not tested.
 
-Now open your agent in that directory and say `ensphere`. It runs five phases in one go and pauses only for things only you can give: the go-ahead to start the sandbox, a login to a provider, a decision about staging.
+Now open your agent in that directory and say `ensphere`. It runs the nine sessions described above in one go, tens of minutes to a few hours depending on the size of the system, and pauses only for the things only you can give: the go-ahead to start the sandbox, a login to a provider, a decision about staging. When it finishes it tells you the three to five things to fix first, where the report and the statement are, and that the statement is yours to sign.
 
-1. **Recon.** Reads the repository, stands up and seeds the sandbox, writes a stack profile and a role table, and lists the hypotheses specific to your system.
-2. **Plan.** The stack profile picks the checklists. The agent decides which sessions apply and asks for everything it still needs, once.
-3. **Check.** Injection, authentication, authorization and workflow state, cross-site scripting, server-side request forgery, cloud and platform configuration, API controls, abuse and cost controls. Each check is baseline, probe, control, and each observation lands in the ledger.
-4. **Prove.** In the sandbox, joins what it found into multi-step chains and runs each one end to end, so a finding that would matter is demonstrated rather than argued.
-5. **Report.** A prioritised fix list, the missing controls per service, detailed findings with safe reproduction steps, what was checked, what was not and why, and a one-page statement.
-
-You can also drive the CLI by hand. Measure whether an endpoint throttles a burst you have approved:
+The CLI is the agent's instrument, but nothing stops you from holding it. Measure whether an endpoint throttles a burst you have approved:
 
 ```bash
 ensphere verify ratelimit --url "https://staging.example.com/api/otp" \
