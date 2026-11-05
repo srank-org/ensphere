@@ -26,6 +26,7 @@ type InitConfig struct {
 	SandboxStart        string
 	SandboxSeed         string
 	SandboxReset        string
+	DeltaSince          string
 }
 
 type Status struct {
@@ -120,6 +121,18 @@ type AssessmentPlan struct {
 	HumanOverrides []string               `json:"human_overrides" yaml:"human_overrides"`
 	CreatedBy      string                 `json:"created_by" yaml:"created_by"`
 	CreatedAt      string                 `json:"created_at" yaml:"created_at"`
+	Delta          *PlanDelta             `json:"delta,omitempty" yaml:"delta,omitempty"`
+}
+
+// PlanDelta records the change set a delta draft was built from. Reason is
+// set, and the other fields are empty, when no change set could be computed.
+type PlanDelta struct {
+	Since                string   `json:"since" yaml:"since"`
+	Head                 string   `json:"head,omitempty" yaml:"head,omitempty"`
+	ChangedSurfaces      []string `json:"changed_surfaces,omitempty" yaml:"changed_surfaces,omitempty"`
+	UnmappedChangedFiles []string `json:"unmapped_changed_files,omitempty" yaml:"unmapped_changed_files,omitempty"`
+	SessionsAffected     []string `json:"sessions_affected,omitempty" yaml:"sessions_affected,omitempty"`
+	Reason               string   `json:"reason,omitempty" yaml:"reason,omitempty"`
 }
 
 type PlanTarget struct {
@@ -261,6 +274,7 @@ type CoverageRow struct {
 	Surface     string   `json:"surface" yaml:"surface"`
 	Check       string   `json:"check" yaml:"check"`
 	Identity    string   `json:"identity,omitempty" yaml:"identity,omitempty"`
+	SurfaceID   string   `json:"surface_id,omitempty" yaml:"surface_id,omitempty"`
 	State       string   `json:"state" yaml:"state"`
 	EvidenceIDs []string `json:"evidence_ids,omitempty" yaml:"evidence_ids,omitempty"`
 	Transcripts []string `json:"transcripts,omitempty" yaml:"transcripts,omitempty"`
@@ -313,6 +327,7 @@ type Statement struct {
 type StatementSystem struct {
 	TargetURL   string   `json:"target_url" yaml:"target_url"`
 	Environment string   `json:"environment" yaml:"environment"`
+	DeltaSince  string   `json:"delta_since,omitempty" yaml:"delta_since,omitempty"`
 	SourcePath  string   `json:"source_path" yaml:"source_path"`
 	TargetType  string   `json:"target_type" yaml:"target_type"`
 	Cloud       []string `json:"cloud" yaml:"cloud"`

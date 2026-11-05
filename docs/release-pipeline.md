@@ -195,6 +195,36 @@ CLI is the agent's only way to send a request. Two layers make it so:
   resolves. "Production is never probed" becomes a property of the network
   rather than a promise by the model.
 
+## What stays in the repository
+
+A run leaves two things in the target repository under `.ensphere/`, and
+the nightly workflow opens a pull request with them.
+
+- **The system map.** `map.md` and `surfaces.yaml`: what the system is
+  for, which product fills each role, every surface with the files that
+  implement it and the sessions that check it, and the commit the map was
+  reconciled against. The next run reads it first and reconciles it rather
+  than re-deriving everything, and `ensphere map changed` says which
+  surfaces a change touched.
+- **The invariants.** One file per declared expectation under
+  `invariants/`, promoted from each finding's validation criteria
+  (`enforce: false` until the fix lands) and from each tested defense
+  (`enforce: true`). `templates/github-invariants.yml` runs them on every
+  pull request with the binary alone, no agent, in a few minutes, and
+  fails only on an enforced invariant that does not hold. A pass is one
+  expectation holding, not a security verdict.
+
+## Delta runs
+
+Once a map exists, `ensphere run init --delta-since <ref>` limits a run to
+the surfaces whose files changed since the ref (a release tag, the
+previous nightly's commit, or the map's `reconciled_at`). The plan records
+the change set and skips untouched sessions with that reason; the statement
+names the ref; `ensphere run diff` against the previous full run shows what
+moved. A changed file that no surface claims cancels every skip until recon
+has mapped it, so a delta run never silently misses new surface. Keep a
+full run on each release and use delta runs between them.
+
 ## What a release run cannot do
 
 - It cannot probe production. The pipeline's target is the sandbox, and the

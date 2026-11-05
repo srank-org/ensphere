@@ -1,0 +1,55 @@
+# Machine-read system map. Written and reconciled by Ensphere Session 01;
+# validated by `ensphere map validate`; `ensphere map changed` reports which
+# surfaces changed since reconciled_at. Ids are stable: never renumber one.
+version: 1
+reconciled_at: "<git rev-parse HEAD at reconciliation>"
+stack:
+  languages: [typescript]
+  frameworks: [hono]
+  data_layers: [supabase_postgres]
+  auth_providers: [supabase_auth]
+  hosting: [cloudflare_workers]
+  storage: [cloudflare_r2]
+  edge: [cloudflare_proxy]
+  billing_exposed_services: [cloudflare_workers, cloudflare_r2, resend]
+  clients: [web_spa]
+surfaces:
+  - id: SURF-001
+    kind: endpoint
+    name: "POST /api/auth/otp"
+    role: billed_operation
+    identity: anonymous
+    files:
+      - src/routes/auth.ts
+      - src/lib/otp.ts
+    sessions: ["03", "08.5"]
+    checks: [auth_control, rate_limit_burst]
+    notes: "Sends an SMS through the provider; the limiter must key on the phone number"
+  - id: SURF-002
+    kind: endpoint
+    name: "GET /api/invoices/{id}"
+    role: authorization_decision
+    identity: "[TENANT_A_USER]"
+    files:
+      - src/routes/invoices.ts
+    sessions: ["04"]
+    checks: [object_authz]
+  - id: SURF-003
+    kind: table
+    name: "public.invoices"
+    role: data_store
+    identity: "[TENANT_A_USER]"
+    files:
+      - supabase/migrations/0003_invoices.sql
+    sessions: ["04", "07"]
+    checks: [rls_isolation]
+  - id: SURF-004
+    kind: bucket
+    name: "uploads (R2)"
+    role: object_storage
+    identity: "[TENANT_A_USER]"
+    files:
+      - src/routes/upload.ts
+      - wrangler.toml
+    sessions: ["07", "08.5"]
+    checks: [upload_size_cap, presign_policy]

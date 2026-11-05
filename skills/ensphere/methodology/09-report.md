@@ -16,18 +16,16 @@ those are the numbers the report uses.
 
 1. Read config, plan, progress, every session report, evidence ledgers,
    transcripts, and checkpoints.
-2. Build a claim-to-evidence table. Deduplicate by root cause and control
-   while keeping distinct assets, roles, and consequences.
-3. Separate observed facts from judgments.
-4. Resolve contradictions and source-versus-live drift explicitly; never
-   silently pick the more severe reading.
-5. Assign status, evidence strength, confidence, severity, and priority
-   under the contract.
-6. Write remediation at the root-cause level with validation criteria the
-   developer can run.
-7. Distinguish an observed multi-step path from a hypothetical chain. Only
-   Session 08.7 produces observed chains; everything else is a risk scenario
-   with its unobserved edges marked.
+2. Build a claim-to-evidence table, deduplicated by root cause and control
+   with distinct assets, roles, and consequences kept visible.
+3. Separate observed facts from judgments; resolve contradictions and
+   source-versus-live drift explicitly, never by picking the more severe
+   reading.
+4. Assign status, evidence strength, confidence, severity, and priority
+   under the contract, and write remediation at the root-cause level with
+   validation criteria the developer can run.
+5. Only Session 08.7 produces observed chains; everything else is a risk
+   scenario with its unobserved edges marked.
 
 ## Finding registry
 
@@ -88,6 +86,29 @@ findings:
 needs affected locations, observed facts, root cause, impact, remediation,
 validation criteria, and at least one citation.
 
+## Invariants
+
+What this assessment established becomes a check the target's own CI runs
+on every pull request, with no agent. Write one file per invariant under
+`.ensphere/invariants/` in the target repository, in the schema
+`ensphere invariants validate` enforces (kinds `http`, `rate_limit`,
+`size_limit`, `source`, `command`; `${VAR}` placeholders for the tokens
+and ids the CI job supplies):
+
+- for every `confirmed` or `likely` finding, the invariant its validation
+  criteria describe, with `enforce: false` and the finding as `origin`;
+  the fix list tells the developer to set `enforce: true` with the fix;
+- for every tested defense worth keeping, `enforce: true` and the coverage
+  row as `origin`;
+- `surface` names the map surface; `origin.evidence` cites the ledger.
+
+Run `ensphere invariants validate`, then `ensphere invariants run` against
+the sandbox. An invariant from an unresolved finding is expected to fail
+today; one from a tested defense must pass; an `error` is fixed before the
+session ends. Retire, with a reason in its file, any existing invariant
+this assessment could not re-establish. Set `origin.assessment` to the
+statement digest after `ensphere run statement` writes it.
+
 ## Report structure
 
 Write `09-report/report.md`:
@@ -116,10 +137,12 @@ Write `09-report/report.md`:
    the finding it became, the tested defense that held, or `not_tested` or
    `blocked` with the reason, taken from the coverage rows that carry its
    id. An empty table is reported with the reasoning recon gave.
-8. **Scope and method**: source path, live target and environment tier with
+8. **Invariants**: every file under `.ensphere/invariants/` with its
+   origin, `enforce`, and today's result, and what changed in the map.
+9. **Scope and method**: source path, live target and environment tier with
    the sandbox isolation record, dates, in and out of scope, checklists
    loaded, uncovered stack, approved request limits, tool versions.
-9. **Appendices**: evidence index with hash-chain state, redactions; the
+10. **Appendices**: evidence index with hash-chain state, redactions; the
    coverage appendix from `shared/coverage-map.md` (every WSTG category and
    ASVS chapter with evidence IDs, `not_tested`, or `not covered`); optional
    compliance mapping; optional attack-path notes that keep observed edges

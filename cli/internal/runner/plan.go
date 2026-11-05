@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/srank-org/ensphere/internal/sysmap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -188,7 +189,65 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 		plan.Sessions[key] = draftSessionDecision(key, targetType, profileEnvironment, liveTarget, cloud, hasCredentials)
 	}
 	applyReconProfileDecisions(plan, profile, hasCredentials, cloud)
+	applyDelta(plan, cfg)
 	return plan
+}
+
+// applyDelta drafts a delta run when config names a commit to compare
+// against. Sessions no changed surface names are drafted skip; every other
+// session keeps its normal draft. A changed file no surface claims means the
+// map is behind the code, so nothing is skipped.
+func applyDelta(plan *AssessmentPlan, cfg InitConfig) {
+	since := strings.TrimSpace(cfg.DeltaSince)
+	if since == "" {
+		return
+	}
+	path := sysmap.Path(cfg.SourcePath)
+	if !fileExists(path) {
+		plan.Delta = &PlanDelta{Since: since, Reason: fmt.Sprintf("no system map at %s; the plan is a full draft", path)}
+		return
+	}
+	validation, m, err := sysmap.ValidateFile(path, cfg.SourcePath, CheckSessionIDs())
+	if err != nil {
+		plan.Delta = &PlanDelta{Since: since, Reason: fmt.Sprintf("system map could not be read (%v); the plan is a full draft", err)}
+		return
+	}
+	if !validation.Valid {
+		plan.Delta = &PlanDelta{Since: since, Reason: fmt.Sprintf("system map %s has validation errors (run ensphere map validate); the plan is a full draft", path)}
+		return
+	}
+	changes, err := sysmap.Changed(m, cfg.SourcePath, since)
+	if err != nil {
+		plan.Delta = &PlanDelta{Since: since, Reason: fmt.Sprintf("change set could not be computed (%v); the plan is a full draft", err)}
+		return
+	}
+	delta := &PlanDelta{
+		Since:                changes.Since,
+		Head:                 changes.Head,
+		UnmappedChangedFiles: changes.UnmappedChangedFiles,
+		SessionsAffected:     changes.SessionsAffected,
+	}
+	for _, surface := range changes.ChangedSurfaces {
+		delta.ChangedSurfaces = append(delta.ChangedSurfaces, surface.ID)
+	}
+	plan.Delta = delta
+	if len(changes.UnmappedChangedFiles) > 0 {
+		plan.Target.Rationale = append(plan.Target.Rationale, fmt.Sprintf("Delta run since %s: %d changed file(s) belong to no surface in the system map (delta.unmapped_changed_files), so every session keeps its full draft. Reconcile the map in Session 01.", since, len(changes.UnmappedChangedFiles)))
+		return
+	}
+	affected := make(map[string]bool, len(changes.SessionsAffected))
+	for _, id := range changes.SessionsAffected {
+		affected[id] = true
+	}
+	for _, key := range planSessionKeys {
+		id, _, _ := strings.Cut(key, "-")
+		if affected[id] {
+			continue
+		}
+		applicability := plan.Sessions[key].Applicability
+		plan.Sessions[key] = planSession(decisionSkip, applicability, fmt.Sprintf("delta run since %s: no surface this session owns changed; the previous assessment stands", since), nil)
+	}
+	plan.Target.Rationale = append(plan.Target.Rationale, fmt.Sprintf("Delta run since %s: %d surface(s) changed; sessions not in delta.sessions_affected are drafted skip.", since, len(delta.ChangedSurfaces)))
 }
 
 func validateChecklistNames(field string, names []string) []string {
@@ -293,6 +352,9 @@ func ValidateAssessmentPlan(plan *AssessmentPlan) []string {
 		if !stackValuePattern.MatchString(strings.TrimSpace(value)) {
 			problems = append(problems, fmt.Sprintf("uncovered_stack value %q must be a lowercase identifier", value))
 		}
+	}
+	if plan.Delta != nil && strings.TrimSpace(plan.Delta.Since) == "" {
+		problems = append(problems, "delta.since is required when delta is present")
 	}
 	for _, key := range planSessionKeys {
 		session, ok := plan.Sessions[key]
@@ -550,6 +612,8 @@ func parseConfigMarkdown(text string) InitConfig {
 				cfg.Environment = value
 			case "cloud":
 				cfg.Cloud = value
+			case "delta since":
+				cfg.DeltaSince = value
 			}
 		case "Assessment":
 			switch key {

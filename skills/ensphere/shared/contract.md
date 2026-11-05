@@ -461,6 +461,40 @@ attestation, or certification." The operator signs it; the model does not.
 If a number looks wrong, fix the workspace file it came from and regenerate;
 the gate rejects a statement that is stale or edited by hand.
 
+## System map and invariants
+
+Two things an assessment learns outlive the workspace and belong in the
+target repository, under `.ensphere/`, committed and reviewed like code.
+
+**The system map** is the persistent inventory: `.ensphere/map.md` says in
+the analyst's own words what the system is for, which product fills each
+role, where the trust boundaries are, and how to drive the sandbox;
+`.ensphere/surfaces.yaml` lists every surface with its kind, role,
+identity, the source files that implement it, and the sessions that own
+its checks, and records the commit it was last reconciled against. Session
+01 reads the map before the source when one exists, reconciles it against
+the current tree, and writes it back; `ensphere map validate` must pass
+before Session 01 is `DONE`. A coverage row cites the surface it resolves
+with `surface_id` when the map has it; the gate rejects an id the map does
+not know. A **delta run** (`run init --delta-since <ref>`) uses `ensphere
+map changed` to re-check only the surfaces whose files changed since the
+ref; the plan records the change set, unaffected sessions are decided
+`skip` with that reason, and the statement names the ref. A changed file
+no surface claims cancels every skip until recon has mapped it.
+
+**Invariants** are declared expectations, one YAML file each under
+`.ensphere/invariants/`, that the target's own CI runs on every pull
+request with `ensphere invariants run` and no agent. Session 09 promotes
+every `confirmed` or `likely` finding's validation criteria into an
+invariant with `enforce: false` and the finding as its origin, and every
+tested defense worth keeping into an invariant with `enforce: true` and
+the coverage row as its origin. CI fails only on an enforced invariant that
+does not hold; a developer flips `enforce` to `true` when the fix lands.
+An invariant that passes means one declared expectation held on the day it
+ran. It is never evidence that a surface is secure, the suite is never
+called complete, and the next full assessment re-establishes each
+invariant or retires it with a reason.
+
 ## Reproducibility and redaction
 
 A reportable finding includes the affected asset and exact location,
@@ -486,6 +520,11 @@ The values the CLI and the report gate accept, in one place.
 | Session decision | `run`, `limited`, `blocked`, `skip`, `not_applicable`, `uncertain` | assessment plan |
 | Progress state | `PENDING`, `IN_PROGRESS`, `DONE` | `progress.md` |
 | Evidence id | `EVID-NNN`, unique per session ledger | `evidence.jsonl` |
+| Surface id | `SURF-NNN` | `.ensphere/surfaces.yaml`, coverage rows |
+| Surface kind | `endpoint`, `table`, `bucket`, `function`, `job`, `config`, `client`, `workflow` | `.ensphere/surfaces.yaml` |
+| Invariant id | `INV-NNN` | `.ensphere/invariants/` |
+| Invariant kind | `http`, `rate_limit`, `size_limit`, `source`, `command` | `.ensphere/invariants/` |
+| Invariant origin | `vulnerability`, `missing_control`, `tested_defense` | `.ensphere/invariants/` |
 | Evidence stage | `baseline`, `probe`, `payload`, `control`, `callback`, `manual_note` | `evidence.jsonl` `result` |
 | Evidence category | `ensphere_measurement`, `source_review`, `manual_observation`, `imported_lead`, `agent_judgment` | registry |
 | Evidence strength | `direct`, `corroborated`, `indicative`, `insufficient` | registry |

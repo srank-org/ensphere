@@ -30,9 +30,10 @@ rule is in doubt:
 
 ## How an assessment works
 
-1. **Learn the project (Session 01).** Read the repository and, when there
-   is one, the running target. Write the stack profile, the role table from
-   the fundamentals, the attack-surface inventory, and
+1. **Learn the project (Session 01).** Read `.ensphere/map.md` and
+   `surfaces.yaml` when the repository has them, then the repository and,
+   when there is one, the running target. Reconcile and write the map,
+   the stack profile, the role table from the fundamentals, and
    `01-recon/hypotheses.md`. Stand up the sandbox as
    [shared/sandbox.md](shared/sandbox.md) describes.
 2. **Plan from the stack (Session 01.5).** Map the stack to checklist files
@@ -47,7 +48,9 @@ rule is in doubt:
    findings and workflow candidates into chains and run each end to end.
 5. **Report (Session 09).** Findings, missing controls with concrete fixes,
    what was checked and held, what was not checked and why. `ensphere run
-   report` is the gate; `ensphere run statement` writes the statement.
+   report` is the gate; `ensphere run statement` writes the statement; the
+   findings' validation criteria and the defenses that held become
+   invariants in `.ensphere/invariants/` for the target's CI to run.
 
 Sessions 01, 01.5, and 09 always run. Sessions 02 to 08.7 run when the plan
 says they apply. The whole run is continuous; you stop only at the human
@@ -174,6 +177,21 @@ ensphere-pentest/
     diff.json, diff.md      written by run diff against a previous workspace
     findings.sarif          written by run sarif for code scanning
 ```
+
+## What persists in the target repository
+
+The workspace is per run. `.ensphere/` in the target repository is what
+carries over, committed and reviewed like code:
+
+```text
+.ensphere/
+  map.md                    what the system is for, roles, trust boundaries, how to drive the sandbox
+  surfaces.yaml             every surface, its files, its sessions; validated by ensphere map validate
+  invariants/INV-NNN.yaml   declared expectations the target's CI runs with ensphere invariants run
+```
+
+The contract (System map and invariants) states the rules; Sessions 01 and
+09 maintain the files.
 
 ## Using the CLI
 

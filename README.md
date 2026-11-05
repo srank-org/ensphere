@@ -95,6 +95,8 @@ Three outputs are deterministic and safe to gate a pipeline on. The statement co
 
 An `ensphere-pentest/` directory in your project, one folder per session, each with its plan, evidence ledger, transcripts, and report. The final report is written for the developer who has to act on it: the three to five things to fix first, a fix list that interleaves vulnerabilities and missing controls by priority, the state of every control on every billed service and storage surface, detailed findings with safe reproduction steps, and a "checks executed" and a "not checked" section copied from the coverage rows, with the reason for each gap. A coverage appendix maps it all to OWASP WSTG and ASVS and marks what no session covers. The full structure is in [Session 09](skills/ensphere/methodology/09-report.md).
 
+Two things stay in your repository under `.ensphere/`, committed and reviewed like code. The **system map** says what the system is for, which product fills each role, and every surface with the files that implement it, so the next run reconciles instead of rediscovering and a change in a pull request can be traced to the surfaces it touches. The **invariants** are the findings' validation criteria and the defenses that held, written as declared expectations your own CI runs on every pull request with the binary alone, in minutes, with no agent. A failing invariant is a fact about one expectation; a passing one is never a security verdict.
+
 Alongside it is a one-page **Statement of Assessment** derived from the workspace: system, dates, environment, model and Ensphere versions, checks executed and not checked, unresolved findings by severity, and the ledger's final hash. It says in plain words that it is a self-assessment by the system owner and not an independent audit. It is the document to attach to a security questionnaire, and the report is the document to hand a pentester so their hours go to the hard problems.
 
 ---
@@ -109,6 +111,7 @@ Alongside it is a one-page **Statement of Assessment** derived from the workspac
 | Evidence you can re-verify | Every request in a ledger, cited per finding | A severity label | A PDF |
 | Finds missing controls, not just bugs | Yes, per billed service and storage surface | Rarely | Yes |
 | Proves a multi-step chain end to end | Yes, in a sandbox copy of your app | No | Yes |
+| Leaves a check behind for every pull request | Yes, invariants your CI runs without an agent | Sometimes, as its own scan | No |
 | Independence | None; you sign the statement | None | The firm's name on the result |
 | Will ever say "secure" | Never | Often | No |
 

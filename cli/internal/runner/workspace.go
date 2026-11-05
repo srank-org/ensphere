@@ -140,7 +140,7 @@ func renderConfig(cfg InitConfig) string {
 - Source path: %s
 - Target type: %s
 - Cloud: %s
-%s
+%s%s
 ## Authentication
 - Login URL: %s
 - Username: %s
@@ -162,7 +162,14 @@ func renderConfig(cfg InitConfig) string {
 ## Authorization
 This assessment is authorized against the environment named above by its owner.
 It does not authorize exploitation, data extraction, or testing of any other system.
-`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, renderSandbox(cfg), cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes, cfg.AssessedBy, cfg.Operator)
+`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, renderDeltaSince(cfg), renderSandbox(cfg), cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes, cfg.AssessedBy, cfg.Operator)
+}
+
+func renderDeltaSince(cfg InitConfig) string {
+	if since := strings.TrimSpace(cfg.DeltaSince); since != "" {
+		return "- Delta since: " + since + "\n"
+	}
+	return ""
 }
 
 // renderSandbox writes the ## Sandbox section for the commands run init was

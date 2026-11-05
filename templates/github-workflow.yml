@@ -22,7 +22,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # pushing the branch that carries the updated map and invariants
+  pull-requests: write # opening that pull request
   id-token: write # keyless signing of the statement
   attestations: write # publishing the signed provenance record
   security-events: write # SARIF upload to code scanning
@@ -135,6 +136,27 @@ jobs:
             ${{ env.WORKSPACE }}/*/coverage.yaml
             ${{ env.WORKSPACE }}/*/evidence.jsonl
           retention-days: 90
+
+      - name: Propose the updated map and invariants
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The run reconciles .ensphere/map.md and surfaces.yaml and writes
+          # invariants. Those changes are reviewed like any other code.
+          if git diff --quiet -- .ensphere && [ -z "$(git ls-files --others --exclude-standard -- .ensphere)" ]; then
+            echo "no changes under .ensphere"
+            exit 0
+          fi
+          branch="ensphere/assessment-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add .ensphere
+          git commit -m "ensphere: update the system map and invariants from assessment run ${GITHUB_RUN_ID}"
+          git push origin "$branch"
+          gh pr create --base "${GITHUB_REF_NAME}" --head "$branch" \
+            --title "Ensphere: system map and invariants from run ${GITHUB_RUN_ID}" \
+            --body "Reconciled .ensphere/ from the assessment in run ${GITHUB_RUN_ID}. The statement and report are attached to that run. An invariant with enforce: false comes from an unresolved finding; set it to true with the fix."
 
       - name: Policy
         run: |

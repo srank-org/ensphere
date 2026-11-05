@@ -30,7 +30,9 @@ The CLI may: send scoped HTTP requests, measure timing, hash responses,
 capture headers, count rows, read provider configuration through a provider
 CLI, validate scope, redact secrets, compute CVSS from supplied metrics, map
 categories to compliance controls, compare two workspaces and report what
-changed, translate the analyst's severity into a SARIF level.
+changed, translate the analyst's severity into a SARIF level, validate the
+system map and ask git which surfaces changed, run a declared invariant and
+report whether the stated expectation held.
 
 The CLI must not: assign status, confidence, or severity; apply thresholds
 ("delta > 500ms means SQLi"); decide exploitability; name a technique in a
@@ -62,6 +64,8 @@ command and never probes production.
 | `cli/internal/evidence/` | Hash-chained JSONL ledger, redaction, locking |
 | `cli/internal/runner/` | Workspace init, plan validation, next-action handoff, report gate, statement, diff, SARIF, workspace discovery and approved scope |
 | `cli/internal/guard/` | The hook guard's command classifier |
+| `cli/internal/sysmap/` | The system map: schema, validation, change set from git |
+| `cli/internal/invariants/` | Declared expectations: schema, validation, runner |
 | `cli/internal/scan/`, `cli/internal/sinks/` | Regex sink scanner and its pattern data |
 | `cli/internal/payloads/` | Embedded payload corpus and query |
 | `cli/internal/cloud/` | Read-only provider configuration probes |
@@ -98,6 +102,12 @@ conventions.
   failures exit 3. When a workspace exists in the working directory, every
   `--in-scope` pattern must appear in the scope the operator approved in
   `config.md`; the shared flag helper enforces it for every family.
+- `.ensphere/` in the target repository is what persists between runs:
+  `map.md`, `surfaces.yaml`, and `invariants/`. Their schemas live in the
+  `sysmap` and `invariants` packages and their vocabulary in the contract.
+  An invariant result is `pass`, `fail`, or `error` and means only that
+  the declared expectation held or did not; no output may call anything
+  secure.
 - The plugin version in `.claude-plugin/plugin.json`, the release tag, and
   the version the binary reports are one number. Bump the manifest in the
   same commit as the tag; the release workflow refuses a mismatch.

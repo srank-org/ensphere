@@ -31,6 +31,7 @@ var (
 	runSandboxStart        string
 	runSandboxSeed         string
 	runSandboxReset        string
+	runDeltaSince          string
 	runPlanForce           bool
 	runDiffPrevious        string
 )
@@ -79,6 +80,7 @@ var runInitCmd = &cobra.Command{
 			SandboxStart:        runSandboxStart,
 			SandboxSeed:         runSandboxSeed,
 			SandboxReset:        runSandboxReset,
+			DeltaSince:          runDeltaSince,
 		})
 		if errors.Is(err, runner.ErrInvalidScope) {
 			return exitRunError(fmt.Errorf("%w: %v", errUsage, err))
@@ -236,6 +238,8 @@ func init() {
 	runInitCmd.Flags().StringVar(&runSandboxStart, "sandbox-start", "", "Exact command that starts the disposable sandbox; writing it under ## Sandbox in config.md is the operator's approval to run it")
 	runInitCmd.Flags().StringVar(&runSandboxSeed, "sandbox-seed", "", "Exact command that loads the sandbox's synthetic fixtures; writing it under ## Sandbox in config.md is the operator's approval to run it")
 	runInitCmd.Flags().StringVar(&runSandboxReset, "sandbox-reset", "", "Exact command that returns the sandbox to its seeded state; writing it under ## Sandbox in config.md is the operator's approval to run it")
+
+	runInitCmd.Flags().StringVar(&runDeltaSince, "delta-since", "", "Git commit of the previous assessment; run plan drafts sessions no changed surface in <source-path>/.ensphere/surfaces.yaml owns as skip")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
 	runDiffCmd.Flags().StringVar(&runDiffPrevious, "previous", "", "Workspace directory of the previous assessment (required)")

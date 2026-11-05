@@ -1,0 +1,17 @@
+# From a tested defense that held: tenant A cannot read tenant B's invoice.
+id: INV-002
+title: "A tenant cannot read another tenant's invoice by id"
+surface: SURF-002
+origin:
+  kind: tested_defense
+  ref: COV-04-007
+  evidence: [EVID-041, EVID-042, EVID-043]
+enforce: true
+kind: http
+request:
+  method: GET
+  path: /api/invoices/${TENANT_B_INVOICE_ID}
+  headers: {"Authorization": "Bearer ${TENANT_A_TOKEN}"}
+expect:
+  status_in: [403, 404]
+  body_not_contains: "${TENANT_B_INVOICE_MARKER}"

@@ -32,6 +32,16 @@ func coverageSessions() []Session {
 	return out
 }
 
+// CheckSessionIDs returns the ids of the sessions that run checks, the
+// sessions a system map surface may name.
+func CheckSessionIDs() []string {
+	var ids []string
+	for _, session := range coverageSessions() {
+		ids = append(ids, session.ID)
+	}
+	return ids
+}
+
 func coverageFilePath(workspace string, session Session) string {
 	return filepath.Join(workspace, session.Directory, "coverage.yaml")
 }
@@ -114,8 +124,10 @@ func coverageOptional(decision string) bool {
 
 // validateCoverageFiles checks every session's coverage.yaml against the
 // contract and returns the gate issues plus the counts the statement uses.
-// decisions maps session ids to plan decisions and may be nil.
-func validateCoverageFiles(workspace string, states map[string]string, decisions map[string]string) ([]ReportGateIssue, *CoverageSummary) {
+// decisions maps session ids to plan decisions and may be nil. surfaces is the
+// set of system map ids a row's surface_id must name, or nil when there is no
+// map and surface_id goes unchecked.
+func validateCoverageFiles(workspace string, states map[string]string, decisions map[string]string, surfaces map[string]bool) ([]ReportGateIssue, *CoverageSummary) {
 	var issues []ReportGateIssue
 	summary := &CoverageSummary{}
 	for _, session := range coverageSessions() {
@@ -139,7 +151,7 @@ func validateCoverageFiles(workspace string, states map[string]string, decisions
 			summary.Sessions = append(summary.Sessions, entry)
 			continue
 		}
-		rowIssues, counts := validateCoverageRows(workspace, session, path, file)
+		rowIssues, counts := validateCoverageRows(workspace, session, path, file, surfaces)
 		issues = append(issues, rowIssues...)
 		entry.Counts = counts
 		summary.Totals.merge(counts)
@@ -148,7 +160,7 @@ func validateCoverageFiles(workspace string, states map[string]string, decisions
 	return issues, summary
 }
 
-func validateCoverageRows(workspace string, session Session, path string, file *CoverageFile) ([]ReportGateIssue, CoverageCounts) {
+func validateCoverageRows(workspace string, session Session, path string, file *CoverageFile, surfaces map[string]bool) ([]ReportGateIssue, CoverageCounts) {
 	var issues []ReportGateIssue
 	var counts CoverageCounts
 	if strings.TrimSpace(file.Session) != session.ID {
@@ -173,6 +185,9 @@ func validateCoverageRows(workspace string, session Session, path string, file *
 		}
 		if strings.TrimSpace(row.Surface) == "" || strings.TrimSpace(row.Check) == "" {
 			issues = append(issues, gateIssue("error", "coverage_field_missing", refPath, "coverage rows require surface and check"))
+		}
+		if surfaceID := strings.TrimSpace(row.SurfaceID); surfaceID != "" && surfaces != nil && !surfaces[surfaceID] {
+			issues = append(issues, gateIssue("error", "coverage_surface_unknown", refPath, fmt.Sprintf("coverage row %s names surface_id %s, which is not in the system map", id, surfaceID)))
 		}
 		state := strings.TrimSpace(row.State)
 		if !validCoverageState(state) {

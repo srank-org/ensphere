@@ -1,0 +1,20 @@
+# From a missing control: enforce stays false until the limiter lands.
+id: INV-001
+title: "OTP send throttles a burst for one phone number"
+surface: SURF-001
+origin:
+  kind: missing_control
+  ref: CTRL-001
+  evidence: [EVID-088, EVID-089]
+enforce: false
+kind: rate_limit
+request:
+  method: POST
+  path: /api/auth/otp
+  headers: {"Content-Type": "application/json"}
+  body: '{"phone": "+60100000001"}'
+burst: 8
+window_sec: 60
+expect:
+  throttled_within: 6
+  retry_after_header: true

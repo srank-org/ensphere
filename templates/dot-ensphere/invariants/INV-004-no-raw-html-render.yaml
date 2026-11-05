@@ -1,0 +1,14 @@
+# From a vulnerability: no raw-HTML helper on user content in the renderers.
+id: INV-004
+title: "No raw-HTML helper in the post renderers"
+origin:
+  kind: vulnerability
+  ref: VULN-003
+  evidence: [EVID-064]
+enforce: false
+kind: source
+include: ["src/components/posts/**/*.tsx"]
+exclude: ["**/*.test.tsx"]
+pattern: 'dangerouslySetInnerHTML'
+expect:
+  matches: 0

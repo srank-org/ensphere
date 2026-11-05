@@ -1,0 +1,19 @@
+# From a tested defense: the upload path rejects a body over the cap.
+id: INV-003
+title: "Upload rejects a body one byte over the 25 MiB cap"
+surface: SURF-004
+origin:
+  kind: tested_defense
+  ref: COV-08.5-003
+  evidence: [EVID-120, EVID-121, EVID-122]
+enforce: true
+kind: size_limit
+request:
+  method: POST
+  path: /api/upload
+  headers: {"Authorization": "Bearer ${TENANT_A_TOKEN}"}
+size_bytes: 26214401
+field: file
+expect:
+  rejected: true
+  status_in: [413]

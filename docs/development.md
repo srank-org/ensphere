@@ -37,6 +37,8 @@ Not allowed in code:
 | `cli/internal/payloads/` | Embedded YAML payload seeds and query logic |
 | `cli/internal/runner/` | Workspace runner, assessment-plan drafting, coverage validation, Session 09 report gate, Statement of Assessment, diff, SARIF, workspace discovery, approved scope |
 | `cli/internal/guard/` | Classifier behind the `ensphere hook pre-tool-use` guard |
+| `cli/internal/sysmap/` | System map schema, validation, and git change set |
+| `cli/internal/invariants/` | Invariant schema, validation, and runner |
 | `cli/internal/compliance/` | Compliance mappings |
 | `cli/internal/cvss/` | CVSS v4.0 calculator |
 | `cli/internal/scan/` | Regex-based sink scanner |

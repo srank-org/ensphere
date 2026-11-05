@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/srank-org/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/sysmap"
 	"gopkg.in/yaml.v3"
 )
 
@@ -78,7 +79,9 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		issues = append(issues, validateSessionReportReadiness(workspace, states)...)
 	}
 	issues = append(issues, validateEvidenceFiles(workspace)...)
-	coverageIssues, coverage := validateCoverageFiles(workspace, states, planDecisions(plan))
+	mapIssues, surfaces := validateWorkspaceSystemMap(workspace)
+	issues = append(issues, mapIssues...)
+	coverageIssues, coverage := validateCoverageFiles(workspace, states, planDecisions(plan), surfaces)
 	issues = append(issues, coverageIssues...)
 
 	registryPath := findingRegistryPath(workspace)
@@ -118,6 +121,29 @@ func buildReportGate(workspace string) *ReportGateOutput {
 		PromptPath:           filepath.Join(workspace, "agent-prompt.md"),
 		Message:              message,
 	}
+}
+
+// validateWorkspaceSystemMap validates the system map in the configured
+// source path, when one exists, and returns its surface ids for the coverage
+// rows to cite. Without a map it returns no issues and a nil set.
+func validateWorkspaceSystemMap(workspace string) ([]ReportGateIssue, map[string]bool) {
+	cfg, err := readConfig(workspace)
+	if err != nil {
+		return []ReportGateIssue{gateIssue("error", "config_read_failed", configPath(workspace), err.Error())}, nil
+	}
+	path := sysmap.Path(cfg.SourcePath)
+	if !fileExists(path) {
+		return nil, nil
+	}
+	validation, m, err := sysmap.ValidateFile(path, cfg.SourcePath, CheckSessionIDs())
+	if err != nil {
+		return []ReportGateIssue{gateIssue("error", "map_parse_failed", path, err.Error())}, nil
+	}
+	issues := make([]ReportGateIssue, 0, len(validation.Issues))
+	for _, issue := range validation.Issues {
+		issues = append(issues, gateIssue(issue.Severity, issue.Code, path+"#"+issue.Path, issue.Message))
+	}
+	return issues, sysmap.IDs(m)
 }
 
 // planDecisions maps each session id to its plan decision, or nil when there

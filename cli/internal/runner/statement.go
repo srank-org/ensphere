@@ -110,13 +110,14 @@ func BuildStatement(workspace, version string, coverage *CoverageSummary) (*Stat
 		plan, _ = ReadAssessmentPlan(assessmentPlanPath(workspace))
 	}
 	if coverage == nil {
-		_, coverage = validateCoverageFiles(workspace, states, planDecisions(plan))
+		_, coverage = validateCoverageFiles(workspace, states, planDecisions(plan), nil)
 	}
 	statement := &Statement{
 		EnsphereVersion: version,
 		System: StatementSystem{
 			TargetURL:   cfg.TargetURL,
 			Environment: cfg.Environment,
+			DeltaSince:  cfg.DeltaSince,
 			SourcePath:  cfg.SourcePath,
 			TargetType:  cfg.TargetType,
 			Cloud:       splitList(cfg.Cloud),
@@ -310,6 +311,9 @@ func renderStatementMarkdown(s *Statement) string {
 	b.WriteString(fmt.Sprintf("- **Source path**: %s\n", orNone(s.System.SourcePath, "none")))
 	b.WriteString(fmt.Sprintf("- **Target type**: %s\n", orNone(s.System.TargetType, "auto")))
 	b.WriteString(fmt.Sprintf("- **Environment tier**: %s\n", orNone(s.System.Environment, "none")))
+	if s.System.DeltaSince != "" {
+		b.WriteString(fmt.Sprintf("- **Delta since**: %s\n", s.System.DeltaSince))
+	}
 	b.WriteString(fmt.Sprintf("- **Platforms**: %s\n", orNone(strings.Join(s.System.Cloud, ", "), "none")))
 	b.WriteString(fmt.Sprintf("- **In scope**: %s\n", orNone(s.System.InScope, "not recorded")))
 	b.WriteString(fmt.Sprintf("- **Assessed by**: %s\n", orNone(s.System.AssessedBy, "not recorded")))

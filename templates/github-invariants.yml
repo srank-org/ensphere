@@ -1,0 +1,82 @@
+# Ensphere invariants on every pull request: a GitHub Actions template.
+#
+# Copy to .github/workflows/ensphere-invariants.yml in the project under
+# assessment and replace every <placeholder>. This job runs no agent. It
+# starts the sandbox, runs the declared expectations under .ensphere/
+# invariants/ with the ensphere binary, and fails on an enforced invariant
+# that does not hold. An invariant from an unresolved finding carries
+# enforce: false until the fix lands and is reported, not failed. A pass
+# means one declared expectation held; it is never a security verdict.
+
+name: Ensphere invariants
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ensphere-invariants-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENSPHERE_REF: main # pin a tag once one exists
+  SANDBOX_URL: http://localhost:3000
+
+jobs:
+  invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the system under assessment
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.26"
+
+      - name: Install the ensphere binary at a pinned version
+        run: |
+          git clone --depth 1 --branch "$ENSPHERE_REF" https://github.com/srank-org/ensphere.git /tmp/ensphere
+          make -C /tmp/ensphere build
+          sudo install /tmp/ensphere/bin/ensphere /usr/local/bin/ensphere
+          ensphere --version
+
+      - name: Validate the map and the invariants
+        run: |
+          ensphere map validate
+          ensphere invariants validate
+
+      - name: Start and seed the sandbox
+        run: |
+          <sandbox start> # e.g. docker compose -f compose.sandbox.yml up -d --wait
+          <sandbox seed> # e.g. npm run seed:synthetic
+
+      - name: Run the invariants
+        env:
+          # Placeholders the invariant files reference as ${VAR}: synthetic
+          # identities and object ids from the seed, never real credentials.
+          TENANT_A_TOKEN: ${{ secrets.SANDBOX_TENANT_A_TOKEN }}
+          TENANT_B_INVOICE_ID: <id from the seed>
+          DATABASE_URL: <sandbox database url>
+        run: |
+          ensphere invariants run \
+            --target "$SANDBOX_URL" \
+            --in-scope localhost \
+            --out invariants.json
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensphere-invariants
+          path: invariants.json
+          retention-days: 30
+
+      - name: Stop the sandbox
+        if: always()
+        run: <sandbox stop>

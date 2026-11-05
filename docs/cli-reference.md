@@ -144,7 +144,18 @@ Flags for `run init`:
 --sandbox-start          Command that starts the sandbox; written under ## Sandbox in config.md, which approves it
 --sandbox-seed           Command that seeds the sandbox with synthetic data
 --sandbox-reset          Command that resets the sandbox to its seeded state
+--delta-since            Git ref for a delta run: only surfaces whose files changed since it are re-checked (needs .ensphere/surfaces.yaml)
 ```
+
+`--delta-since` writes `- Delta since: <ref>` into `config.md`. When the
+source tree has a valid map, `run plan` computes the change set with the
+same logic as `map changed`, records it in the plan's `delta` block
+(`since`, `head`, `changed_surfaces`, `unmapped_changed_files`,
+`sessions_affected`), and drafts every session the change set does not
+touch as `skip` with the ref in its reason. A changed file no surface
+claims keeps every session's normal draft. Without a valid map the plan is
+drafted in full and `delta` carries only the ref and a reason. The
+statement prints the ref as "Delta since".
 
 The three sandbox flags write a `## Sandbox` section into `config.md` with
 `Start`, `Seed`, and `Reset` lines. Writing a command there is the
@@ -207,7 +218,11 @@ The gate also reads every session's `coverage.yaml` (Sessions 02 through
 an error unless the plan decided that session `skip` or `not_applicable`.
 Each row needs an id of the form `COV-<session>-NNN`, a `surface`, a
 `check`, and a `state` of `planned`, `tested`, `not_tested`, `blocked`, or
-`not_applicable`. A `planned` row blocks the report. A `tested` row must
+`not_applicable`. A row may carry `surface_id`, the `SURF-NNN` id from
+`.ensphere/surfaces.yaml`; when the source tree has that map, the gate
+validates the map (its issue codes become gate issues, `map_parse_failed`
+when it does not parse) and rejects an id it does not list
+(`coverage_surface_unknown`). A `planned` row blocks the report. A `tested` row must
 cite `evidence_ids` that exist in that session's `evidence.jsonl`, and when
 any cited entry is a `probe`, `payload`, or `callback` the row must also
 cite a `baseline` entry and a `control` entry from the same ledger
@@ -276,6 +291,111 @@ registry.
 Runner-generated state, plans, recon profiles, report artifacts, and finding
 registries use one canonical schema. Unknown fields are rejected rather than
 ignored.
+
+## Map
+
+The system map is the persistent inventory an assessment leaves in the
+target repository: `<source-path>/.ensphere/surfaces.yaml` (machine-read,
+validated here) beside `.ensphere/map.md` (prose, not parsed). Session 01
+writes and reconciles both; the contract (System map and invariants) states
+the rules and the vocabulary.
+
+```bash
+ensphere map validate [--source-path .] [--map <path>]
+ensphere map changed [--since <ref>] [--source-path .] [--map <path>]
+```
+
+`map validate` checks `version: 1`, a non-empty `reconciled_at`, unique
+`SURF-NNN` ids, a known `kind` (`endpoint`, `table`, `bucket`, `function`,
+`job`, `config`, `client`, `workflow`), a non-empty `name`, a `role` from
+the fundamentals vocabulary, at least one file that exists under the source
+path with no absolute or `..` component, and at least one owning session.
+Output is JSON with `path`, `valid`, `surfaces`, and `issues` (`severity`,
+`code`, `path`, `message`); exit 1 on an error issue, 3 when the file
+cannot be read.
+
+`map changed` validates, then asks git which files changed since `--since`
+(a commit, tag, or branch; default `reconciled_at`) against the working
+tree, uncommitted edits and untracked files included, and reports
+`changed_files`,
+`changed_surfaces` (each with its `changed_files` and `sessions`),
+`unmapped_changed_files` (changed files no surface claims),
+`missing_files` (files a surface claims that no longer exist), and
+`sessions_affected`. A surface may list a directory and then claims every
+changed file beneath it. Files under `.ensphere/` and under the
+`ensphere-pentest/` workspace are never part of the change set, since
+both change on every assessment by design. It is the input to a delta run and to Session 01's
+reconciliation. Exit 3 when git fails.
+
+## Invariants
+
+Invariants are declared expectations, one YAML file each under
+`<source-path>/.ensphere/invariants/`, that the target's own CI runs on
+every pull request with no agent. Session 09 writes them from findings'
+validation criteria and from tested defenses; `templates/dot-ensphere/`
+shows one of each kind.
+
+```bash
+ensphere invariants validate [--dir <path>] [--source-path .] [--map <path>]
+ensphere invariants run --in-scope <patterns> [--target <base url>] \
+  [--dir <path>] [--source-path .] [--map <path>] [--only INV-001,INV-002] \
+  [--max-risk N] [--throttle ms] [--timeout s] [--header k:v] [--out <file>]
+```
+
+`--target` may be omitted when the directory holds only `source` and
+`command` invariants; an HTTP-kind invariant run without one is `error`.
+
+Each file has `id` (`INV-NNN`), `title`, optional `surface`, `origin`
+(`kind` of `vulnerability`, `missing_control`, or `tested_defense`, the
+`ref` it came from, optional `assessment` digest and `evidence` ids),
+`enforce`, a `kind`, the kind's inputs, and an `expect` block:
+
+| Kind | Inputs | Expectations |
+|------|--------|--------------|
+| `http` | `request` (`method`, `path`, `headers`, `body`) | `status`, `status_in`, `header_present`, `header_absent`, `header_matches`, `body_contains`, `body_not_contains` |
+| `rate_limit` | `request`, `burst` (1 to 50), `window_sec` | `throttled_within`, `retry_after_header` |
+| `size_limit` | `request`, `size_bytes`, `field` | `rejected`, `status_in` |
+| `source` | `include`, `exclude` globs, `pattern` or `require` | `matches`, `every_file_matches` |
+| `command` | `run` (through `sh -c` in the source path), `timeout_sec` | `exit_code`, `stdout_equals`, `stdout_matches` |
+
+`${VAR}` in request fields, bodies, commands, and expectation strings is
+read from the environment at run time; an unset or empty variable makes
+that invariant `error`, never pass or fail, and no request or command is
+sent. A value substituted into a regex expectation is matched literally.
+The report echoes the expectation with the `${VAR}` reference, so a
+substituted secret never reaches it.
+
+`invariants validate` checks the schema, unique ids, the fields each kind
+requires and forbids, their ranges (a burst of 1 to 50, a size up to the
+verify cap, a window and a timeout in bounds), regexes, and that `surface`
+names an id in the map when one exists; its codes are
+`invariant_yaml_invalid`, `invariant_id_invalid`, `invariant_id_duplicate`,
+`invariant_title_missing`, `invariant_kind_invalid`,
+`invariant_origin_invalid`, `invariant_field_missing`,
+`invariant_field_foreign`, `invariant_field_invalid`,
+`invariant_burst_out_of_range`, `invariant_expect_missing`,
+`invariant_expect_foreign`, `invariant_expect_invalid`,
+`invariant_regex_invalid`, and `invariant_surface_unknown`. `invariants run` validates first, sends
+every HTTP-kind request through the same scope check as the verify
+commands (and the workspace-approved scope when a workspace exists),
+writes no ledger, and prints a report: `target`, `source_path`,
+`guarded`, per invariant `id`, `title`, `kind`, `enforce`, `origin`,
+`surface`, `result` (`pass`, `fail`, or `error`), `message`, `measured`
+(per kind: the status, the named headers, and body length; the first
+throttled request, throttled count, and status codes; the status for the
+size; files scanned, matches, and redacted samples; exit code and
+truncated, redacted output), `expect`, and `duration_ms`, with a `summary`
+of `total`, `pass`, `fail`, `error`, `enforced_fail`, `unenforced_fail`,
+and `unenforced_pass`. A `rate_limit` invariant counts a 429 or a 503 as
+throttled, as the verify family does. Exit 0 when no enforced invariant
+failed and nothing errored, else 1. A pass means the declared expectation
+held when it ran; the runner says nothing else.
+
+When an assessment workspace is active, a `command` invariant's shell
+string goes through the same classifier as the plugin's guard before it
+runs: a raw network tool or inline-code interpreter in it makes the
+invariant `error` instead of running, and the report's `guarded` is true.
+In CI, with no workspace, commands run as written.
 
 ## Hook
 

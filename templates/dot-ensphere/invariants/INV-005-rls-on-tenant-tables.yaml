@@ -1,0 +1,22 @@
+# From a tested defense: every table with a tenant column has row security on.
+id: INV-005
+title: "Every public table with a tenant_id column has row-level security enabled"
+surface: SURF-003
+origin:
+  kind: tested_defense
+  ref: COV-07-002
+  evidence: [EVID-205]
+enforce: true
+kind: command
+# ${DATABASE_URL} is the runner's placeholder: unset, the invariant is an
+# error and nothing runs. A shell-style $VAR would be left to the shell.
+run: >-
+  psql "${DATABASE_URL}" -tAc
+  "select count(*) from information_schema.columns c
+   join pg_class r on r.relname = c.table_name
+   join pg_namespace n on n.oid = r.relnamespace and n.nspname = c.table_schema
+   where c.table_schema = 'public' and c.column_name = 'tenant_id' and not r.relrowsecurity"
+timeout_sec: 30
+expect:
+  exit_code: 0
+  stdout_equals: "0"
