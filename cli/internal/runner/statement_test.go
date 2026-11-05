@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -153,6 +154,79 @@ rows:
 	}
 }
 
+func TestRunStatementWritesJSONThatTheGateChecks(t *testing.T) {
+	workspace := writeStatementReadyWorkspace(t)
+	out, err := RunStatement(workspace, "test-version")
+	if err != nil {
+		t.Fatalf("run statement: %v", err)
+	}
+	raw, err := os.ReadFile(out.JSONPath)
+	if err != nil {
+		t.Fatalf("read statement.json: %v", err)
+	}
+	var fromJSON Statement
+	if err := json.Unmarshal(raw, &fromJSON); err != nil {
+		t.Fatalf("decode statement.json: %v", err)
+	}
+	yamlRaw, err := os.ReadFile(out.StatementPath)
+	if err != nil {
+		t.Fatalf("read statement.yaml: %v", err)
+	}
+	var fromYAML Statement
+	if err := decodeStrictYAML(yamlRaw, &fromYAML); err != nil {
+		t.Fatalf("decode statement.yaml: %v", err)
+	}
+	if fromJSON.InputsDigest != out.InputsDigest || fromJSON.GeneratedAt == "" || fromJSON.GeneratedAt != fromYAML.GeneratedAt {
+		t.Fatalf("statement.json disagrees with statement.yaml: json digest=%s at=%s, yaml at=%s, output digest=%s", fromJSON.InputsDigest, fromJSON.GeneratedAt, fromYAML.GeneratedAt, out.InputsDigest)
+	}
+
+	if err := os.Remove(out.JSONPath); err != nil {
+		t.Fatalf("remove statement.json: %v", err)
+	}
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report without statement.json: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "statement_json_missing") {
+		t.Fatalf("expected statement_json_missing, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+	if _, err := RunStatement(workspace, "test-version"); err != nil {
+		t.Fatalf("regenerate after statement.json was deleted: %v", err)
+	}
+
+	raw, err = os.ReadFile(out.JSONPath)
+	if err != nil {
+		t.Fatalf("read regenerated statement.json: %v", err)
+	}
+	edited := strings.Replace(string(raw), out.InputsDigest, strings.Repeat("0", len(out.InputsDigest)), 1)
+	if err := os.WriteFile(out.JSONPath, []byte(edited), 0644); err != nil {
+		t.Fatalf("edit statement.json: %v", err)
+	}
+	gate, err = RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report after editing statement.json: %v", err)
+	}
+	var editedIssue *ReportGateIssue
+	for i := range gate.Issues {
+		if gate.Issues[i].Code == "statement_edited" {
+			editedIssue = &gate.Issues[i]
+		}
+	}
+	if gate.Ready || editedIssue == nil || editedIssue.Path != out.JSONPath {
+		t.Fatalf("expected statement_edited on %s, got ready=%v issues=%+v", out.JSONPath, gate.Ready, gate.Issues)
+	}
+	if _, err := RunStatement(workspace, "test-version"); err != nil {
+		t.Fatalf("regenerate after statement.json was edited: %v", err)
+	}
+	gate, err = RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report after regeneration: %v", err)
+	}
+	if !gate.Ready || gate.StatementState != "current" {
+		t.Fatalf("expected a current statement after regeneration, got ready=%v state=%q issues=%+v", gate.Ready, gate.StatementState, gate.Issues)
+	}
+}
+
 func TestRunStatementRefusesWhenGateNotReady(t *testing.T) {
 	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
 	if _, err := InitWorkspace(InitConfig{Workspace: workspace, TargetURL: "https://example.com"}); err != nil {
@@ -292,5 +366,33 @@ rows:
 		if strings.HasSuffix(issue.Path, "#rows[1]") {
 			t.Fatalf("a source-review row citing only a manual note must not need baseline or control: %+v", issue)
 		}
+	}
+}
+
+func TestRunStatementRegeneratesAfterMarkdownDeleted(t *testing.T) {
+	workspace := writeStatementReadyWorkspace(t)
+	out, err := RunStatement(workspace, "test-version")
+	if err != nil {
+		t.Fatalf("run statement: %v", err)
+	}
+	if err := os.Remove(out.MarkdownPath); err != nil {
+		t.Fatalf("remove statement.md: %v", err)
+	}
+	gate, err := RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report without statement.md: %v", err)
+	}
+	if gate.Ready || !hasIssue(gate.Issues, "statement_markdown_missing") {
+		t.Fatalf("expected statement_markdown_missing, got ready=%v issues=%+v", gate.Ready, gate.Issues)
+	}
+	if _, err := RunStatement(workspace, "test-version"); err != nil {
+		t.Fatalf("regenerate after statement.md was deleted: %v", err)
+	}
+	gate, err = RunReport(workspace)
+	if err != nil {
+		t.Fatalf("run report after regeneration: %v", err)
+	}
+	if !gate.Ready || gate.StatementState != "current" {
+		t.Fatalf("expected a current statement after regeneration, got ready=%v state=%q issues=%+v", gate.Ready, gate.StatementState, gate.Issues)
 	}
 }

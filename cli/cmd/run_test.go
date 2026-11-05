@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,5 +178,125 @@ func TestCLIRunStatementRefusesUntilGateReady(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(workspace, "09-report", name)); err == nil {
 			t.Fatalf("expected no %s while the gate is not ready", name)
 		}
+	}
+}
+
+const cliTestRegistry = `generated_from: Session 09
+findings:
+  - id: %s
+    kind: missing_control
+    title: No rate limit on OTP
+    category: abuse_and_cost
+    status: %s
+    confidence: high
+    evidence_strength: direct
+    severity: medium
+    priority: P2
+    affected_assets: [app.example.invalid]
+    affected_locations: ["app/api/otp.ts:%d", "POST /api/otp"]
+    observed_facts: [Twenty requests in ten seconds all returned 200]
+    root_cause: No limiter on the route
+    security_impact: SMS cost abuse
+    remediation: Add a per-number limiter
+    validation_criteria: [The eleventh request in ten seconds is refused]
+    evidence_ids: [EVID-001]
+    evidence_categories: [ensphere_measurement, agent_judgment]
+`
+
+func initCLIWorkspaceWithRegistry(t *testing.T, workspace, id, status string, line int) {
+	t.Helper()
+	if result := runCLISplit(t, "run", "--workspace", workspace, "init", "--target", "https://example.com"); result.code != 0 {
+		t.Fatalf("run init exit %d stderr=%s", result.code, result.stderr)
+	}
+	dir := filepath.Join(workspace, "09-report")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir 09-report: %v", err)
+	}
+	registry := fmt.Sprintf(cliTestRegistry, id, status, line)
+	if err := os.WriteFile(filepath.Join(dir, "finding-registry.yaml"), []byte(registry), 0644); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+}
+
+func TestCLIRunDiffComparesWorkspaces(t *testing.T) {
+	root := t.TempDir()
+	previous := filepath.Join(root, "previous")
+	current := filepath.Join(root, "current")
+	initCLIWorkspaceWithRegistry(t, previous, "CTRL-001", "not_supported", 24)
+	initCLIWorkspaceWithRegistry(t, current, "CTRL-002", "confirmed", 31)
+
+	result := runCLISplit(t, "run", "--workspace", current, "diff", "--previous", previous)
+	if result.code != 0 {
+		t.Fatalf("run diff exit %d stderr=%s", result.code, result.stderr)
+	}
+	var out struct {
+		DiffPath string `json:"diff_path"`
+		Findings struct {
+			Changed []struct {
+				PreviousID string `json:"previous_id"`
+				CurrentID  string `json:"current_id"`
+			} `json:"changed"`
+			Summary *struct {
+				UnresolvedBefore int `json:"unresolved_before"`
+				UnresolvedAfter  int `json:"unresolved_after"`
+				Reopened         int `json:"reopened"`
+			} `json:"summary"`
+		} `json:"findings"`
+	}
+	decodeJSON(t, result.stdout, &out)
+	if out.Findings.Summary == nil || out.Findings.Summary.Reopened != 1 || out.Findings.Summary.UnresolvedAfter <= out.Findings.Summary.UnresolvedBefore {
+		t.Fatalf("unexpected diff summary:\n%s", result.stdout)
+	}
+	if len(out.Findings.Changed) != 1 || out.Findings.Changed[0].PreviousID != "CTRL-001" || out.Findings.Changed[0].CurrentID != "CTRL-002" {
+		t.Fatalf("expected CTRL-001 -> CTRL-002:\n%s", result.stdout)
+	}
+	for _, path := range []string{out.DiffPath, filepath.Join(current, "09-report", "diff.md")} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected %s: %v", path, err)
+		}
+	}
+}
+
+func TestCLIRunDiffUsageErrors(t *testing.T) {
+	root := t.TempDir()
+	current := filepath.Join(root, "current")
+	initCLIWorkspaceWithRegistry(t, current, "CTRL-001", "confirmed", 24)
+	for name, args := range map[string][]string{
+		"missing --previous":         {"run", "--workspace", current, "diff"},
+		"--previous not a directory": {"run", "--workspace", current, "diff", "--previous", filepath.Join(root, "nope")},
+	} {
+		result := runCLISplit(t, args...)
+		if result.code != 2 || !strings.Contains(result.stderr, "usage error") {
+			t.Fatalf("%s: expected usage exit 2, got %d stderr=%s", name, result.code, result.stderr)
+		}
+	}
+}
+
+func TestCLIRunSarifWritesFindings(t *testing.T) {
+	workspace := filepath.Join(t.TempDir(), "ensphere-pentest")
+	initCLIWorkspaceWithRegistry(t, workspace, "CTRL-001", "confirmed", 24)
+	result := runCLISplit(t, "run", "--workspace", workspace, "sarif")
+	if result.code != 0 {
+		t.Fatalf("run sarif exit %d stderr=%s", result.code, result.stderr)
+	}
+	var out struct {
+		SARIFPath string `json:"sarif_path"`
+		Results   int    `json:"results"`
+		Rules     int    `json:"rules"`
+	}
+	decodeJSON(t, result.stdout, &out)
+	if out.Results != 1 || out.Rules != 1 {
+		t.Fatalf("expected one result and one rule:\n%s", result.stdout)
+	}
+	raw, err := os.ReadFile(out.SARIFPath)
+	if err != nil {
+		t.Fatalf("read findings.sarif: %v", err)
+	}
+	var log struct {
+		Version string `json:"version"`
+	}
+	decodeJSON(t, string(raw), &log)
+	if log.Version != "2.1.0" {
+		t.Fatalf("unexpected SARIF version %q", log.Version)
 	}
 }

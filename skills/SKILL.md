@@ -169,7 +169,9 @@ ensphere-pentest/
     report.md               the deliverable
     evidence-appendix.md    claim-to-evidence table
     report-gate.yaml, .md   gate result and coverage summary
-    statement.yaml, .md     written by run statement; the operator signs statement.md
+    statement.yaml, .md, .json  written by run statement; the operator signs statement.md
+    diff.json, diff.md      written by run diff against a previous workspace
+    findings.sarif          written by run sarif for code scanning
 ```
 
 ## Using the CLI

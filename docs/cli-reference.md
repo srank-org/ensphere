@@ -100,8 +100,8 @@ return valid values.
 Create and inspect the `ensphere-pentest/` workspace used by the agent
 workflow. The runner writes deterministic workspace files, `next-action.md`,
 and `agent-prompt.md`; it does not run AI reasoning and has no exploitation
-command. Subcommands are `init`, `status`, `next`, `plan`, `report`, and
-`statement`.
+command. Subcommands are `init`, `status`, `next`, `plan`, `report`,
+`statement`, `diff`, and `sarif`.
 
 ```bash
 ensphere run init \
@@ -116,6 +116,8 @@ ensphere run plan
 ensphere run next
 ensphere run report
 ensphere run statement
+ensphere run diff --previous ../previous-release/ensphere-pentest
+ensphere run sarif
 ```
 
 Flags for `run init`:
@@ -219,6 +221,43 @@ changes, `statement_edited` if `statement.md` no longer matches
 `statement.yaml`, and `statement_markdown_missing` if the markdown is
 deleted. Regenerate rather than edit. The markdown ends with the fixed
 self-assessment sentence and a signature block for the operator.
+
+`run statement` also writes `09-report/statement.json`, the same record as
+JSON, for a release pipeline to sign as the predicate of a provenance
+attestation (`docs/release-pipeline.md`). The gate reports
+`statement_json_missing` when it is absent and `statement_edited` when its
+digest differs from the YAML's.
+
+`run diff --previous <dir>` compares the current workspace with a previous
+assessment's workspace and writes `09-report/diff.json` and `diff.md`.
+Findings are matched across the two registries by kind, category, and
+normalised title, then by a shared affected location with any `:line`
+suffix ignored; each match records `matched_by`. The output lists findings
+that are `new`, `gone`, `changed` (status, severity, or priority), and
+`unchanged`, with a summary of `unresolved_before`, `unresolved_after`,
+`new_unresolved`, `gone_unresolved`, `reopened`, and `resolved`, where
+unresolved means `confirmed` or `likely`. Coverage rows are keyed by
+session, surface, check, and identity and reported as `added`, `removed`,
+or `changed` with the state before and after, plus counts per session.
+When both workspaces hold a statement, their Ensphere version, assessor,
+and ledger entry counts are compared. The command assigns nothing, is
+deterministic, and exits 0 whenever both inputs parse; a missing
+`--previous`, or one that is not a directory, is a usage error (exit 2).
+
+`run sarif` writes `09-report/findings.sarif`, SARIF 2.1.0, from the
+finding registry. Results are the `confirmed`, `likely`, and
+`informational` findings; `not_supported` and `not_tested` entries are
+never results. Each result carries one rule per kind and category
+(`ensphere/<kind>/<category>`, with a help link to the methodology file), a
+`level` that is a fixed translation of the analyst's severity (critical and
+high to `error`, medium to `warning`, the rest to `note`), a physical
+location for every affected `path:line` and a logical location for every
+endpoint, a fingerprint derived from the diff's matching key so an alert
+survives across uploads, and the registry's status, confidence, evidence
+strength, severity, priority, evidence ids, and assets as properties. A
+finding with no file location points at its own entry in the registry so
+code scanning still displays it. The file is deterministic for a given
+registry.
 
 Runner-generated state, plans, recon profiles, report artifacts, and finding
 registries use one canonical schema. Unknown fields are rejected rather than

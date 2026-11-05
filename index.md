@@ -27,7 +27,7 @@ Fast orientation for agents and contributors.
 | [cli/internal/](cli/internal/) | Deterministic business logic |
 | [assets/seeds/](assets/seeds/) | YAML payload sources |
 | [docs/](docs/) | CLI reference, release pipeline, development, testing |
-| [templates/](templates/) | Workspace configuration template |
+| [templates/](templates/) | Workspace configuration and CI workflow templates |
 
 ## Folder indexes
 

@@ -290,8 +290,10 @@ type CoverageSummary struct {
 	Totals   CoverageCounts    `json:"totals" yaml:"totals"`
 }
 
-// Statement is 09-report/statement.yaml: every number in the Statement of
-// Assessment, derived from the workspace by ensphere run statement.
+// Statement is 09-report/statement.yaml and its JSON twin statement.json,
+// the predicate a CI provenance attestation signs: every number in the
+// Statement of Assessment, derived from the workspace by ensphere run
+// statement.
 type Statement struct {
 	GeneratedAt     string             `json:"generated_at" yaml:"generated_at"`
 	EnsphereVersion string             `json:"ensphere_version" yaml:"ensphere_version"`
@@ -356,6 +358,140 @@ type StatementOutput struct {
 	Workspace     string `json:"workspace"`
 	StatementPath string `json:"statement_path"`
 	MarkdownPath  string `json:"markdown_path"`
+	JSONPath      string `json:"json_path"`
 	InputsDigest  string `json:"inputs_digest"`
 	Message       string `json:"message"`
+}
+
+// DiffOutput is 09-report/diff.json, the result of ensphere run diff: what
+// changed between a previous assessment's registry and coverage and this
+// one's. It echoes the analyst's fields and assigns nothing.
+type DiffOutput struct {
+	Workspace    string        `json:"workspace" yaml:"workspace"`
+	Previous     string        `json:"previous" yaml:"previous"`
+	DiffPath     string        `json:"diff_path" yaml:"diff_path"`
+	MarkdownPath string        `json:"markdown_path" yaml:"markdown_path"`
+	Findings     FindingDiff   `json:"findings" yaml:"findings"`
+	Coverage     CoverageDiff  `json:"coverage" yaml:"coverage"`
+	Statement    StatementDiff `json:"statement" yaml:"statement"`
+	Message      string        `json:"message" yaml:"message"`
+}
+
+type FindingDiff struct {
+	New       []FindingRef       `json:"new" yaml:"new"`
+	Gone      []FindingRef       `json:"gone" yaml:"gone"`
+	Changed   []FindingChange    `json:"changed" yaml:"changed"`
+	Unchanged []FindingPair      `json:"unchanged" yaml:"unchanged"`
+	Summary   FindingDiffSummary `json:"summary" yaml:"summary"`
+}
+
+type FindingRef struct {
+	ID       string `json:"id" yaml:"id"`
+	Kind     string `json:"kind" yaml:"kind"`
+	Category string `json:"category" yaml:"category"`
+	Status   string `json:"status" yaml:"status"`
+	Severity string `json:"severity" yaml:"severity"`
+	Priority string `json:"priority" yaml:"priority"`
+	Title    string `json:"title" yaml:"title"`
+}
+
+// FindingPair links a previous finding to the current one. MatchedBy is
+// "title" (same kind, category, and normalized title) or "location" (same
+// kind and category and a shared affected location, line numbers ignored).
+type FindingPair struct {
+	PreviousID string `json:"previous_id" yaml:"previous_id"`
+	CurrentID  string `json:"current_id" yaml:"current_id"`
+	MatchedBy  string `json:"matched_by" yaml:"matched_by"`
+}
+
+type FindingChange struct {
+	PreviousID string        `json:"previous_id" yaml:"previous_id"`
+	CurrentID  string        `json:"current_id" yaml:"current_id"`
+	MatchedBy  string        `json:"matched_by" yaml:"matched_by"`
+	Title      string        `json:"title" yaml:"title"`
+	Kind       string        `json:"kind" yaml:"kind"`
+	Category   string        `json:"category" yaml:"category"`
+	Changes    []FieldChange `json:"changes" yaml:"changes"`
+}
+
+type FieldChange struct {
+	Field string `json:"field" yaml:"field"`
+	From  string `json:"from" yaml:"from"`
+	To    string `json:"to" yaml:"to"`
+}
+
+// FindingDiffSummary counts findings whose status is confirmed or likely as
+// unresolved. Reopened and resolved count matched pairs whose status crossed
+// that line.
+type FindingDiffSummary struct {
+	PreviousTotal    int                           `json:"previous_total" yaml:"previous_total"`
+	CurrentTotal     int                           `json:"current_total" yaml:"current_total"`
+	UnresolvedBefore int                           `json:"unresolved_before" yaml:"unresolved_before"`
+	UnresolvedAfter  int                           `json:"unresolved_after" yaml:"unresolved_after"`
+	NewUnresolved    int                           `json:"new_unresolved" yaml:"new_unresolved"`
+	GoneUnresolved   int                           `json:"gone_unresolved" yaml:"gone_unresolved"`
+	Reopened         int                           `json:"reopened" yaml:"reopened"`
+	Resolved         int                           `json:"resolved" yaml:"resolved"`
+	ByKind           map[string]KindUnresolvedDiff `json:"by_kind" yaml:"by_kind"`
+}
+
+type KindUnresolvedDiff struct {
+	UnresolvedBefore int `json:"unresolved_before" yaml:"unresolved_before"`
+	UnresolvedAfter  int `json:"unresolved_after" yaml:"unresolved_after"`
+}
+
+type CoverageDiff struct {
+	Added        []CoverageRef         `json:"added" yaml:"added"`
+	Removed      []CoverageRef         `json:"removed" yaml:"removed"`
+	Changed      []CoverageChange      `json:"changed" yaml:"changed"`
+	Unchanged    int                   `json:"unchanged" yaml:"unchanged"`
+	TotalsBefore CoverageCounts        `json:"totals_before" yaml:"totals_before"`
+	TotalsAfter  CoverageCounts        `json:"totals_after" yaml:"totals_after"`
+	Sessions     []SessionCoverageDiff `json:"sessions" yaml:"sessions"`
+}
+
+type CoverageRef struct {
+	Session  string `json:"session" yaml:"session"`
+	ID       string `json:"id" yaml:"id"`
+	Surface  string `json:"surface" yaml:"surface"`
+	Check    string `json:"check" yaml:"check"`
+	Identity string `json:"identity" yaml:"identity"`
+	State    string `json:"state" yaml:"state"`
+}
+
+type CoverageChange struct {
+	Session    string `json:"session" yaml:"session"`
+	PreviousID string `json:"previous_id" yaml:"previous_id"`
+	CurrentID  string `json:"current_id" yaml:"current_id"`
+	Surface    string `json:"surface" yaml:"surface"`
+	Check      string `json:"check" yaml:"check"`
+	Identity   string `json:"identity" yaml:"identity"`
+	From       string `json:"from" yaml:"from"`
+	To         string `json:"to" yaml:"to"`
+}
+
+type SessionCoverageDiff struct {
+	ID     string         `json:"id" yaml:"id"`
+	Before CoverageCounts `json:"before" yaml:"before"`
+	After  CoverageCounts `json:"after" yaml:"after"`
+}
+
+// StatementDiff is filled only when both workspaces hold statement.yaml.
+type StatementDiff struct {
+	Compared              bool   `json:"compared" yaml:"compared"`
+	EnsphereVersionBefore string `json:"ensphere_version_before" yaml:"ensphere_version_before"`
+	EnsphereVersionAfter  string `json:"ensphere_version_after" yaml:"ensphere_version_after"`
+	AssessedByBefore      string `json:"assessed_by_before" yaml:"assessed_by_before"`
+	AssessedByAfter       string `json:"assessed_by_after" yaml:"assessed_by_after"`
+	LedgerEntriesBefore   int    `json:"ledger_entries_before" yaml:"ledger_entries_before"`
+	LedgerEntriesAfter    int    `json:"ledger_entries_after" yaml:"ledger_entries_after"`
+}
+
+// SARIFOutput is the JSON result of ensphere run sarif.
+type SARIFOutput struct {
+	Workspace string `json:"workspace" yaml:"workspace"`
+	SARIFPath string `json:"sarif_path" yaml:"sarif_path"`
+	Results   int    `json:"results" yaml:"results"`
+	Rules     int    `json:"rules" yaml:"rules"`
+	Message   string `json:"message" yaml:"message"`
 }

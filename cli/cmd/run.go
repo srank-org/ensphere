@@ -29,6 +29,7 @@ var (
 	runAssessedBy          string
 	runOperator            string
 	runPlanForce           bool
+	runDiffPrevious        string
 )
 
 var runCmd = &cobra.Command{
@@ -131,11 +132,13 @@ var runReportCmd = &cobra.Command{
 var runStatementCmd = &cobra.Command{
 	Use:   "statement",
 	Short: "Write the Statement of Assessment from the workspace",
-	Long: `Derive 09-report/statement.yaml and statement.md from the workspace: config,
-progress, plan decisions, coverage counts, finding counts, and evidence ledger
-hashes. Nothing is typed by the caller. The command refuses to run until
-ensphere run report is ready, and the report gate fails with statement_stale
-or statement_edited if the workspace or the markdown changes afterwards.`,
+	Long: `Derive 09-report/statement.yaml, statement.md, and statement.json from the
+workspace: config, progress, plan decisions, coverage counts, finding counts,
+and evidence ledger hashes. Nothing is typed by the caller. statement.json is
+the predicate a CI provenance attestation signs. The command refuses to run
+until ensphere run report is ready, and the report gate fails with
+statement_stale, statement_edited, or statement_json_missing if the workspace,
+the markdown, or the JSON changes afterwards.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out, err := runner.RunStatement(runWorkspace, version)
 		if err != nil {
@@ -148,6 +151,60 @@ or statement_edited if the workspace or the markdown changes afterwards.`,
 		}
 		return encodeRunJSON(out)
 	},
+}
+
+var runDiffCmd = &cobra.Command{
+	Use:   "diff",
+	Short: "Compare this workspace with a previous assessment",
+	Long: `Compare this workspace's finding registry, coverage files, and statement with
+a previous assessment's workspace and write 09-report/diff.json and diff.md.
+
+Findings match by kind, category, and normalized title, then by kind,
+category, and a shared affected location with line numbers ignored. The diff
+reports what changed between the two registries and coverage sets and assigns
+nothing: it exits 0 whenever both inputs parse, and the release pipeline
+decides which changes fail the build.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if strings.TrimSpace(runDiffPrevious) == "" {
+			return exitRunError(fmt.Errorf("%w: --previous is required", errUsage))
+		}
+		out, err := runner.RunDiff(runWorkspace, runDiffPrevious)
+		if errors.Is(err, runner.ErrPreviousNotDirectory) {
+			return exitRunError(fmt.Errorf("%w: --previous: %v", errUsage, err))
+		}
+		if err != nil {
+			return exitRunError(err)
+		}
+		return encodeRunJSON(out)
+	},
+}
+
+var runSarifCmd = &cobra.Command{
+	Use:   "sarif",
+	Short: "Export the finding registry as SARIF 2.1.0",
+	Long: `Write 09-report/findings.sarif from the finding registry for upload to code
+scanning. Only confirmed, likely, and informational findings become results.
+The SARIF level translates the analyst's severity (critical and high to error,
+medium to warning, anything else to note); nothing is assigned.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		out, err := runner.RunSARIF(runWorkspace, version)
+		if err != nil {
+			return exitRunError(err)
+		}
+		return encodeRunJSON(out)
+	},
+}
+
+// exitRunError exits 2 for a usage error and 3 for a runtime failure, so a
+// release pipeline can tell a bad invocation from an unreadable workspace.
+func exitRunError(err error) error {
+	if errors.Is(err, errUsage) {
+		writeVerifyError(err)
+	} else {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	}
+	osExit(exitForVerifyError(err))
+	return nil
 }
 
 func init() {
@@ -169,8 +226,9 @@ func init() {
 	runInitCmd.Flags().StringVar(&runOperator, "operator", "", "Person who authorizes the assessment and signs the statement")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
+	runDiffCmd.Flags().StringVar(&runDiffPrevious, "previous", "", "Workspace directory of the previous assessment (required)")
 
-	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runStatementCmd)
+	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runStatementCmd, runDiffCmd, runSarifCmd)
 	rootCmd.AddCommand(runCmd)
 }
 

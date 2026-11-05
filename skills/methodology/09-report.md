@@ -9,11 +9,8 @@ checked. Session 09 performs no new probing.
 ## Gate
 
 Run `ensphere run report`. Fix every error. Warnings become explicit
-limitations. The gate checks that planned sessions are terminal, session
-reports and `coverage.yaml` files exist, evidence chains verify, every
-`tested` coverage row cites evidence in its session ledger, and every finding
-cites evidence that exists inside the workspace. The gate output includes
-the coverage counts per session; those are the numbers the report uses.
+limitations. The gate output includes the coverage counts per session;
+those are the numbers the report uses.
 
 ## Synthesis
 
@@ -140,7 +137,15 @@ attestation, or certification." Then a signature block for the operator.
 It records a digest of its inputs, and the gate fails with `statement_stale`
 if the workspace changes afterwards. Do not edit the statement by hand. If
 a number looks wrong, fix the workspace file it came from and run the
-command again. The operator signs it, not the model.
+command again. The operator signs it, not the model. The command also
+writes `statement.json`, the record a release pipeline signs.
+
+When a previous assessment's workspace is available, run `ensphere run
+diff --previous <dir>`. It matches findings by kind, category, and title
+first and by a shared affected location second, so keep a finding's title
+stable across runs for the same root cause, and let the report's summary
+say what is new, reopened, and resolved. Run `ensphere run sarif` when
+findings go to code scanning. Both read the registry and decide nothing.
 
 Write `09-report/evidence-appendix.md` as the claim-to-evidence table:
 finding ID, claim, evidence category and strength, evidence ID or path,

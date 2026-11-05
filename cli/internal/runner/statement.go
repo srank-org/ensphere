@@ -34,8 +34,13 @@ func statementMarkdownPath(workspace string) string {
 	return filepath.Join(workspace, "09-report", "statement.md")
 }
 
-// RunStatement writes 09-report/statement.yaml and statement.md from the
-// workspace. It refuses to run while the report gate has error issues.
+func statementJSONPath(workspace string) string {
+	return filepath.Join(workspace, "09-report", "statement.json")
+}
+
+// RunStatement writes 09-report/statement.yaml, statement.md, and
+// statement.json from the workspace. It refuses to run while the report gate
+// has error issues other than the ones regenerating fixes.
 func RunStatement(workspace, version string) (*StatementOutput, error) {
 	if workspace == "" {
 		workspace = defaultWorkspace
@@ -47,7 +52,12 @@ func RunStatement(workspace, version string) (*StatementOutput, error) {
 	if !gate.Ready {
 		var codes []string
 		for _, issue := range gate.Issues {
-			if issue.Severity == "error" && issue.Code != "statement_stale" && issue.Code != "statement_edited" {
+			if issue.Severity != "error" {
+				continue
+			}
+			switch issue.Code {
+			case "statement_stale", "statement_edited", "statement_markdown_missing", "statement_json_missing":
+			default:
 				codes = append(codes, issue.Code)
 			}
 		}
@@ -70,10 +80,14 @@ func RunStatement(workspace, version string) (*StatementOutput, error) {
 	if err := os.WriteFile(statementMarkdownPath(workspace), []byte(renderStatementMarkdown(statement)), 0644); err != nil {
 		return nil, fmt.Errorf("write statement markdown: %w", err)
 	}
+	if err := writeIndentedJSON(statementJSONPath(workspace), statement); err != nil {
+		return nil, err
+	}
 	return &StatementOutput{
 		Workspace:     workspace,
 		StatementPath: statementPath(workspace),
 		MarkdownPath:  statementMarkdownPath(workspace),
+		JSONPath:      statementJSONPath(workspace),
 		InputsDigest:  statement.InputsDigest,
 		Message:       "Statement of Assessment written from the workspace. The operator signs statement.md; do not edit it by hand.",
 	}, nil
@@ -258,6 +272,23 @@ func validateStatement(workspace string, coverage *CoverageSummary) ([]ReportGat
 		}
 	} else {
 		issues = append(issues, gateIssue("error", "statement_markdown_missing", mdPath, "statement.yaml exists but statement.md is missing; run ensphere run statement again"))
+	}
+	jsonPath := statementJSONPath(workspace)
+	if !fileExists(jsonPath) {
+		issues = append(issues, gateIssue("error", "statement_json_missing", jsonPath, "statement.yaml exists but statement.json is missing; run ensphere run statement again"))
+		return issues, state
+	}
+	rawJSON, err := os.ReadFile(jsonPath)
+	if err != nil {
+		issues = append(issues, gateIssue("error", "statement_read_failed", jsonPath, err.Error()))
+		return issues, state
+	}
+	// An unparseable statement.json is reported as edited, not as a parse
+	// failure, so that ensphere run statement can still regenerate it.
+	var storedJSON Statement
+	if err := json.Unmarshal(rawJSON, &storedJSON); err != nil || storedJSON.InputsDigest != stored.InputsDigest {
+		state = "edited"
+		issues = append(issues, gateIssue("error", "statement_edited", jsonPath, "statement.json does not match statement.yaml; regenerate it instead of editing by hand"))
 	}
 	return issues, state
 }

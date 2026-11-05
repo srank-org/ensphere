@@ -1,0 +1,154 @@
+# Ensphere on every release: a GitHub Actions template.
+#
+# Copy this file to .github/workflows/ensphere.yml in the project under
+# assessment and replace every <placeholder>. A run is agent time measured
+# in tens of minutes to a few hours, so it belongs on a schedule or a release
+# tag, never on pull requests. docs/release-pipeline.md in the Ensphere
+# repository explains every gate below and the network boundary.
+#
+# What the agent may touch is the allow-list on the "Run the assessment"
+# step. It names the ensphere binary, the sandbox commands, and file tools.
+# It deliberately omits curl, wget, nc, python, and node, so every request the
+# agent sends goes through ensphere and lands in the ledger under scope
+# enforcement. Add what your sandbox needs; never add a raw network tool.
+
+name: Ensphere assessment
+
+on:
+  schedule:
+    - cron: "0 18 * * *" # nightly, at a quiet hour for your runner
+  push:
+    tags: ["v*"] # and on every release tag
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # keyless signing of the statement
+  attestations: write # publishing the signed provenance record
+  security-events: write # SARIF upload to code scanning
+  actions: read # downloading the previous run's workspace
+
+concurrency:
+  group: ensphere
+  cancel-in-progress: false
+
+env:
+  ENSPHERE_REF: main # pin a tag or commit once one exists
+  CLAUDE_MODEL: claude-fable-5-1 # also written into the statement
+  WORKSPACE: ensphere-pentest
+
+jobs:
+  assess:
+    runs-on: ubuntu-latest # or your self-hosted runner
+    timeout-minutes: 240
+    steps:
+      - name: Check out the system under assessment
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+
+      - name: Install Ensphere, the CLI and the skill
+        run: |
+          git clone --depth 1 --branch "$ENSPHERE_REF" https://github.com/srank-org/ensphere.git /tmp/ensphere
+          make -C /tmp/ensphere build
+          sudo install /tmp/ensphere/bin/ensphere /usr/local/bin/ensphere
+          /tmp/ensphere/install-skills.sh --target claude
+          ensphere --version
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Start and seed the sandbox
+        run: |
+          <sandbox start> # e.g. docker compose -f compose.sandbox.yml up -d --wait
+          <sandbox seed> # e.g. npm run seed:synthetic
+
+      - name: Initialise the workspace with every input the run needs
+        run: |
+          ensphere run init \
+            --target "http://localhost:3000" \
+            --environment sandbox \
+            --in-scope localhost \
+            --login-url /login --username sandbox-a --password "${{ secrets.SANDBOX_PASSWORD }}" \
+            --approved-bursts "<METHOD /path: count/seconds, ...>" \
+            --approved-upload-sizes "<bytes>" \
+            --assessed-by "$CLAUDE_MODEL via Claude Code $(claude --version)" \
+            --operator "<Name, role>"
+          cat >> "$WORKSPACE/config.md" <<'CFG'
+
+          ## Sandbox
+          - Start: <sandbox start>
+          - Seed: <sandbox seed>
+          - Reset: <sandbox reset>
+          CFG
+
+      - name: Fetch the previous assessment, if there is one
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --workflow "${{ github.workflow }}" --status success --limit 1 --json databaseId --jq '.[0].databaseId' || true)
+          if [ -n "$run_id" ] && gh run download "$run_id" --name ensphere-workspace --dir previous; then
+            echo "PREVIOUS=previous" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run the assessment
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          claude -p "ensphere" --model "$CLAUDE_MODEL" \
+            --allowedTools "Bash(ensphere:*),Bash(<sandbox start>),Bash(<sandbox seed>),Bash(<sandbox reset>),Bash(docker compose ps:*),Read,Glob,Grep,Write,Edit"
+
+      - name: Gate on the report
+        run: ensphere run statement # exits 2 until the report gate passes
+
+      - name: Export SARIF and compare with the previous run
+        run: |
+          ensphere run sarif
+          if [ -n "${PREVIOUS:-}" ]; then
+            ensphere run diff --previous "$PREVIOUS"
+          fi
+
+      - name: Upload findings to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ env.WORKSPACE }}/09-report/findings.sarif
+          category: ensphere
+
+      - name: Sign the statement's provenance
+        uses: actions/attest@v2
+        with:
+          subject-path: ${{ env.WORKSPACE }}/09-report/statement.yaml
+          predicate-type: https://github.com/srank-org/ensphere/statement/v1
+          predicate-path: ${{ env.WORKSPACE }}/09-report/statement.json
+
+      - name: Keep the workspace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ensphere-workspace
+          path: |
+            ${{ env.WORKSPACE }}/09-report
+            ${{ env.WORKSPACE }}/progress.md
+            ${{ env.WORKSPACE }}/assessment-plan.yaml
+            ${{ env.WORKSPACE }}/*/report.md
+            ${{ env.WORKSPACE }}/*/coverage.yaml
+            ${{ env.WORKSPACE }}/*/evidence.jsonl
+          retention-days: 90
+
+      - name: Policy
+        run: |
+          # Fail the release on an unresolved P0, and on any unresolved finding
+          # that is new or reopened since the previous run. Both are facts the
+          # registry and the diff state; neither is a count of findings alone.
+          p0=$(yq '[.findings[] | select((.status == "confirmed" or .status == "likely") and .priority == "P0")] | length' "$WORKSPACE/09-report/finding-registry.yaml")
+          test "$p0" -eq 0
+          if [ -f "$WORKSPACE/09-report/diff.json" ]; then
+            jq -e '.findings.summary.new_unresolved == 0 and .findings.summary.reopened == 0' "$WORKSPACE/09-report/diff.json"
+          fi
+
+      - name: Stop the sandbox
+        if: always()
+        run: <sandbox stop> # e.g. docker compose -f compose.sandbox.yml down -v

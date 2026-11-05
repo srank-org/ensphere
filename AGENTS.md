@@ -28,7 +28,8 @@ produces the same outputs. It never classifies, interprets, or judges.
 The CLI may: send scoped HTTP requests, measure timing, hash responses,
 capture headers, count rows, read provider configuration through a provider
 CLI, validate scope, redact secrets, compute CVSS from supplied metrics, map
-categories to compliance controls.
+categories to compliance controls, compare two workspaces and report what
+changed, translate the analyst's severity into a SARIF level.
 
 The CLI must not: assign status, confidence, or severity; apply thresholds
 ("delta > 500ms means SQLi"); decide exploitability; name a technique in a
@@ -63,7 +64,7 @@ command and never probes production.
 | `cli/internal/callback/` | Local out-of-band listener |
 | `cli/internal/enums/` | Shared enum vocabulary |
 | `assets/seeds/` | YAML payload sources |
-| `templates/` | Workspace config template |
+| `templates/` | Workspace config template and CI workflow template |
 
 ## Build and test
 
