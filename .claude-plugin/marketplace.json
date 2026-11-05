@@ -1,0 +1,15 @@
+{
+  "name": "srank",
+  "description": "Ensphere, a defensive security assessment for systems you own: a written method, a measurement CLI with an evidence ledger, and a report gate.",
+  "owner": {
+    "name": "srank",
+    "url": "https://github.com/srank-org"
+  },
+  "plugins": [
+    {
+      "name": "ensphere",
+      "source": "./",
+      "description": "Defensive security assessment of a system you own, with a measurement CLI, an evidence ledger, and a report gate."
+    }
+  ]
+}

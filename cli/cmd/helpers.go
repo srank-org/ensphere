@@ -8,9 +8,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/srank-org/ensphere/internal/runner"
 	"github.com/srank-org/ensphere/internal/verify"
 )
 
+// errUsage is wrapped first ("%w: detail") so the message reads
+// "usage error: detail".
 var errUsage = errors.New("usage error")
 var osExit = os.Exit
 
@@ -39,15 +43,31 @@ func addProbeFlags(cmd *cobra.Command, f *probeFlags) {
 }
 
 // buildProbeConfig turns shared flag values into a ProbeConfig. It exits the
-// process on a malformed --header, matching the other verify error paths.
+// process on a malformed --header, matching the other verify error paths, and
+// exits 2 when an assessment workspace exists and --in-scope names a pattern
+// its config.md does not approve.
 func buildProbeConfig(f *probeFlags) verify.ProbeConfig {
+	headers := mustParseHeaders(f.headers)
+	mustBeWorkspaceScope(f.inScope)
 	return verify.ProbeConfig{
 		InScope:    f.inScope,
 		MaxRisk:    f.maxRisk,
 		ThrottleMs: f.throttle,
 		TimeoutSec: f.timeout,
-		Headers:    mustParseHeaders(f.headers),
+		Headers:    headers,
 		Evidence:   f.evidence,
+	}
+}
+
+func mustBeWorkspaceScope(patterns []string) {
+	cwd, _ := os.Getwd()
+	workspace, ok := runner.FindWorkspace(cwd, os.Getenv)
+	if !ok {
+		return
+	}
+	if err := runner.CheckScopeApproved(workspace, patterns); err != nil {
+		writeVerifyError(err)
+		osExit(2)
 	}
 }
 
@@ -108,7 +128,7 @@ func writeVerifyError(err error) {
 	case errors.As(err, &scopeErr):
 		fmt.Fprintf(os.Stderr, "scope error: %s\n", err)
 	case errors.Is(err, errUsage):
-		fmt.Fprintf(os.Stderr, "usage error: %s\n", err)
+		fmt.Fprintln(os.Stderr, err)
 	default:
 		fmt.Fprintf(os.Stderr, "probe error: %s\n", err)
 	}

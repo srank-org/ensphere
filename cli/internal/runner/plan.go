@@ -117,13 +117,7 @@ func BuildAssessmentPlan(cfg InitConfig, workspace string) *AssessmentPlan {
 	targetType := normalizeTargetType(cfg.TargetType)
 	liveTarget := strings.TrimSpace(cfg.TargetURL) != ""
 	cloud := parseList(cfg.Cloud)
-	scope := parseList(cfg.InScope)
-	if len(scope) == 0 {
-		scope = []string{cfg.InScope}
-	}
-	if cfg.InScope == "" {
-		scope = []string{"All network-reachable endpoints of the target application"}
-	}
+	scope := scopeTokens(cfg.InScope)
 	classificationSource := "config"
 	classificationConfidence := "low"
 	rationale := []string{
@@ -506,9 +500,6 @@ func readConfig(workspace string) (InitConfig, error) {
 	cfg.Environment = defaultEnvironment(cfg.Environment, cfg.TargetURL)
 	if cfg.Cloud == "" {
 		cfg.Cloud = "none"
-	}
-	if cfg.InScope == "" {
-		cfg.InScope = "All network-reachable endpoints of the target application"
 	}
 	if cfg.OutOfScope == "" {
 		cfg.OutOfScope = "Third-party services, production systems"

@@ -22,7 +22,10 @@ Fast orientation for agents and contributors.
 
 | Path | Purpose |
 |------|---------|
-| [skills/](skills/) | The Ensphere skill: entry point, contract, methodology, checklists |
+| [.claude-plugin/](.claude-plugin/) | Plugin manifest and marketplace entry |
+| [hooks/](hooks/) | Assessment guard and session-start hooks |
+| [agents/](agents/) | The fresh-context session agent |
+| [skills/](skills/) | The assessment skill (`ensphere/`) and the setup skill (`ensphere-setup/`) |
 | [cli/cmd/](cli/cmd/) | Cobra command layer |
 | [cli/internal/](cli/internal/) | Deterministic business logic |
 | [assets/seeds/](assets/seeds/) | YAML payload sources |

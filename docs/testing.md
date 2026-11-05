@@ -21,6 +21,7 @@ GitHub Actions runs on every push and on pull requests. The workflow uses `go-ve
 - `cd cli && go test -race -short ./internal/verify/`
 - `make smoke`
 - `make verify-generated`
+- `claude plugin validate .` in a second job, for the plugin and marketplace manifests, the hooks file, and the agent. It is not run with `--strict` because the validator warns that a plugin does not load the repository's CLAUDE.md, which is expected.
 
 ## Generated Artifacts
 
@@ -48,9 +49,10 @@ diff, and SARIF contracts directly.
 |------|---------|---------|
 | `cmd/helpers_test.go` | cmd | Command helper behavior: header parsing and verify exit-code mapping |
 | `cmd/subprocess_test.go` | cmd | Subprocess CLI contract tests for help, JSON output, evidence, scope failure, and malformed headers |
-| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, the statement refusal exit code, run diff, and run sarif |
+| `cmd/run_test.go` | cmd | Runner CLI lifecycle: init, scope list validation and default, environment flag validation, assessor and operator recording, status, next, plan drafting, the report gate, the statement refusal exit code, run diff, run sarif, and the hook commands |
 | `runner/workspace_test.go` | runner | Workspace, planning, environment tier and chains drafting, source-only drafting, report contracts, the three progress states, which sessions may omit coverage.yaml, and evidence/citation gates |
 | `runner/statement_test.go` | runner | Coverage file validation codes, the baseline/probe/control citation rule, statement generation in YAML, Markdown, and JSON, stable inputs digest, and stale, edited, or missing-JSON statement detection |
+| `guard/guard_test.go` | guard | Hook guard classification: allow for ensphere and approved sandbox commands, deny for raw network tools, inline-code interpreters, wrappers, substitutions, and constructs the scanner cannot follow, no opinion otherwise |
 | `runner/diff_test.go` | runner | Workspace comparison: finding matching by title and by location with line drift, new, gone, changed, reopened, and resolved counts, coverage row changes, statement comparison, deterministic output |
 | `runner/sarif_test.go` | runner | SARIF export: rule ids, severity-to-level translation, physical and logical locations, registry fallback location, fingerprint stability, excluded statuses, deterministic output |
 | `verify/helpers_test.go` | verify | Shared test utilities (newTestServer, baseProbeConfig, assertScopeErr, handler factories) |

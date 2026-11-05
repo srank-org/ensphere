@@ -1,0 +1,47 @@
+# Release binaries for the ensphere CLI. The tag is the version the binary
+# reports, and .github/workflows/release.yml checks it against the plugin
+# manifest before building, so a plugin and its binary always carry the same
+# version string.
+version: 2
+project_name: ensphere
+
+before:
+  hooks:
+    - make copy-seeds
+
+builds:
+  - id: ensphere
+    dir: cli
+    main: .
+    binary: ensphere
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/srank-org/ensphere/cmd.version={{ .Tag }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+release:
+  prerelease: auto

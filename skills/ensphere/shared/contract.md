@@ -46,9 +46,11 @@ one application or service in it is named.
 - **Source is always in scope.** Source review proceeds with or without a
   live target.
 - **A live target is optional** and belongs to one of the two tiers below.
-  Its URL, tier, and in-scope hosts are recorded in `config.md`, and every
-  verify command carries `--in-scope`. The CLI refuses any host outside it,
-  including redirect hops.
+  Its URL, tier, and in-scope host patterns are recorded in `config.md`,
+  and every verify command carries `--in-scope`. The CLI refuses any host
+  outside it, including redirect hops, and refuses any `--in-scope` pattern
+  the config does not list. Scope is widened only by the operator editing
+  `config.md`.
 - **Third parties are never targets.** A payment, mail, AI, or analytics
   provider the application calls is out of scope even when its hostname
   appears in the code. Only the operator's own configuration of that
@@ -120,8 +122,9 @@ are human gates, where a decision belongs to the operator:
 
 Foresee gates 2 and 4 in Session 01.5 and ask for everything at once. A gate
 whose answer is already in `config.md` is pre-answered: the authorization
-statement, sandbox commands under a `Sandbox` heading, approved burst counts
-and upload sizes, the operator's name. Do not ask again; cite the heading.
+statement, sandbox commands under a `Sandbox` heading (written by the
+`--sandbox-*` flags of `run init` or by the operator), approved burst
+counts and upload sizes, the operator's name. Do not ask again; cite the heading.
 Anything else that would need the operator is recorded as `blocked` or
 `not_tested` and the run goes on.
 

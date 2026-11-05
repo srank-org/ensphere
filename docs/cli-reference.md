@@ -36,6 +36,11 @@ plan.
 
 - Scope validation precedes every verify request and every redirect hop.
   A host outside `--in-scope` is refused with exit 2.
+- When an assessment workspace exists (`ENSPHERE_WORKSPACE`, then
+  `./ensphere-pentest`, then `$CLAUDE_PROJECT_DIR/ensphere-pentest`), every
+  `--in-scope` pattern must appear in the scope recorded in its `config.md`,
+  or the command is refused with exit 2. Scope is approved by the operator
+  in the workspace, not chosen on the command line.
 - The default maximum risk is 3. Each verify family carries a fixed risk;
   SQLi also selects payload records by risk; `verify request` carries the
   risk the analyst declares with `--risk`. Risk 4 and 5 payloads never read
@@ -129,14 +134,23 @@ Flags for `run init`:
 --source-path            Path to the source tree under assessment, default "."
 --target-type            auto (default), web_app, api_backend, static_site, mobile_client_remote_backend, mobile_client_offline, desktop_or_extension_client, cloud_only, library_or_cli
 --cloud                  none (default), aws, gcp, azure, kubernetes, cloudflare, supabase, or comma-separated
---in-scope               In-scope boundary summary
+--in-scope               Comma-separated host patterns the verify commands must stay within (hostnames, globs such as *.example.com, IPs, CIDRs); defaults to the target's host
 --out-of-scope           Out-of-scope boundary summary
 --login-url, --username, --password   Test identity for authenticated sessions
 --approved-bursts        Operator-approved rate-limit bursts, e.g. "POST /api/otp: 10/10s"
 --approved-upload-sizes  Operator-approved upload sizes in bytes for the size-limit probe
 --assessed-by            Model or person performing the assessment, e.g. "Claude Fable 5.1 via Claude Code"
 --operator               Person who authorizes the assessment and signs the statement
+--sandbox-start          Command that starts the sandbox; written under ## Sandbox in config.md, which approves it
+--sandbox-seed           Command that seeds the sandbox with synthetic data
+--sandbox-reset          Command that resets the sandbox to its seeded state
 ```
+
+The three sandbox flags write a `## Sandbox` section into `config.md` with
+`Start`, `Seed`, and `Reset` lines. Writing a command there is the
+operator's approval of it: the agent may run it, and the plugin's guard
+allows it without prompting. Add further lines by hand for anything else
+the sandbox needs, one `- Label: command` per line.
 
 `--assessed-by` and `--operator` are recorded under an `Assessment` heading
 in `config.md` and copied into the Statement of Assessment. Both may be
@@ -262,6 +276,46 @@ registry.
 Runner-generated state, plans, recon profiles, report artifacts, and finding
 registries use one canonical schema. Unknown fields are rejected rather than
 ignored.
+
+## Hook
+
+The two commands behind the plugin's hooks (`hooks/hooks.json`). Each reads
+the Claude Code hook JSON on stdin and exits 0; the decision is in the
+output, so a missing binary is the only thing that blocks, and the shell
+wrapper reports that itself.
+
+```bash
+ensphere hook pre-tool-use                      # PreToolUse for Bash
+ensphere hook session-start --plugin-version 0.2.0
+```
+
+`hook pre-tool-use` has no opinion unless an assessment workspace exists
+for the hook's `cwd` (discovered as above) and `ENSPHERE_GUARD` is not
+`off`. With a workspace it splits the Bash command into simple commands,
+following pipes, `&&`, `;`, `$(...)`, backticks, and `sh -c` strings, and
+strips `sudo`, `env`, `timeout`, and similar wrappers before classifying
+each command word. It prints a `deny` decision when any simple command is a
+raw network tool (`curl`, `wget`, `nc`, `ssh`, `nmap`, and the rest of a
+fixed list in `cli/internal/guard`), an interpreter running inline code
+(`python -c`, `node -e`, a shell or interpreter fed by a pipe or here-doc,
+and similar), or a construct it cannot follow (`eval`, `xargs`, `source`, a
+command word that is a variable, an unterminated quote). Commands run by
+`find -exec` are classified like any other. The scanner does not read
+scripts from disk or follow programs that run other programs (`make`, npm
+scripts); those fall through to the normal permission flow, and the
+container boundary in `docs/release-pipeline.md` is the layer that holds
+when a script reaches the network. It prints an `allow`
+decision when every simple command is `ensphere` or the whole line equals
+a command the operator wrote under `## Sandbox` in `config.md`. Otherwise
+it prints nothing and the harness's normal permission flow applies. The
+deny reason names the command and the way forward: the CLI for requests,
+`evidence log` for observations, the `## Sandbox` section for an approved
+command, or `ENSPHERE_GUARD=off`.
+
+`hook session-start` prints, when a workspace exists, the workspace path,
+the contents of `next-action.md`, the session states from `progress.md`,
+and whether the binary's version matches the plugin's. The harness adds
+the text to the session's context.
 
 ## Verify
 

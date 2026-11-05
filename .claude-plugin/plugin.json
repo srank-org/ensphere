@@ -1,0 +1,13 @@
+{
+  "name": "ensphere",
+  "version": "0.2.0",
+  "description": "Defensive security assessment of a system you own: a written method, a measurement CLI with a hash-chained evidence ledger, and a report gate. Say \"ensphere\" to start or resume.",
+  "author": {
+    "name": "srank",
+    "url": "https://github.com/srank-org"
+  },
+  "homepage": "https://github.com/srank-org/ensphere",
+  "repository": "https://github.com/srank-org/ensphere",
+  "license": "AGPL-3.0",
+  "keywords": ["security", "assessment", "defensive", "evidence", "sandbox"]
+}

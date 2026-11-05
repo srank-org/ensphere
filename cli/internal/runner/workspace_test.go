@@ -78,7 +78,7 @@ func TestRunPlanWritesDraftAndStatusSummary(t *testing.T) {
 		TargetURL:  "https://api.example.com",
 		TargetType: "api_backend",
 		Cloud:      "aws",
-		InScope:    "api.example.com, aws://123456789012",
+		InScope:    "api.example.com",
 	}); err != nil {
 		t.Fatalf("init workspace: %v", err)
 	}

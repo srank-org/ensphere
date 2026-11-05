@@ -36,6 +36,17 @@ Because none of the reasoning lives in the tool, a better model produces a bette
 
 ## Running it
 
+Ensphere is a Claude Code plugin plus a Go binary. In Claude Code:
+
+```text
+/plugin marketplace add srank-org/ensphere
+/plugin install ensphere@srank
+```
+
+Then say `ensphere-setup` once. It installs the `ensphere` binary at the plugin's version, from a signed release when one exists and from source otherwise, and tells you which provider CLIs are logged in. The plugin also installs two hooks: while a project holds an assessment workspace, raw network tools such as `curl` are refused so every request goes through the CLI's scope enforcement, and each new session starts from the workspace's next action. Set `ENSPHERE_GUARD=off` to switch the guard off for a shell.
+
+For Codex or another harness that loads skills from a directory, or to build by hand:
+
 ```bash
 git clone https://github.com/srank-org/ensphere.git
 cd ensphere
@@ -43,7 +54,7 @@ make build            # builds bin/ensphere
 make install-all      # installs the binary to /usr/local/bin and the skill to ~/.claude and ~/.codex
 ```
 
-You need **Go 1.26+** to build and an **agent surface that can load a skill**: Claude Code, Codex, or similar. For platform configuration checks the agent uses the provider's own CLI, so have `aws`, `gcloud`, `az`, `wrangler`, or `supabase` installed and logged in for the platforms you run on. The agent tells you which one it needs and marks the check blocked until you sign in.
+You need **Go 1.26+** to build from source. If you later switch to the plugin, remove the copied skill with `./install-skills.sh --uninstall --target claude` so it is not loaded twice. For platform configuration checks the agent uses the provider's own CLI, so have `aws`, `gcloud`, `az`, `wrangler`, or `supabase` installed and logged in for the platforms you run on. The agent tells you which one it needs and marks the check blocked until you sign in.
 
 Then, in the project you want to check:
 
@@ -121,7 +132,7 @@ Not yet measured. Ensphere is a proof of concept published for review, and a cle
 
 ## For agents
 
-`make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere`. The entry point is [`skills/ensphere/SKILL.md`](skills/ensphere/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The workspace is the protocol between sessions: an orchestrator can run recon, planning, and the report itself and dispatch each check session to a fresh subagent with a short brief, and a harness without subagents runs the same files in one context and resumes from `next-action.md` after a context loss. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
+The repository is a Claude Code plugin: `.claude-plugin/plugin.json` is the manifest, `skills/ensphere/` is the assessment skill, `skills/ensphere-setup/` installs the matching binary, `agents/ensphere-session.md` is the fresh-context agent that runs one check session, and `hooks/` holds the assessment guard. `make install-all` copies the skill to `~/.claude/skills/ensphere` and `~/.codex/skills/ensphere` for harnesses without plugins. The entry point is [`skills/ensphere/SKILL.md`](skills/ensphere/SKILL.md), which loads the contract, the fundamentals map, and one methodology file per session. The workspace is the protocol between sessions: an orchestrator can run recon, planning, and the report itself and dispatch each check session to a fresh subagent with a short brief, and a harness without subagents runs the same files in one context and resumes from `next-action.md` after a context loss. [`AGENTS.md`](AGENTS.md) is the entry point for agents working on the Ensphere codebase itself.
 
 ---
 

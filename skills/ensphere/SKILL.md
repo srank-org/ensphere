@@ -110,7 +110,8 @@ First-run inputs, collected once:
 - source path and the selected deployable when the repository has several;
 - live target URL and its tier (`sandbox` or `staging`), if any, and the
   target type;
-- in-scope and out-of-scope hosts, assets, and accounts;
+- in-scope host patterns (the verify commands may send nowhere else) and
+  the out-of-scope hosts, assets, and accounts;
 - stability constraints, prohibited actions, and approved request limits
   (burst counts per endpoint, upload sizes);
 - test identities, roles, and tenants for a staging target (the sandbox
@@ -177,8 +178,11 @@ ensphere-pentest/
 ## Using the CLI
 
 `ensphere help` and each subcommand's `--help` are the source of truth.
-Every verify command requires `--in-scope`; scope failures exit 2, runtime
-failures exit 3, and a refusal is never worked around. Three commands do
+Every verify command requires `--in-scope`, and the patterns must be the
+ones `config.md` records; scope failures exit 2, runtime failures exit 3,
+and a refusal is never worked around. While a workspace exists, the
+plugin's guard refuses `curl` and every other raw network tool: a request
+is sent with the CLI or not at all. Three commands do
 most of the work:
 
 - `ensphere verify request` sends one request you construct, labelled

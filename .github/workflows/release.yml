@@ -1,0 +1,50 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # publish the release
+  id-token: write # keyless signing of the binaries' provenance
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+
+      - name: Check that the plugin manifest carries this version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          plugin=$(jq -r .version .claude-plugin/plugin.json)
+          if [ "$tag" != "$plugin" ]; then
+            echo "plugin.json version $plugin does not match tag $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+
+      - name: Build and publish the binaries
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign the binaries' provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/checksums.txt

@@ -1,0 +1,28 @@
+{
+  "description": "Ensphere assessment guard. While an ensphere-pentest workspace exists in the project: raw network tools are refused so every request goes through the ensphere CLI and its scope enforcement; ensphere itself and the sandbox commands the operator wrote into config.md run without prompting; everything else follows the normal permission flow. A new session starts from next-action.md and reports a binary that does not match the plugin.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/pre-tool-use.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

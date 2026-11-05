@@ -35,9 +35,16 @@ func InitWorkspace(cfg InitConfig) (*Status, error) {
 	if cfg.Cloud == "" {
 		cfg.Cloud = "none"
 	}
-	if cfg.InScope == "" {
-		cfg.InScope = "All network-reachable endpoints of the target application"
+	scope, err := ParseScopeList(cfg.InScope)
+	if err != nil {
+		return nil, err
 	}
+	if len(scope) == 0 {
+		if host := targetHost(cfg.TargetURL); host != "" {
+			scope = []string{host}
+		}
+	}
+	cfg.InScope = strings.Join(scope, ", ")
 	if cfg.OutOfScope == "" {
 		cfg.OutOfScope = "Third-party services, production systems"
 	}
@@ -133,7 +140,7 @@ func renderConfig(cfg InitConfig) string {
 - Source path: %s
 - Target type: %s
 - Cloud: %s
-
+%s
 ## Authentication
 - Login URL: %s
 - Username: %s
@@ -155,7 +162,26 @@ func renderConfig(cfg InitConfig) string {
 ## Authorization
 This assessment is authorized against the environment named above by its owner.
 It does not authorize exploitation, data extraction, or testing of any other system.
-`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes, cfg.AssessedBy, cfg.Operator)
+`, cfg.TargetURL, cfg.Environment, cfg.SourcePath, cfg.TargetType, cfg.Cloud, renderSandbox(cfg), cfg.LoginURL, cfg.Username, cfg.Password, cfg.InScope, cfg.OutOfScope, cfg.ApprovedBursts, cfg.ApprovedUploadSizes, cfg.AssessedBy, cfg.Operator)
+}
+
+// renderSandbox writes the ## Sandbox section for the commands run init was
+// given. Listing a command there is the operator's approval of it.
+func renderSandbox(cfg InitConfig) string {
+	var b strings.Builder
+	for _, line := range []struct{ label, command string }{
+		{"Start", cfg.SandboxStart},
+		{"Seed", cfg.SandboxSeed},
+		{"Reset", cfg.SandboxReset},
+	} {
+		if command := strings.TrimSpace(line.command); command != "" {
+			fmt.Fprintf(&b, "- %s: %s\n", line.label, command)
+		}
+	}
+	if b.Len() == 0 {
+		return ""
+	}
+	return "\n## Sandbox\n" + b.String()
 }
 
 func renderProgress(workspace string) string {

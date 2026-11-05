@@ -28,6 +28,9 @@ var (
 	runApprovedUploadSizes string
 	runAssessedBy          string
 	runOperator            string
+	runSandboxStart        string
+	runSandboxSeed         string
+	runSandboxReset        string
 	runPlanForce           bool
 	runDiffPrevious        string
 )
@@ -73,7 +76,13 @@ var runInitCmd = &cobra.Command{
 			ApprovedUploadSizes: runApprovedUploadSizes,
 			AssessedBy:          runAssessedBy,
 			Operator:            runOperator,
+			SandboxStart:        runSandboxStart,
+			SandboxSeed:         runSandboxSeed,
+			SandboxReset:        runSandboxReset,
 		})
+		if errors.Is(err, runner.ErrInvalidScope) {
+			return exitRunError(fmt.Errorf("%w: %v", errUsage, err))
+		}
 		if err != nil {
 			return err
 		}
@@ -215,7 +224,7 @@ func init() {
 	runInitCmd.Flags().StringVar(&runTargetType, "target-type", "auto", "Target type: auto, web_app, api_backend, static_site, mobile_client_remote_backend, mobile_client_offline, desktop_or_extension_client, cloud_only, or library_or_cli")
 	runInitCmd.Flags().StringVar(&runEnvironment, "environment", "", "Environment tier of the live target: sandbox, staging, or none (default: sandbox when --target is set, none otherwise)")
 	runInitCmd.Flags().StringVar(&runCloud, "cloud", "none", "Platform scope: none, aws, gcp, azure, kubernetes, cloudflare, supabase, or comma-separated")
-	runInitCmd.Flags().StringVar(&runInScope, "in-scope", "", "In-scope boundary summary")
+	runInitCmd.Flags().StringVar(&runInScope, "in-scope", "", "Comma-separated host patterns every verify command must stay within: hostnames, globs (*.example.com), IPs, or CIDRs (default: the --target host; empty for a source-only assessment)")
 	runInitCmd.Flags().StringVar(&runOutOfScope, "out-of-scope", "", "Out-of-scope boundary summary")
 	runInitCmd.Flags().StringVar(&runLoginURL, "login-url", "", "Login URL")
 	runInitCmd.Flags().StringVar(&runUsername, "username", "", "Test username")
@@ -224,6 +233,9 @@ func init() {
 	runInitCmd.Flags().StringVar(&runApprovedUploadSizes, "approved-upload-sizes", "", "Operator-approved upload sizes in bytes for Session 08.5")
 	runInitCmd.Flags().StringVar(&runAssessedBy, "assessed-by", "", "Model or person performing the assessment, e.g. \"Claude Fable 5.1 via Claude Code\"")
 	runInitCmd.Flags().StringVar(&runOperator, "operator", "", "Person who authorizes the assessment and signs the statement")
+	runInitCmd.Flags().StringVar(&runSandboxStart, "sandbox-start", "", "Exact command that starts the disposable sandbox; writing it under ## Sandbox in config.md is the operator's approval to run it")
+	runInitCmd.Flags().StringVar(&runSandboxSeed, "sandbox-seed", "", "Exact command that loads the sandbox's synthetic fixtures; writing it under ## Sandbox in config.md is the operator's approval to run it")
+	runInitCmd.Flags().StringVar(&runSandboxReset, "sandbox-reset", "", "Exact command that returns the sandbox to its seeded state; writing it under ## Sandbox in config.md is the operator's approval to run it")
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
 	runDiffCmd.Flags().StringVar(&runDiffPrevious, "previous", "", "Workspace directory of the previous assessment (required)")

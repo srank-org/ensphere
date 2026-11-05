@@ -25,7 +25,7 @@ already in `config.md` is not asked again.
 | Gate | Where the answer lives |
 |------|------------------------|
 | Authorization and first-run inputs | `config.md`, written by `run init` flags: target, scope, test identity, assessor, operator. The authorization statement is part of the file. |
-| Sandbox start, seed, and reset commands | A `## Sandbox` section in `config.md` with `Start`, `Seed`, and `Reset` lines. Writing them there approves them. |
+| Sandbox start, seed, and reset commands | A `## Sandbox` section in `config.md` with `Start`, `Seed`, and `Reset` lines, written by the `--sandbox-start`, `--sandbox-seed`, and `--sandbox-reset` flags of `run init` or by hand. Writing them there approves them. |
 | Assessment-level blocker | Cannot be pre-answered. The run stops, writes a Needs-from-you list, and the pipeline fails. Fix the input and rerun. |
 | Staging state change or burst count | Do not give the pipeline a staging target, or record every burst count and upload size in `config.md` with `--approved-bursts` and `--approved-upload-sizes`. |
 | Finished report and statement | The pipeline publishes them; the operator signs the statement. |
@@ -58,31 +58,27 @@ ensphere run init \
   --approved-bursts "POST /api/auth/otp: 20/10s, POST /api/upload: 10/10s" \
   --approved-upload-sizes "26214400" \
   --assessed-by "$MODEL via Claude Code $(claude --version)" \
-  --operator "Jane Doe, CTO"
+  --operator "Jane Doe, CTO" \
+  --sandbox-start "docker compose -f compose.sandbox.yml up -d --wait" \
+  --sandbox-seed "npm run seed:synthetic" \
+  --sandbox-reset "docker compose -f compose.sandbox.yml down -v && docker compose -f compose.sandbox.yml up -d --wait && npm run seed:synthetic"
+#    The three sandbox flags write the ## Sandbox section of config.md, which
+#    is the operator's approval of those exact commands.
 
-# 3. Approve the sandbox commands by writing them into config.md.
-cat >> ensphere-pentest/config.md <<'CFG'
-
-## Sandbox
-- Start: docker compose -f compose.sandbox.yml up -d --wait
-- Seed: npm run seed:synthetic
-- Reset: docker compose -f compose.sandbox.yml down -v && docker compose -f compose.sandbox.yml up -d --wait && npm run seed:synthetic
-CFG
-
-# 4. Run the agent unattended with the prompt "ensphere". The allow-list
+# 3. Run the agent unattended with the prompt "ensphere". The allow-list
 #    names the ensphere binary, the sandbox commands, and file tools, and
 #    nothing that can open a socket on its own.
 claude -p "ensphere" --model "$MODEL" \
   --allowedTools "Bash(ensphere:*),Bash(docker compose:*),Bash(npm run seed:synthetic),Read,Glob,Grep,Write,Edit"
 
-# 5. Gate. The statement command exits 2 until the report gate passes.
+# 4. Gate. The statement command exits 2 until the report gate passes.
 ensphere run statement
 
-# 6. Compare with the previous release and export for code scanning.
+# 5. Compare with the previous release and export for code scanning.
 ensphere run diff --previous ../previous-release/ensphere-pentest
 ensphere run sarif
 
-# 7. Policy. Fail the release on an unresolved P0 and on any unresolved
+# 6. Policy. Fail the release on an unresolved P0 and on any unresolved
 #    finding that is new or reopened since the previous run.
 p0=$(yq '[.findings[] | select((.status == "confirmed" or .status == "likely") and .priority == "P0")] | length' \
   ensphere-pentest/09-report/finding-registry.yaml)
@@ -90,7 +86,7 @@ test "$p0" -eq 0
 jq -e '.findings.summary.new_unresolved == 0 and .findings.summary.reopened == 0' \
   ensphere-pentest/09-report/diff.json
 
-# 8. Publish.
+# 7. Publish.
 tar czf ensphere-report.tgz \
   ensphere-pentest/09-report \
   ensphere-pentest/*/evidence.jsonl \
@@ -181,6 +177,12 @@ The CLI refuses any host outside `--in-scope`, including redirect hops,
 for every request that goes through it. That boundary holds only if the
 CLI is the agent's only way to send a request. Two layers make it so:
 
+- **The guard.** The plugin's PreToolUse hook refuses raw network tools,
+  inline-code interpreters, and shell constructs it cannot follow whenever
+  a workspace exists, on a developer's machine and in `claude -p` alike.
+  It also auto-approves `ensphere` and the sandbox commands in `config.md`,
+  and every verify command checks its `--in-scope` against the scope the
+  operator approved there.
 - **The allow-list.** In `claude -p`, allow `Bash(ensphere:*)`, the exact
   sandbox commands, and the file tools. Do not allow `curl`, `wget`, `nc`,
   `python`, `node`, or a shell wrapper that could reach them. Every request

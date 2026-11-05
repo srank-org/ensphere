@@ -52,8 +52,22 @@ func TestMain(m *testing.M) {
 
 func runCLISplit(t *testing.T, args ...string) commandResult {
 	t.Helper()
+	return runCLIIn(t, cliRoot, "", args...)
+}
+
+// runCLIIn runs the CLI from dir with stdin and an environment that names no
+// assessment workspace, so workspace discovery sees only what dir holds.
+func runCLIIn(t *testing.T, dir, stdin string, args ...string) commandResult {
+	t.Helper()
 	cmd := exec.Command(cliBinary, args...)
-	cmd.Dir = cliRoot
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(stdin)
+	for _, kv := range os.Environ() {
+		key, _, _ := strings.Cut(kv, "=")
+		if key != "ENSPHERE_WORKSPACE" && key != "CLAUDE_PROJECT_DIR" && key != "ENSPHERE_GUARD" {
+			cmd.Env = append(cmd.Env, kv)
+		}
+	}
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -252,8 +266,8 @@ func TestCLIMalformedHeaderIsUsageExit(t *testing.T) {
 	if result.code != 2 {
 		t.Fatalf("expected usage exit 2, got %d stderr=%s stdout=%s", result.code, result.stderr, result.stdout)
 	}
-	if !strings.Contains(result.stderr, "malformed --header") {
-		t.Fatalf("expected malformed header message, got %s", result.stderr)
+	if !strings.HasPrefix(result.stderr, "usage error: malformed --header") || strings.Count(result.stderr, "usage error") != 1 {
+		t.Fatalf("expected one usage error prefix and the malformed header message, got %s", result.stderr)
 	}
 
 	result = runCLISplit(t, "verify", "cors",

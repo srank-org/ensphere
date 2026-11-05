@@ -22,6 +22,7 @@
 
 ## Scope
 - In scope: staging.example.invalid
+- (In scope is a comma-separated list of host patterns, such as localhost, *.staging.example.invalid, or 10.0.0.0/8. Every ensphere verify command must stay within it; a --in-scope pattern not listed here is refused.)
 - Out of scope: third-party services, production systems
 - Rules to avoid: no load testing, no data destruction
 - Approved rate-limit bursts: (endpoint → burst count / window, agreed with the operator before Session 08.5)

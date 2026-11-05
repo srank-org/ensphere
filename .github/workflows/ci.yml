@@ -29,3 +29,18 @@ jobs:
 
       - name: Generated artifact drift
         run: make verify-generated
+
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      # Not --strict: CLAUDE.md at the repository root is for people and agents
+      # working on Ensphere itself, and the validator warns that a plugin does
+      # not load it. That warning is expected; everything else must pass.
+      - name: Validate the plugin and marketplace manifests
+        run: claude plugin validate .

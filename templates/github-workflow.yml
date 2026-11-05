@@ -43,19 +43,18 @@ jobs:
     timeout-minutes: 240
     steps:
       - name: Check out the system under assessment
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: "1.26"
 
-      - name: Install Ensphere, the CLI and the skill
+      - name: Install Ensphere, the plugin and the binary, at one pinned version
         run: |
           git clone --depth 1 --branch "$ENSPHERE_REF" https://github.com/srank-org/ensphere.git /tmp/ensphere
           make -C /tmp/ensphere build
           sudo install /tmp/ensphere/bin/ensphere /usr/local/bin/ensphere
-          /tmp/ensphere/install-skills.sh --target claude
           ensphere --version
 
       - name: Install Claude Code
@@ -76,14 +75,10 @@ jobs:
             --approved-bursts "<METHOD /path: count/seconds, ...>" \
             --approved-upload-sizes "<bytes>" \
             --assessed-by "$CLAUDE_MODEL via Claude Code $(claude --version)" \
-            --operator "<Name, role>"
-          cat >> "$WORKSPACE/config.md" <<'CFG'
-
-          ## Sandbox
-          - Start: <sandbox start>
-          - Seed: <sandbox seed>
-          - Reset: <sandbox reset>
-          CFG
+            --operator "<Name, role>" \
+            --sandbox-start "<sandbox start>" \
+            --sandbox-seed "<sandbox seed>" \
+            --sandbox-reset "<sandbox reset>"
 
       - name: Fetch the previous assessment, if there is one
         env:
@@ -98,7 +93,10 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          claude -p "ensphere" --model "$CLAUDE_MODEL" \
+          # --plugin-dir loads the pinned checkout as the plugin, hooks included,
+          # so the guard refuses raw network tools here exactly as it does on a
+          # developer's machine.
+          claude -p "ensphere" --model "$CLAUDE_MODEL" --plugin-dir /tmp/ensphere \
             --allowedTools "Bash(ensphere:*),Bash(<sandbox start>),Bash(<sandbox seed>),Bash(<sandbox reset>),Bash(docker compose ps:*),Read,Glob,Grep,Write,Edit"
 
       - name: Gate on the report

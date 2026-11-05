@@ -57,7 +57,7 @@ func TestCLIRunPlanWritesAssessmentPlan(t *testing.T) {
 		"--target", "https://api.example.com",
 		"--target-type", "api_backend",
 		"--cloud", "aws",
-		"--in-scope", "api.example.com, aws://123456789012",
+		"--in-scope", "api.example.com",
 	)
 	if initResult.code != 0 {
 		t.Fatalf("run init exit %d stderr=%s", initResult.code, initResult.stderr)
@@ -125,8 +125,8 @@ func TestCLIRunInitRejectsUnknownEnvironment(t *testing.T) {
 	if result.code != 2 {
 		t.Fatalf("expected usage exit 2, got %d stderr=%s", result.code, result.stderr)
 	}
-	if !strings.Contains(result.stderr, "usage error") {
-		t.Fatalf("expected usage error on stderr, got %s", result.stderr)
+	if !strings.HasPrefix(result.stderr, "usage error: --environment") || strings.Count(result.stderr, "usage error") != 1 {
+		t.Fatalf("expected one usage error prefix on stderr, got %s", result.stderr)
 	}
 	if _, err := os.Stat(filepath.Join(workspace, "config.md")); err == nil {
 		t.Fatal("expected no workspace to be created for a rejected environment")
@@ -266,7 +266,7 @@ func TestCLIRunDiffUsageErrors(t *testing.T) {
 		"--previous not a directory": {"run", "--workspace", current, "diff", "--previous", filepath.Join(root, "nope")},
 	} {
 		result := runCLISplit(t, args...)
-		if result.code != 2 || !strings.Contains(result.stderr, "usage error") {
+		if result.code != 2 || !strings.HasPrefix(result.stderr, "usage error: --previous") || strings.Count(result.stderr, "usage error") != 1 {
 			t.Fatalf("%s: expected usage exit 2, got %d stderr=%s", name, result.code, result.stderr)
 		}
 	}

@@ -5,7 +5,8 @@ Guidance for agents working in the Ensphere repository.
 ## What this is
 
 Ensphere is a defensive security checker for a system its operator owns: a
-portable agent skill (`skills/`) that carries the assessment methodology, plus
+Claude Code plugin whose skill (`skills/ensphere/`) carries the assessment
+methodology and whose hooks enforce that requests go through the CLI, plus
 a Go CLI (`cli/`) that performs scoped measurements and keeps a hash-chained
 evidence ledger. The agent reads the operator's source, stands up a sandbox
 copy, runs Sessions 01 to 09 (08.7 proves chains in the sandbox), and writes
@@ -44,6 +45,10 @@ command and never probes production.
 
 | Path | Purpose |
 |------|---------|
+| `.claude-plugin/` | Plugin manifest and the marketplace entry; the version here is the version the binary must report |
+| `hooks/` | Assessment guard: a PreToolUse hook that refuses raw network tools while a workspace exists and auto-approves `ensphere` and the config's sandbox commands, and a SessionStart hook that injects `next-action.md` and checks the binary version. Both call `ensphere hook`. |
+| `agents/` | `ensphere-session`, the fresh-context agent that runs one check session from a brief |
+| `skills/ensphere-setup/` | Installs the binary at the plugin's version and checks provider CLIs |
 | `skills/ensphere/SKILL.md` | Agent entry point |
 | `skills/ensphere/shared/contract.md` | The one rulebook: scope, evidence, findings, stop rules |
 | `skills/ensphere/shared/fundamentals.md` | Stack-agnostic map of roles, invariants, and generic fixes; the checks themselves |
@@ -55,7 +60,8 @@ command and never probes production.
 | `cli/cmd/` | Cobra commands, one file per command, flags only |
 | `cli/internal/verify/` | Measurement probes and the shared scoped HTTP layer |
 | `cli/internal/evidence/` | Hash-chained JSONL ledger, redaction, locking |
-| `cli/internal/runner/` | Workspace init, plan validation, next-action handoff, report gate |
+| `cli/internal/runner/` | Workspace init, plan validation, next-action handoff, report gate, statement, diff, SARIF, workspace discovery and approved scope |
+| `cli/internal/guard/` | The hook guard's command classifier |
 | `cli/internal/scan/`, `cli/internal/sinks/` | Regex sink scanner and its pattern data |
 | `cli/internal/payloads/` | Embedded payload corpus and query |
 | `cli/internal/cloud/` | Read-only provider configuration probes |
@@ -89,7 +95,12 @@ conventions.
   `--max-risk`, or `--header` by hand.
 - Errors wrap with `fmt.Errorf("context: %w", err)`.
 - Every verify command requires `--in-scope`. Scope failures exit 2, runtime
-  failures exit 3.
+  failures exit 3. When a workspace exists in the working directory, every
+  `--in-scope` pattern must appear in the scope the operator approved in
+  `config.md`; the shared flag helper enforces it for every family.
+- The plugin version in `.claude-plugin/plugin.json`, the release tag, and
+  the version the binary reports are one number. Bump the manifest in the
+  same commit as the tag; the release workflow refuses a mismatch.
 - There is one assessment mode. Source is always in scope; a live target is
   optional (`run init` without `--target` yields a draft plan with
   `environment: none` whose measurement sessions are limited to source review).

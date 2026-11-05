@@ -23,6 +23,9 @@ type InitConfig struct {
 	ApprovedUploadSizes string
 	AssessedBy          string
 	Operator            string
+	SandboxStart        string
+	SandboxSeed         string
+	SandboxReset        string
 }
 
 type Status struct {

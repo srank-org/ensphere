@@ -35,7 +35,8 @@ Not allowed in code:
 | `cli/internal/verify/` | Verification probe logic |
 | `cli/internal/evidence/` | JSONL evidence writer and reader |
 | `cli/internal/payloads/` | Embedded YAML payload seeds and query logic |
-| `cli/internal/runner/` | Workspace runner, assessment-plan drafting, coverage validation, Session 09 report gate, Statement of Assessment |
+| `cli/internal/runner/` | Workspace runner, assessment-plan drafting, coverage validation, Session 09 report gate, Statement of Assessment, diff, SARIF, workspace discovery, approved scope |
+| `cli/internal/guard/` | Classifier behind the `ensphere hook pre-tool-use` guard |
 | `cli/internal/compliance/` | Compliance mappings |
 | `cli/internal/cvss/` | CVSS v4.0 calculator |
 | `cli/internal/scan/` | Regex-based sink scanner |
@@ -45,7 +46,8 @@ Not allowed in code:
 | `cli/internal/openapi/` | OpenAPI parser |
 | `cli/internal/enums/` | Shared enum validation maps |
 | `assets/seeds/` | Payload YAML sources (embedded via a copy under `cli/internal/payloads/data/`) |
-| `skills/` | Agent methodology and checklists |
+| `skills/` | The assessment skill (`ensphere/`) and the setup skill (`ensphere-setup/`) |
+| `.claude-plugin/`, `hooks/`, `agents/` | Plugin manifest, hook scripts, and the session agent |
 | `docs/` | Product and engineering documentation |
 
 ## Build
