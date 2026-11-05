@@ -18,6 +18,21 @@ Fast orientation for agents and contributors.
 | CLI commands and flags | [docs/cli-reference.md](docs/cli-reference.md) |
 | Running it from a release pipeline | [docs/release-pipeline.md](docs/release-pipeline.md) |
 
+## For agents running an assessment
+
+The repository is a Claude Code plugin: `.claude-plugin/plugin.json` is the
+manifest, `skills/ensphere/` the assessment skill, `skills/ensphere-setup/`
+the installer for the matching binary, `agents/ensphere-session.md` the
+fresh-context agent that runs one check session, and `hooks/` the assessment
+guard. `make install-all` copies the skill to `~/.claude/skills/ensphere` and
+`~/.codex/skills/ensphere` for harnesses without plugins. The entry point,
+[skills/ensphere/SKILL.md](skills/ensphere/SKILL.md), loads the contract, the
+fundamentals map, and one methodology file per session. The workspace is the
+protocol between sessions: an orchestrator runs recon, planning, and the
+report itself and dispatches each check session to a fresh subagent with a
+short brief, and a harness without subagents runs the same files in one
+context and resumes from `next-action.md` after a context loss.
+
 ## Repository map
 
 | Path | Purpose |

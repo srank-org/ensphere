@@ -4,11 +4,36 @@ This document is the full command reference for the `ensphere` Go CLI. Commands 
 
 ## Build and Install
 
+In Claude Code, install the plugin (`/plugin marketplace add srank-org/ensphere`,
+then `/plugin install ensphere@srank`) and say `ensphere-setup`: it installs the
+binary that matches the plugin's version from a signed release, checks the
+checksum and the provenance attestation, reports which provider CLIs are
+logged in, and ends with `ensphere run doctor`. The plugin installs two hooks:
+while a project holds an assessment workspace, raw network tools such as
+`curl` are refused so every request goes through the CLI's scope enforcement,
+and each new session starts from the workspace's next action. Set
+`ENSPHERE_GUARD=off` to switch the guard off for one shell.
+
+For Codex or another harness that loads skills from a directory, or to build
+by hand (Go 1.26 or newer):
+
 ```bash
+git clone https://github.com/srank-org/ensphere.git
+cd ensphere
 make build        # build ./bin/ensphere
-make install      # install binary to /usr/local/bin/ensphere
-make install-all  # install binary and skill files
+make install      # install the binary to /usr/local/bin/ensphere
+make install-all  # install the binary and copy the skill to ~/.claude and ~/.codex
 ```
+
+If you later switch to the plugin, remove the copied skill with
+`./install-skills.sh --uninstall --target claude` so it is not loaded twice.
+A binary built from an untagged checkout reports a commit hash instead of a
+release version, and the doctor says so.
+
+For platform configuration checks the agent uses the provider's own CLI, so
+have `aws`, `gcloud`, `az`, `wrangler`, or `supabase` installed and logged in
+for the platforms you run on. The agent names the one it needs and marks the
+check blocked until you sign in; Ensphere never logs in on your behalf.
 
 You can also run directly from source:
 
