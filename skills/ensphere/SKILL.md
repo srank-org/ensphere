@@ -91,7 +91,9 @@ When the user says `ensphere` or names a session:
 1. Locate `ensphere-pentest/config.md` and `progress.md`. If absent, collect
    the first-run inputs below and run `ensphere run init`. Never assume
    authorization from repository access alone.
-2. Run `ensphere run status` and read `next-action.md`, the assessment plan,
+2. Run `ensphere run doctor` and fix every `error` it reports before going
+   on; a `warning` becomes a stated limitation. Then run `ensphere run
+   status` and read `next-action.md`, the assessment plan,
    the current session's methodology, its assigned checklists, the previous
    session report, and any `checkpoint.md`.
 3. If the workspace contains several deployable applications, confirm which
@@ -215,7 +217,8 @@ most of the work:
   (a source citation, a database row after a chain step) into the ledger,
   and `ensphere evidence verify` checks the chain before a session ends.
 
-`ensphere run` manages the workspace, `scan` and `openapi` produce leads
+`ensphere run` manages the workspace and `run doctor` checks, read-only,
+that a run can proceed here; `scan` and `openapi` produce leads
 and inventories, `payloads` selects controlled inputs by risk, `callback`
 runs the out-of-band listener, `cloud` reads provider configuration
 read-only, and `cvss` and `compliance` are optional. If a checklist command
@@ -237,6 +240,8 @@ run it; record the row `blocked` with the reason.
   the row after it, the transcript while the observation is fresh.
 - Prefer the sandbox for anything that changes state. Prefer staging only
   for what the sandbox cannot show: the edge, platform settings, drift.
+- Never edit the system you are assessing. The report says what to fix;
+  the tree stays at one commit, and the gate checks that it did.
 - When source and live disagree, record both and say which the finding
   rests on.
 - Tell the operator what is missing once, in the Needs-from-you list, with

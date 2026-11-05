@@ -61,6 +61,7 @@ rows:
     reason: "no XML parser in the inventory"
 `)
 	writeValidFindingRegistry(t, workspace, "VULN-001")
+	promoteRegistryFindings(t, workspace)
 	return workspace
 }
 

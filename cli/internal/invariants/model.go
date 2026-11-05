@@ -106,12 +106,23 @@ type RunConfig struct {
 	Headers    map[string]string
 	Only       []string
 	Getenv     func(string) string
+	// Since and ChangedSurfaces come from ensphere map changed: the ref the
+	// working tree was compared with and the surfaces whose files changed.
+	// Each result then says whether its surface is one of them.
+	Since           string
+	ChangedSurfaces []string
+	// Guard, when set, classifies a command invariant's substituted shell
+	// string before it runs and returns the reason to refuse it, or "" to
+	// let it run. The plugin's assessment guard supplies it while a
+	// workspace exists; nil runs commands as written, as CI does.
+	Guard func(run string) string
 }
 
 // Report is the output of Run.
 type Report struct {
 	Target     string   `json:"target"`
 	SourcePath string   `json:"source_path"`
+	Since      string   `json:"since,omitempty"`
 	Guarded    bool     `json:"guarded"`
 	Invariants []Result `json:"invariants"`
 	Summary    Summary  `json:"summary"`
@@ -121,17 +132,20 @@ type Report struct {
 // Result records one invariant's run. Expect echoes the declaration before
 // environment substitution, so substituted values never reach the report.
 type Result struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	Kind       string `json:"kind"`
-	Enforce    bool   `json:"enforce"`
-	Origin     Origin `json:"origin"`
-	Surface    string `json:"surface,omitempty"`
-	Result     string `json:"result"`
-	Message    string `json:"message"`
-	Measured   any    `json:"measured"`
-	Expect     Expect `json:"expect"`
-	DurationMs int64  `json:"duration_ms"`
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Kind    string `json:"kind"`
+	Enforce bool   `json:"enforce"`
+	Origin  Origin `json:"origin"`
+	Surface string `json:"surface,omitempty"`
+	// SurfaceChanged is true when the run was given a change set and the
+	// invariant's surface is in it.
+	SurfaceChanged bool   `json:"surface_changed,omitempty"`
+	Result         string `json:"result"`
+	Message        string `json:"message"`
+	Measured       any    `json:"measured"`
+	Expect         Expect `json:"expect"`
+	DurationMs     int64  `json:"duration_ms"`
 }
 
 // Summary counts results. EnforcedFail and Error are what a CI gate fails on.
@@ -143,6 +157,9 @@ type Summary struct {
 	EnforcedFail   int `json:"enforced_fail"`
 	UnenforcedFail int `json:"unenforced_fail"`
 	UnenforcedPass int `json:"unenforced_pass"`
+	// SurfaceChanged counts the invariants whose surface changed since the
+	// ref the run was given; 0 without one.
+	SurfaceChanged int `json:"surface_changed"`
 }
 
 // Check is one expectation and whether it held.
@@ -175,11 +192,12 @@ type RateLimitMeasured struct {
 
 // SizeLimitMeasured is what a size_limit invariant measured.
 type SizeLimitMeasured struct {
-	URL           string  `json:"url"`
-	SizeBytes     int     `json:"size_bytes"`
-	StatusCode    int     `json:"status_code"`
-	ResponseBytes int     `json:"response_bytes"`
-	Checks        []Check `json:"checks"`
+	URL              string  `json:"url"`
+	SizeBytes        int     `json:"size_bytes"`
+	StatusCode       int     `json:"status_code"`
+	ResponseBytes    int     `json:"response_bytes"`
+	ConnectionClosed bool    `json:"connection_closed,omitempty"`
+	Checks           []Check `json:"checks"`
 }
 
 // SourceMeasured is what a source invariant measured. With pattern, Matches

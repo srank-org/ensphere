@@ -156,3 +156,62 @@ func TestVerifyLimits_ScopeAndTechnique(t *testing.T) {
 		t.Fatal("expected technique error")
 	}
 }
+
+func TestVerifyLimits_UploadSizeServerClosesBeforeReadingTheBody(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Errorf("hijack: %v", err)
+			return
+		}
+		_, _ = io.WriteString(conn, "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 9\r\nConnection: close\r\n\r\ntoo large")
+		_ = conn.Close()
+	}))
+	t.Cleanup(ts.Close)
+
+	cfg := LimitsConfig{
+		URL:         ts.URL + "/upload",
+		Technique:   "upload_size",
+		Sizes:       []int{8 << 20},
+		ProbeConfig: baseProbeConfig(),
+	}
+	result, err := VerifyLimits(cfg)
+	if err != nil {
+		t.Fatalf("a server that answers and closes before consuming the body is a measurement, not an error: %v", err)
+	}
+	round := result.Measurements.(LimitsMeasurements).Upload[0]
+	// Expect: 100-continue lets the server answer before any body is sent, so
+	// the 413 is read cleanly instead of being lost to a reset mid-upload.
+	if round.SizeBytes != 8<<20 || round.StatusCode != http.StatusRequestEntityTooLarge || round.ResponseBytes != 9 {
+		t.Fatalf("expected the 413 and its body, got %+v", round)
+	}
+}
+
+func TestVerifyLimits_UploadSizeDeclaresLengthAndExpectContinue(t *testing.T) {
+	var contentLength int64
+	var expect string
+	var received int64
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		contentLength, expect = r.ContentLength, r.Header.Get("Expect")
+		received, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(ts.Close)
+
+	result, err := VerifyLimits(LimitsConfig{URL: ts.URL + "/upload", Technique: "upload_size", Sizes: []int{2048}, ProbeConfig: baseProbeConfig()})
+	if err != nil {
+		t.Fatalf("VerifyLimits: %v", err)
+	}
+	round := result.Measurements.(LimitsMeasurements).Upload[0]
+	if round.StatusCode != http.StatusCreated || round.ConnectionClosed {
+		t.Fatalf("unexpected round %+v", round)
+	}
+	if contentLength <= 2048 || contentLength != received {
+		t.Fatalf("the request must declare the multipart body's exact length: Content-Length %d, received %d", contentLength, received)
+	}
+	// Go's server consumes Expect itself and sends 100 Continue before the
+	// first body read; the handler sees the body arrive in full.
+	if expect != "" && expect != "100-continue" {
+		t.Fatalf("unexpected Expect header %q", expect)
+	}
+}

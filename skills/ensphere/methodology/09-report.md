@@ -99,7 +99,8 @@ and ids the CI job supplies):
   criteria describe, with `enforce: false` and the finding as `origin`;
   the fix list tells the developer to set `enforce: true` with the fix;
 - for every tested defense worth keeping, `enforce: true` and the coverage
-  row as `origin`;
+  row as `origin`, with the row's control observation among
+  `origin.evidence`, so the file shows the check can fail;
 - `surface` names the map surface; `origin.evidence` cites the ledger.
 
 Run `ensphere invariants validate`, then `ensphere invariants run` against

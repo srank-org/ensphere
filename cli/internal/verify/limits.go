@@ -1,17 +1,21 @@
 package verify
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/srank-org/ensphere/internal/evidence"
@@ -51,6 +55,10 @@ type LimitsUploadRound struct {
 	ElapsedMs     int64  `json:"elapsed_ms"`
 	BodyHash      string `json:"body_hash"`
 	ResponseBytes int    `json:"response_bytes"`
+	// ConnectionClosed is true when the server closed the connection before
+	// the whole body was sent or the response fully read: StatusCode is the
+	// answer it sent first, or 0 when it sent none.
+	ConnectionClosed bool `json:"connection_closed,omitempty"`
 }
 
 // LimitsResponseRound records a single response-size measurement.
@@ -228,9 +236,13 @@ func verifyLimitsUploadSize(cfg LimitsConfig, throttle *Throttle, timer *Timer, 
 			return nil, fmt.Errorf("upload_size probe (size=%d): %w", size, err)
 		}
 		rounds = append(rounds, round)
-		fmt.Fprintf(os.Stderr, "[LIMITS upload_size=%d] status=%d\n", size, round.StatusCode)
+		note := fmt.Sprintf("size_bytes=%d", size)
+		if round.ConnectionClosed {
+			note += " connection_closed=true"
+		}
+		fmt.Fprintf(os.Stderr, "[LIMITS upload_size=%d] status=%d closed=%t\n", size, round.StatusCode, round.ConnectionClosed)
 		writeEvidence(ew, "limits", "upload_size", cfg.URL, field, round.StatusCode,
-			fmt.Sprintf("%dms", round.ElapsedMs), "probe", fmt.Sprintf("size_bytes=%d", size))
+			fmt.Sprintf("%dms", round.ElapsedMs), "probe", note)
 	}
 
 	return &ProbeResult{
@@ -243,38 +255,39 @@ func verifyLimitsUploadSize(cfg LimitsConfig, throttle *Throttle, timer *Timer, 
 	}, nil
 }
 
-// uploadSizeProbe streams a multipart body of `size` random bytes without
-// buffering the whole body in memory twice.
+// uploadSizeProbe streams a multipart body of `size` random bytes, declaring
+// its exact Content-Length and Expect: 100-continue as a large real upload
+// does, so a server that caps on the headers can refuse before any body is
+// sent and its answer is not lost to a connection it resets mid-upload.
 func uploadSizeProbe(cfg LimitsConfig, method, field string, size int, headers map[string]string) (LimitsUploadRound, error) {
 	if err := CheckScope(cfg.URL, cfg.InScope); err != nil {
 		return LimitsUploadRound{}, err
 	}
 
-	pr, pw := io.Pipe()
-	writer := multipart.NewWriter(pw)
-	go func() {
-		part, err := writer.CreateFormFile(field, fmt.Sprintf("ensphere-limit-%d.bin", size))
-		if err != nil {
-			pw.CloseWithError(err)
-			return
-		}
-		if _, err := io.CopyN(part, rand.Reader, int64(size)); err != nil {
-			pw.CloseWithError(err)
-			return
-		}
-		if err := writer.Close(); err != nil {
-			pw.CloseWithError(err)
-			return
-		}
-		pw.Close()
-	}()
+	var prologue, epilogue bytes.Buffer
+	writer := multipart.NewWriter(&prologue)
+	if _, err := writer.CreateFormFile(field, fmt.Sprintf("ensphere-limit-%d.bin", size)); err != nil {
+		return LimitsUploadRound{}, fmt.Errorf("build multipart body: %w", err)
+	}
+	// The part's bytes stream between the two buffers; closing the writer
+	// against the second buffer yields only the closing boundary.
+	writerForEpilogue := multipart.NewWriter(&epilogue)
+	if err := writerForEpilogue.SetBoundary(writer.Boundary()); err != nil {
+		return LimitsUploadRound{}, fmt.Errorf("build multipart body: %w", err)
+	}
+	if err := writerForEpilogue.Close(); err != nil {
+		return LimitsUploadRound{}, fmt.Errorf("build multipart body: %w", err)
+	}
+	body := io.MultiReader(bytes.NewReader(prologue.Bytes()), io.LimitReader(rand.Reader, int64(size)), bytes.NewReader(epilogue.Bytes()))
 
 	client := scopedHTTPClient(cfg.TimeoutSec, cfg.InScope, len(cfg.InScope) > 0, false)
-	req, err := http.NewRequest(method, cfg.URL, pr)
+	req, err := http.NewRequest(method, cfg.URL, body)
 	if err != nil {
 		return LimitsUploadRound{}, fmt.Errorf("build request: %w", err)
 	}
+	req.ContentLength = int64(prologue.Len() + size + epilogue.Len())
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Expect", "100-continue")
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
@@ -283,22 +296,47 @@ func uploadSizeProbe(cfg LimitsConfig, method, field string, size int, headers m
 	resp, err := client.Do(req)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
-		return LimitsUploadRound{}, fmt.Errorf("request failed: %w", err)
+		if !closedDuringUpload(err) {
+			return LimitsUploadRound{}, fmt.Errorf("request failed: %w", err)
+		}
+		return LimitsUploadRound{
+			SizeBytes:        size,
+			ElapsedMs:        elapsed,
+			BodyHash:         fmt.Sprintf("%x", sha256.Sum256(nil)),
+			ConnectionClosed: true,
+		}, nil
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
-	if err != nil {
-		return LimitsUploadRound{}, fmt.Errorf("read body: %w", err)
-	}
-
-	return LimitsUploadRound{
+	respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
+	round := LimitsUploadRound{
 		SizeBytes:     size,
 		StatusCode:    resp.StatusCode,
 		ElapsedMs:     elapsed,
 		BodyHash:      fmt.Sprintf("%x", sha256.Sum256(respBody)),
 		ResponseBytes: len(respBody),
-	}, nil
+	}
+	if readErr != nil {
+		if !closedDuringUpload(readErr) {
+			return LimitsUploadRound{}, fmt.Errorf("read body: %w", readErr)
+		}
+		round.ConnectionClosed = true
+	}
+	return round, nil
+}
+
+// closedDuringUpload reports whether err says the peer closed the connection
+// while the body was being sent or the response read. A server that refuses
+// an oversize body before consuming it commonly answers and closes, or just
+// closes; both are measurements. A refused connection, a scope failure, or a
+// timeout is not.
+func closedDuringUpload(err error) bool {
+	for _, target := range []error{io.EOF, io.ErrUnexpectedEOF, net.ErrClosed, syscall.ECONNRESET, syscall.EPIPE} {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	return false
 }
 
 func verifyLimitsResponseSize(cfg LimitsConfig, throttle *Throttle, timer *Timer, ew *evidence.Writer) (*ProbeResult, error) {

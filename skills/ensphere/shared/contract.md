@@ -78,6 +78,14 @@ one application or service in it is named.
 - **Leads are not findings.** Source candidates, `ensphere scan` matches,
   hypotheses, and imported scanner results establish that something is
   worth checking, never that it is reachable or exploitable.
+- **An assessment describes one commit.** The source tree stays at the
+  commit it was at when Session 01 began; the agent never changes the
+  system it is assessing, and fixes go in the report, not the tree. The
+  only files the run writes into the repository are under `.ensphere/`.
+  The statement names the commit, and the gate refuses a tracked file that
+  differs from it (`source_tree_modified`). `ensphere run doctor` is run
+  before Session 01 and again on resume; an `error` there is fixed before
+  any session continues.
 
 Missing optional context (a second tenant, a provider login, a staging URL)
 is a coverage limitation. It never widens what may be tested.
@@ -452,8 +460,8 @@ each before the session is `DONE`:
 - Coverage statements agree with the session reports and the plan.
 
 The Statement of Assessment is produced by `ensphere run statement` from
-the workspace, never written by the analyst. It carries the system,
-environment, dates, assessor, operator, session decisions and states,
+the workspace, never written by the analyst. It carries the system, its
+source commit, environment, dates, assessor, operator, session decisions and states,
 coverage counts, finding counts, unresolved findings, ledger hashes, and the
 Ensphere version, and ends with the sentence: "This is a self-assessment
 performed by the system owner with Ensphere. It is not an independent audit,
@@ -490,6 +498,15 @@ invariant with `enforce: false` and the finding as its origin, and every
 tested defense worth keeping into an invariant with `enforce: true` and
 the coverage row as its origin. CI fails only on an enforced invariant that
 does not hold; a developer flips `enforce` to `true` when the fix lands.
+The report gate enforces the promotion: a `confirmed` or `likely` finding
+with no invariant whose `origin.ref` names it blocks the report, and so
+does such an invariant with `enforce: true`. An invariant must be able to
+fail: one promoted from a tested defense cites, in `origin.evidence`, the
+control observation that showed the measurement distinguishing the defense
+from its absence, so a check nobody has seen fail is never promoted.
+Each `invariants run` given `--since` marks the invariants whose surface
+changed, so a pull request's reviewer sees which declared expectations
+cover the files it touched.
 An invariant that passes means one declared expectation held on the day it
 ran. It is never evidence that a surface is secure, the suite is never
 called complete, and the next full assessment re-establishes each

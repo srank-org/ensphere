@@ -34,6 +34,8 @@ var (
 	runDeltaSince          string
 	runPlanForce           bool
 	runDiffPrevious        string
+	runDoctorPluginVersion string
+	runDoctorTimeout       int
 )
 
 var runCmd = &cobra.Command{
@@ -206,6 +208,42 @@ medium to warning, anything else to note); nothing is assigned.`,
 	},
 }
 
+var runDoctorCmd = &cobra.Command{
+	Use:   "doctor",
+	Short: "Check that an assessment can run here, read-only",
+	Long: `Run every readiness check once and report each one: the binary against the
+plugin version, the workspace, the source tree's git state, the system map and
+invariants when present, one GET to the configured target inside the approved
+scope, the sandbox commands, the provider CLIs the cloud scope needs, and the
+evidence chain of every ledger. Nothing is written. Each check is ok, warning,
+error, or skipped; the output describes the tooling, never the system.
+
+Without a workspace the binary, source, map, and invariants are still checked
+from the current directory. --plugin-version defaults to the version in
+$CLAUDE_PLUGIN_ROOT/.claude-plugin/plugin.json when the plugin runs the command.
+
+Exit 0 when no check is an error, 1 otherwise.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		pluginVersion := runDoctorPluginVersion
+		if pluginVersion == "" {
+			pluginVersion = runner.PluginVersion(os.Getenv("CLAUDE_PLUGIN_ROOT"))
+		}
+		out := runner.RunDoctor(runner.DoctorConfig{
+			Workspace:     runWorkspace,
+			BinaryVersion: version,
+			PluginVersion: pluginVersion,
+			TimeoutSec:    runDoctorTimeout,
+		})
+		if err := encodeRunJSON(out); err != nil {
+			return err
+		}
+		if !out.Ready {
+			osExit(1)
+		}
+		return nil
+	},
+}
+
 // exitRunError exits 2 for a usage error and 3 for a runtime failure, so a
 // release pipeline can tell a bad invocation from an unreadable workspace.
 func exitRunError(err error) error {
@@ -243,8 +281,10 @@ func init() {
 
 	runPlanCmd.Flags().BoolVar(&runPlanForce, "force", false, "Overwrite an existing assessment-plan.yaml from config")
 	runDiffCmd.Flags().StringVar(&runDiffPrevious, "previous", "", "Workspace directory of the previous assessment (required)")
+	runDoctorCmd.Flags().StringVar(&runDoctorPluginVersion, "plugin-version", "", "Version of the installed Ensphere plugin to compare the binary with (default: read from $CLAUDE_PLUGIN_ROOT)")
+	runDoctorCmd.Flags().IntVar(&runDoctorTimeout, "timeout", 10, "Seconds to wait for the target to answer")
 
-	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runStatementCmd, runDiffCmd, runSarifCmd)
+	runCmd.AddCommand(runInitCmd, runStatusCmd, runNextCmd, runPlanCmd, runReportCmd, runStatementCmd, runDiffCmd, runSarifCmd, runDoctorCmd)
 	rootCmd.AddCommand(runCmd)
 }
 

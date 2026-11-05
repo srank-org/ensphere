@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/spf13/cobra"
 
+	"github.com/srank-org/ensphere/internal/invariants"
 	"github.com/srank-org/ensphere/internal/runner"
 	"github.com/srank-org/ensphere/internal/sysmap"
 )
@@ -59,8 +63,33 @@ the map or git fails.`,
 		if err != nil {
 			return exitRunError(err)
 		}
-		return encodeRunJSON(changes)
+		return encodeRunJSON(changeSetWithInvariants(changes, mapSourcePath))
 	},
+}
+
+// changeSetOutput is ensphere map changed's output: the change set plus the
+// invariants whose surface is in it, when the source tree holds any.
+type changeSetOutput struct {
+	*sysmap.ChangeSet
+	InvariantsAffected []invariants.Affected `json:"invariants_affected"`
+}
+
+func changeSetWithInvariants(changes *sysmap.ChangeSet, sourcePath string) changeSetOutput {
+	out := changeSetOutput{ChangeSet: changes, InvariantsAffected: []invariants.Affected{}}
+	dir := filepath.Join(sourcePath, invariants.DefaultDir)
+	if _, err := os.Stat(dir); err != nil {
+		return out
+	}
+	invs, _, err := invariants.Load(dir)
+	if err != nil {
+		return out
+	}
+	ids := make([]string, 0, len(changes.ChangedSurfaces))
+	for _, surface := range changes.ChangedSurfaces {
+		ids = append(ids, surface.ID)
+	}
+	out.InvariantsAffected = invariants.AffectedBySurfaces(invs, ids)
+	return out
 }
 
 func validateMapFile() (*sysmap.Validation, *sysmap.Map, error) {

@@ -33,6 +33,8 @@ jobs:
     steps:
       - name: Check out the system under assessment
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # --since needs the base commit in the clone
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -57,7 +59,11 @@ jobs:
           <sandbox seed> # e.g. npm run seed:synthetic
 
       - name: Run the invariants
+        # --since marks each invariant whose surface's files this change
+        # touched, so the report names the declared expectations that cover
+        # the diff. Every invariant still runs.
         env:
+          SINCE: ${{ github.event.pull_request.base.sha || github.event.before }}
           # Placeholders the invariant files reference as ${VAR}: synthetic
           # identities and object ids from the seed, never real credentials.
           TENANT_A_TOKEN: ${{ secrets.SANDBOX_TENANT_A_TOKEN }}
@@ -67,6 +73,7 @@ jobs:
           ensphere invariants run \
             --target "$SANDBOX_URL" \
             --in-scope localhost \
+            --since "$SINCE" \
             --out invariants.json
 
       - name: Keep the report

@@ -129,7 +129,8 @@ rows:
 	writeSourceFile(t, source, "routes/otp.ts", "v1\n")
 	writeSourceFile(t, source, "db/schema.sql", "v1\n")
 	writeSystemMap(t, source, "9f1c2d3e")
-	setConfigLine(t, workspace, "- Source path: .", "- Source path: "+source)
+	setSourcePath(t, workspace, source)
+	promoteRegistryFindings(t, workspace)
 	gate, err = RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report: %v", err)
@@ -150,7 +151,8 @@ func TestRunReportReportsSystemMapErrors(t *testing.T) {
 	source := t.TempDir()
 	writeSourceFile(t, source, "routes/otp.ts", "v1\n")
 	writeSystemMap(t, source, "9f1c2d3e")
-	setConfigLine(t, workspace, "- Source path: .", "- Source path: "+source)
+	setSourcePath(t, workspace, source)
+	promoteRegistryFindings(t, workspace)
 	gate, err := RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report: %v", err)

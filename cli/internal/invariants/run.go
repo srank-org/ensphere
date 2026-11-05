@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srank-org/ensphere/internal/guard"
-	"github.com/srank-org/ensphere/internal/runner"
 	"github.com/srank-org/ensphere/internal/verify"
 )
 
@@ -38,36 +36,14 @@ func fromChecks(checks []Check, measured any) outcome {
 	return outcome{result: ResultFail, message: "did not hold: " + strings.Join(failed, "; "), measured: measured}
 }
 
-// commandGuard holds the assessment guard state for a run; a nil guard means
-// no workspace was found or ENSPHERE_GUARD is off.
-type commandGuard struct {
-	approved []string
-}
-
-func findCommandGuard(sourcePath string, getenv func(string) string) *commandGuard {
-	if getenv("ENSPHERE_GUARD") == "off" {
-		return nil
-	}
-	workspace, ok := runner.FindWorkspace(sourcePath, getenv)
-	if !ok {
-		return nil
-	}
-	g := &commandGuard{}
-	if raw, err := os.ReadFile(runner.ConfigPath(workspace)); err == nil {
-		g.approved = runner.SandboxCommands(string(raw))
-	}
-	return g
-}
-
 // Run executes the invariants in order, skipping any whose id is not in
 // cfg.Only when Only is set. It assumes invs passed Validate.
 //
-// When an assessment workspace is found from cfg.SourcePath and
-// ENSPHERE_GUARD is not off, each command invariant's substituted run string
-// is classified by the assessment guard first, and a deny makes the result
-// error without executing it. Otherwise an agent could run a raw network tool
-// during an assessment by writing it into an invariant. CI, with no
-// workspace, runs commands unguarded; Report.Guarded records which mode ran.
+// When cfg.Guard is set, each command invariant's substituted run string goes
+// through it first, and a refusal makes the result error without executing
+// it. Otherwise an agent could run a raw network tool during an assessment by
+// writing it into an invariant. CI, with no guard, runs commands as written;
+// Report.Guarded records which mode ran.
 func Run(invs []Invariant, cfg RunConfig) *Report {
 	if cfg.Getenv == nil {
 		cfg.Getenv = os.Getenv
@@ -80,35 +56,42 @@ func Run(invs []Invariant, cfg RunConfig) *Report {
 		only[id] = true
 	}
 	throttle := verify.NewThrottle(cfg.ThrottleMs)
-	cmdGuard := findCommandGuard(cfg.SourcePath, cfg.Getenv)
 
-	report := &Report{Target: cfg.Target, SourcePath: cfg.SourcePath, Guarded: cmdGuard != nil, Invariants: []Result{}}
+	changed := make(map[string]bool, len(cfg.ChangedSurfaces))
+	for _, id := range cfg.ChangedSurfaces {
+		changed[strings.TrimSpace(id)] = true
+	}
+	report := &Report{Target: cfg.Target, SourcePath: cfg.SourcePath, Since: cfg.Since, Guarded: cfg.Guard != nil, Invariants: []Result{}}
 	for _, inv := range invs {
 		if len(only) > 0 && !only[inv.ID] {
 			continue
 		}
 		start := time.Now()
-		out := runOne(inv, cfg, throttle, cmdGuard)
+		out := runOne(inv, cfg, throttle)
 		report.Invariants = append(report.Invariants, Result{
-			ID:         inv.ID,
-			Title:      inv.Title,
-			Kind:       inv.Kind,
-			Enforce:    inv.Enforce,
-			Origin:     inv.Origin,
-			Surface:    inv.Surface,
-			Result:     out.result,
-			Message:    out.message,
-			Measured:   out.measured,
-			Expect:     inv.Expect,
-			DurationMs: time.Since(start).Milliseconds(),
+			ID:             inv.ID,
+			Title:          inv.Title,
+			Kind:           inv.Kind,
+			Enforce:        inv.Enforce,
+			Origin:         inv.Origin,
+			Surface:        inv.Surface,
+			SurfaceChanged: inv.Surface != "" && changed[inv.Surface],
+			Result:         out.result,
+			Message:        out.message,
+			Measured:       out.measured,
+			Expect:         inv.Expect,
+			DurationMs:     time.Since(start).Milliseconds(),
 		})
 	}
 	report.Summary = summarize(report.Invariants)
 	report.Message = summaryMessage(report.Summary)
+	if cfg.Since != "" {
+		report.Message += fmt.Sprintf(" %d invariant(s) cover a surface whose files changed since %s.", report.Summary.SurfaceChanged, cfg.Since)
+	}
 	return report
 }
 
-func runOne(inv Invariant, cfg RunConfig, throttle *verify.Throttle, cmdGuard *commandGuard) outcome {
+func runOne(inv Invariant, cfg RunConfig, throttle *verify.Throttle) outcome {
 	resolved, missing := substitute(inv, cfg.Getenv)
 	if len(missing) > 0 {
 		return errorOutcome("environment variable not set: %s", strings.Join(missing, ", "))
@@ -130,9 +113,9 @@ func runOne(inv Invariant, cfg RunConfig, throttle *verify.Throttle, cmdGuard *c
 	case KindSource:
 		return runSource(resolved, cfg.SourcePath)
 	case KindCommand:
-		if cmdGuard != nil {
-			if decision := guard.Decide(resolved.Run, cmdGuard.approved); decision.Verdict == guard.VerdictDeny {
-				return errorOutcome("%s", decision.Reason)
+		if cfg.Guard != nil {
+			if reason := cfg.Guard(resolved.Run); reason != "" {
+				return errorOutcome("%s", reason)
 			}
 		}
 		return runCommand(resolved, cfg.SourcePath)
@@ -144,6 +127,9 @@ func runOne(inv Invariant, cfg RunConfig, throttle *verify.Throttle, cmdGuard *c
 func summarize(results []Result) Summary {
 	s := Summary{Total: len(results)}
 	for _, r := range results {
+		if r.SurfaceChanged {
+			s.SurfaceChanged++
+		}
 		switch r.Result {
 		case ResultPass:
 			s.Pass++

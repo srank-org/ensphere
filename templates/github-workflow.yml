@@ -81,6 +81,12 @@ jobs:
             --sandbox-seed "<sandbox seed>" \
             --sandbox-reset "<sandbox reset>"
 
+      - name: Check that the run can proceed
+        # Read-only: binary against the plugin, workspace, source commit, map
+        # and invariants, one GET to the sandbox inside the approved scope,
+        # the sandbox commands, provider CLIs, ledgers. Exits 1 on an error.
+        run: ensphere run doctor --plugin-version "$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' /tmp/ensphere/.claude-plugin/plugin.json)"
+
       - name: Fetch the previous assessment, if there is one
         env:
           GH_TOKEN: ${{ github.token }}

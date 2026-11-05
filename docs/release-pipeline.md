@@ -68,6 +68,11 @@ ensphere run init \
 # 3. Run the agent unattended with the prompt "ensphere". The allow-list
 #    names the ensphere binary, the sandbox commands, and file tools, and
 #    nothing that can open a socket on its own.
+# 3. Check that the run can proceed: binary, workspace, source commit, map,
+#    invariants, one GET to the sandbox, sandbox commands, provider CLIs.
+#    Read-only; exits 1 on an error.
+ensphere run doctor
+
 claude -p "ensphere" --model "$MODEL" \
   --allowedTools "Bash(ensphere:*),Bash(docker compose:*),Bash(npm run seed:synthetic),Read,Glob,Grep,Write,Edit"
 
@@ -106,7 +111,8 @@ or in `config.md`.
 
 - **The report gate.** `ensphere run statement` exits 2 while
   `ensphere run report` has errors: a non-terminal session, a missing
-  coverage file, a broken evidence chain, an uncited finding. This is the
+  coverage file, a broken evidence chain, an uncited finding, a tracked
+  file that differs from the commit the statement names. This is the
   minimum. A run that cannot produce a statement did not finish.
 - **Unresolved findings by priority.** The finding registry is YAML; count
   `confirmed` and `likely` findings at the priority your policy names.
@@ -224,6 +230,11 @@ names the ref; `ensphere run diff` against the previous full run shows what
 moved. A changed file that no surface claims cancels every skip until recon
 has mapped it, so a delta run never silently misses new surface. Keep a
 full run on each release and use delta runs between them.
+
+Between runs, the per-pull-request job in `templates/github-invariants.yml`
+passes the base commit as `ensphere invariants run --since`, so its report
+marks the invariants whose surface the change touched; `ensphere map
+changed` lists the same invariants under `invariants_affected`.
 
 ## What a release run cannot do
 

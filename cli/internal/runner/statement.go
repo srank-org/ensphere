@@ -112,18 +112,23 @@ func BuildStatement(workspace, version string, coverage *CoverageSummary) (*Stat
 	if coverage == nil {
 		_, coverage = validateCoverageFiles(workspace, states, planDecisions(plan), nil)
 	}
+	source, err := readSourceState(workspace, cfg)
+	if err != nil {
+		return nil, err
+	}
 	statement := &Statement{
 		EnsphereVersion: version,
 		System: StatementSystem{
-			TargetURL:   cfg.TargetURL,
-			Environment: cfg.Environment,
-			DeltaSince:  cfg.DeltaSince,
-			SourcePath:  cfg.SourcePath,
-			TargetType:  cfg.TargetType,
-			Cloud:       splitList(cfg.Cloud),
-			InScope:     cfg.InScope,
-			AssessedBy:  cfg.AssessedBy,
-			Operator:    cfg.Operator,
+			TargetURL:    cfg.TargetURL,
+			Environment:  cfg.Environment,
+			DeltaSince:   cfg.DeltaSince,
+			SourcePath:   cfg.SourcePath,
+			SourceCommit: source.Commit,
+			TargetType:   cfg.TargetType,
+			Cloud:        splitList(cfg.Cloud),
+			InScope:      cfg.InScope,
+			AssessedBy:   cfg.AssessedBy,
+			Operator:     cfg.Operator,
 		},
 		Coverage: *coverage,
 		Findings: StatementFindings{
@@ -309,6 +314,7 @@ func renderStatementMarkdown(s *Statement) string {
 	b.WriteString("# Statement of Assessment\n\n")
 	b.WriteString(fmt.Sprintf("- **System**: %s\n", orNone(s.System.TargetURL, "source only, no live target")))
 	b.WriteString(fmt.Sprintf("- **Source path**: %s\n", orNone(s.System.SourcePath, "none")))
+	b.WriteString(fmt.Sprintf("- **Source commit**: %s\n", orNone(s.System.SourceCommit, "not in git")))
 	b.WriteString(fmt.Sprintf("- **Target type**: %s\n", orNone(s.System.TargetType, "auto")))
 	b.WriteString(fmt.Sprintf("- **Environment tier**: %s\n", orNone(s.System.Environment, "none")))
 	if s.System.DeltaSince != "" {

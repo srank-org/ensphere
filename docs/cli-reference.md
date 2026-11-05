@@ -106,7 +106,7 @@ Create and inspect the `ensphere-pentest/` workspace used by the agent
 workflow. The runner writes deterministic workspace files, `next-action.md`,
 and `agent-prompt.md`; it does not run AI reasoning and has no exploitation
 command. Subcommands are `init`, `status`, `next`, `plan`, `report`,
-`statement`, `diff`, and `sarif`.
+`statement`, `diff`, `sarif`, and `doctor`.
 
 ```bash
 ensphere run init \
@@ -123,7 +123,21 @@ ensphere run report
 ensphere run statement
 ensphere run diff --previous ../previous-release/ensphere-pentest
 ensphere run sarif
+ensphere run doctor
 ```
+
+`run doctor` runs every readiness check once, read-only, and prints each
+as `ok`, `warning`, `error`, or `skipped` with a detail line: the binary
+against the plugin version (`--plugin-version`, or the manifest under
+`$CLAUDE_PLUGIN_ROOT`), the workspace and its next session, the source
+tree's git commit and drift, the system map and the invariants when
+present, one `GET` to the configured target after checking it against the
+approved scope, the `Start`, `Seed`, and `Reset` commands under `## Sandbox`,
+the provider CLIs the cloud scope needs (installed or not; it never logs
+in), and the hash chain of every session ledger. Without a workspace it
+still checks the binary, the source tree, the map, and the invariants from
+the current directory. It writes nothing and exits 1 when any check is an
+`error`. The output describes the tooling, never the system.
 
 Flags for `run init`:
 
@@ -204,7 +218,15 @@ session the plan decided `skip`, `not_applicable`, or `blocked` is `DONE`
 once its short report names that decision. Any other value is a gate
 error. The gate blocks report readiness when a session from 01 to 08.7 is
 not `DONE`, a session report is missing or empty, `assessment-plan.yaml` is
-missing or invalid, evidence chain verification fails, or the finding
+missing or invalid, evidence chain verification fails, a tracked file in
+the source tree differs from its commit (`source_tree_modified`; untracked
+files are the warning `source_tree_untracked`, and a source path outside
+git is the warning `source_not_git`), a `confirmed` or
+`likely` finding has no invariant under the source tree's
+`.ensphere/invariants/` whose `origin.ref` names it
+(`finding_invariant_missing`) or has one with `enforce: true`
+(`invariant_enforced_before_fix`), an invariant file does not load or
+validate (the `invariants validate` codes), or the finding
 registry contains uncited findings, missing required finding fields,
 invalid or duplicate finding ids, missing or invalid finding kinds, invalid
 statuses (`confirmed`, `likely`, `informational`, `not_supported`,
@@ -238,7 +260,8 @@ numbers; there is no analyst-chosen coverage label.
 
 `run statement` derives `09-report/statement.yaml` and
 `09-report/statement.md`, the one-page Statement of Assessment, from the
-workspace alone: target, environment, source path, platforms, assessor and
+workspace alone: target, environment, source path and the git commit the
+tree is at (`source_commit`), platforms, assessor and
 operator from `config.md`; every session's plan decision and progress
 state; the coverage counts above; finding counts by kind, status,
 and severity with the unresolved findings listed; each ledger's entry count,
@@ -305,6 +328,11 @@ ensphere map validate [--source-path .] [--map <path>]
 ensphere map changed [--since <ref>] [--source-path .] [--map <path>]
 ```
 
+`map changed` also lists `invariants_affected`: every invariant under
+`.ensphere/invariants/` whose `surface` is among the changed surfaces, with
+its id, surface, `enforce`, and path, so a change to a surface's files
+names the declared expectations that cover it.
+
 `map validate` checks `version: 1`, a non-empty `reconciled_at`, unique
 `SURF-NNN` ids, a known `kind` (`endpoint`, `table`, `bucket`, `function`,
 `job`, `config`, `client`, `workflow`), a non-empty `name`, a `role` from
@@ -333,14 +361,23 @@ Invariants are declared expectations, one YAML file each under
 `<source-path>/.ensphere/invariants/`, that the target's own CI runs on
 every pull request with no agent. Session 09 writes them from findings'
 validation criteria and from tested defenses; `templates/dot-ensphere/`
-shows one of each kind.
+shows one of each kind. The report gate checks that every `confirmed` or
+`likely` finding has one, with `enforce: false` (see Run).
 
 ```bash
 ensphere invariants validate [--dir <path>] [--source-path .] [--map <path>]
 ensphere invariants run --in-scope <patterns> [--target <base url>] \
   [--dir <path>] [--source-path .] [--map <path>] [--only INV-001,INV-002] \
-  [--max-risk N] [--throttle ms] [--timeout s] [--header k:v] [--out <file>]
+  [--since <ref>] [--max-risk N] [--throttle ms] [--timeout s] \
+  [--header k:v] [--out <file>]
 ```
+
+`--since <ref>` joins the working tree's changes since the ref to the
+system map, as `map changed` does, and marks each result whose `surface`
+changed with `surface_changed: true`; the report records `since` and the
+summary counts `surface_changed`. It needs a valid map (usage error
+otherwise). A pull-request job passes the base commit so the reviewer sees
+which invariants cover the files the change touched.
 
 `--target` may be omitted when the directory holds only `source` and
 `command` invariants; an HTTP-kind invariant run without one is `error`.
@@ -383,7 +420,8 @@ writes no ledger, and prints a report: `target`, `source_path`,
 `surface`, `result` (`pass`, `fail`, or `error`), `message`, `measured`
 (per kind: the status, the named headers, and body length; the first
 throttled request, throttled count, and status codes; the status for the
-size; files scanned, matches, and redacted samples; exit code and
+size and `connection_closed` when the server closed the connection before
+consuming the body; files scanned, matches, and redacted samples; exit code and
 truncated, redacted output), `expect`, and `duration_ms`, with a `summary`
 of `total`, `pass`, `fail`, `error`, `enforced_fail`, `unenforced_fail`,
 and `unenforced_pass`. A `rate_limit` invariant counts a 429 or a 503 as
@@ -644,8 +682,13 @@ Risk 2. `--technique` is one of:
   determinable), and `content_length`.
 - `upload_size` — requires `--sizes` (1-5 ints, each at most 100 MB). `--field`
   (default `file`) is the multipart field; the method is forced to POST. Each
-  round streams that many random bytes and records `size_bytes`, `status_code`,
-  `elapsed_ms`, `body_hash`, and `response_bytes`.
+  round streams that many random bytes with the body's exact `Content-Length`
+  and `Expect: 100-continue`, as a large real upload does, so a server that
+  caps on the headers can refuse before any body is sent; it records
+  `size_bytes`, `status_code`, `elapsed_ms`, `body_hash`, and
+  `response_bytes`. A server that closes the connection before consuming the
+  body is recorded, not an error: `connection_closed` is true, with the
+  `status_code` it sent first or 0 when it sent none.
 - `response_size` — a single request (honoring `--method` and `--body`) that
   records `body_bytes`, `content_length_header`, `content_encoding`,
   `elapsed_ms`, and `body_hash`.

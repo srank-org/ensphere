@@ -28,7 +28,12 @@ the ledger, and the gate. An assessment needs both at the same version.
 4. For each provider CLI the operator's platforms need (`aws`, `gcloud`,
    `az`, `wrangler`, `supabase`), report whether it is installed and logged
    in using a read-only identity command. Never log in on their behalf.
-5. Report in one short list what is ready and what is not, with the exact
+5. Run `ensphere run doctor --plugin-version <plugin version>` from the
+   project directory and include its checks in the report. It compares the
+   binary with the plugin, reads the workspace when one exists, checks the
+   source tree, the map, the invariants, the target, the sandbox commands,
+   the provider CLIs, and the evidence chains, and writes nothing.
+6. Report in one short list what is ready and what is not, with the exact
    command for anything missing.
 
 Run this skill from a directory without an `ensphere-pentest/` workspace,

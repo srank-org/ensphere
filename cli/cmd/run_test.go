@@ -300,3 +300,41 @@ func TestCLIRunSarifWritesFindings(t *testing.T) {
 		t.Fatalf("unexpected SARIF version %q", log.Version)
 	}
 }
+
+func TestCLIRunDoctor(t *testing.T) {
+	root := t.TempDir()
+	workspace := filepath.Join(root, "ensphere-pentest")
+	result := runCLIIn(t, root, "", "run", "--workspace", workspace, "doctor")
+	if result.code != 1 {
+		t.Fatalf("doctor without a workspace must exit 1, got %d stderr=%s", result.code, result.stderr)
+	}
+	var out struct {
+		Ready  bool `json:"ready"`
+		Checks []struct {
+			Name  string `json:"name"`
+			State string `json:"state"`
+		} `json:"checks"`
+	}
+	decodeJSON(t, result.stdout, &out)
+	if out.Ready || len(out.Checks) == 0 || out.Checks[1].Name != "workspace" || out.Checks[1].State != "error" {
+		t.Fatalf("unexpected doctor output: %+v", out)
+	}
+
+	if init := runCLIIn(t, root, "", "run", "--workspace", workspace, "init", "--source-path", root); init.code != 0 {
+		t.Fatalf("run init exit %d stderr=%s", init.code, init.stderr)
+	}
+	// The test binary carries no release version, so the plugin comparison
+	// is a warning here; the runner tests cover a mismatch.
+	result = runCLIIn(t, root, "", "run", "--workspace", workspace, "doctor", "--plugin-version", "0.0.0")
+	if result.code != 0 || !strings.Contains(result.stdout, "not a release version") {
+		t.Fatalf("an untagged binary is a warning, got %d stdout=%s", result.code, result.stdout)
+	}
+	result = runCLIIn(t, root, "", "run", "--workspace", workspace, "doctor")
+	if result.code != 0 {
+		t.Fatalf("a source-only workspace must be ready, got %d stdout=%s", result.code, result.stdout)
+	}
+	decodeJSON(t, result.stdout, &out)
+	if !out.Ready {
+		t.Fatalf("expected ready: %+v", out)
+	}
+}

@@ -153,3 +153,75 @@ func TestCLIMapChanged(t *testing.T) {
 		t.Fatalf("a reconciled_at git cannot resolve must exit 3 with git's error, got %d stderr=%s", result.code, result.stderr)
 	}
 }
+
+func TestCLIMapChangedListsTheInvariantsAffected(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	gitIn(t, root, "init", "-q")
+	writeMapSource(t, root, "placeholder")
+	gitIn(t, root, "add", ".")
+	gitIn(t, root, "commit", "-q", "-m", "base")
+	base := gitIn(t, root, "rev-parse", "HEAD")
+	writeMapSource(t, root, base)
+	dir := filepath.Join(root, ".ensphere", "invariants")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "INV-001.yaml"), []byte("id: INV-001\ntitle: otp throttle\nsurface: SURF-001\norigin: {kind: tested_defense, ref: COV-08.5-001}\nenforce: true\nkind: source\ninclude: ['routes/*.ts']\npattern: 'limiter'\nexpect: {matches: 0}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "INV-002.yaml"), []byte("id: INV-002\ntitle: schema\nsurface: SURF-002\norigin: {kind: tested_defense, ref: COV-02-001}\nenforce: true\nkind: source\ninclude: ['db/*.sql']\npattern: 'drop'\nexpect: {matches: 0}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "routes", "otp.ts"), []byte("v2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result := runCLIIn(t, root, "", "map", "changed", "--since", base)
+	if result.code != 0 {
+		t.Fatalf("map changed exit %d stderr=%s", result.code, result.stderr)
+	}
+	var out struct {
+		ChangedSurfaces []struct {
+			ID string `json:"id"`
+		} `json:"changed_surfaces"`
+		InvariantsAffected []struct {
+			ID      string `json:"id"`
+			Surface string `json:"surface"`
+			Enforce bool   `json:"enforce"`
+		} `json:"invariants_affected"`
+	}
+	decodeJSON(t, result.stdout, &out)
+	if len(out.ChangedSurfaces) != 1 || out.ChangedSurfaces[0].ID != "SURF-001" {
+		t.Fatalf("unexpected changed surfaces: %+v", out)
+	}
+	if len(out.InvariantsAffected) != 1 || out.InvariantsAffected[0].ID != "INV-001" || out.InvariantsAffected[0].Surface != "SURF-001" || !out.InvariantsAffected[0].Enforce {
+		t.Fatalf("expected INV-001 to be the affected invariant: %+v", out.InvariantsAffected)
+	}
+
+	run := runCLIIn(t, root, "", "invariants", "run", "--in-scope", "localhost", "--since", base)
+	if run.code != 0 {
+		t.Fatalf("invariants run --since exit %d stderr=%s", run.code, run.stderr)
+	}
+	var report struct {
+		Since      string `json:"since"`
+		Invariants []struct {
+			ID             string `json:"id"`
+			SurfaceChanged bool   `json:"surface_changed"`
+		} `json:"invariants"`
+		Summary struct {
+			SurfaceChanged int `json:"surface_changed"`
+		} `json:"summary"`
+	}
+	decodeJSON(t, run.stdout, &report)
+	if report.Since != base || report.Summary.SurfaceChanged != 1 || !report.Invariants[0].SurfaceChanged || report.Invariants[1].SurfaceChanged {
+		t.Fatalf("expected INV-001 marked as covering the changed surface: %+v", report)
+	}
+
+	noMap := invariantSource(t, map[string]string{"INV-001.yaml": "id: INV-001\ntitle: t\norigin: {kind: tested_defense, ref: COV-02-001}\nkind: source\ninclude: ['**/*.ts']\npattern: 'x'\nexpect: {matches: 0}\n"})
+	if bad := runCLIIn(t, noMap, "", "invariants", "run", "--in-scope", "localhost", "--since", base); bad.code != 2 {
+		t.Fatalf("--since without a map is a usage error, got %d stderr=%s", bad.code, bad.stderr)
+	}
+}

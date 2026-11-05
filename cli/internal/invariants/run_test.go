@@ -409,14 +409,6 @@ func TestRunOnlySummaryAndMessage(t *testing.T) {
 	}
 }
 
-func guardedSource(t *testing.T, sandbox string) string {
-	t.Helper()
-	return writeFiles(t, map[string]string{
-		"ensphere-pentest/config.md": "# Config\n\n## Sandbox\n\n" + sandbox + "\n",
-		"curl":                       "#!/bin/sh\necho fake\n",
-	})
-}
-
 func makeFakeCurlExecutable(t *testing.T, root string) {
 	t.Helper()
 	if err := os.Chmod(filepath.Join(root, "curl"), 0o755); err != nil {
@@ -424,15 +416,25 @@ func makeFakeCurlExecutable(t *testing.T, root string) {
 	}
 }
 
-func TestRunCommandGuardDeniesNetworkToolInWorkspace(t *testing.T) {
-	root := guardedSource(t, "- Start: docker compose up -d")
+// refuseCurl stands in for the assessment guard: it refuses any run string
+// that names curl and lets everything else through.
+func refuseCurl(run string) string {
+	if strings.Contains(run, "curl") {
+		return "Ensphere guard: raw network tool curl is refused while an assessment workspace exists"
+	}
+	return ""
+}
+
+func TestRunCommandGuardRefusesBeforeExecution(t *testing.T) {
+	root := writeFiles(t, map[string]string{"curl": "#!/bin/sh\necho fake\n"})
 	makeFakeCurlExecutable(t, root)
 	cfg := testConfig("", root)
+	cfg.Guard = refuseCurl
 	for _, run := range []string{"curl http://x/", "./curl http://x/"} {
 		inv := parseInvariant(t, fmt.Sprintf(commandInvariant, run, "exit_code: 0"))
 		report := Run([]Invariant{inv}, cfg)
 		if !report.Guarded {
-			t.Fatalf("a workspace in the source path should guard the run")
+			t.Fatalf("a guard in the config should mark the run guarded")
 		}
 		r := report.Invariants[0]
 		assertResult(t, r, ResultError)
@@ -442,43 +444,52 @@ func TestRunCommandGuardDeniesNetworkToolInWorkspace(t *testing.T) {
 	}
 }
 
-func TestRunCommandUnguardedWithoutWorkspace(t *testing.T) {
+func TestRunCommandUnguardedWithoutGuard(t *testing.T) {
 	root := writeFiles(t, map[string]string{"curl": "#!/bin/sh\necho fake\n"})
 	makeFakeCurlExecutable(t, root)
 	inv := parseInvariant(t, fmt.Sprintf(commandInvariant, "./curl http://x/", `stdout_equals: "fake"`))
 	report := Run([]Invariant{inv}, testConfig("", root))
 	if report.Guarded {
-		t.Fatal("no workspace means an unguarded run")
+		t.Fatal("no guard means an unguarded run")
 	}
 	assertResult(t, report.Invariants[0], ResultPass)
 }
 
-func TestRunCommandGuardAllowsApprovedSandboxCommand(t *testing.T) {
-	root := guardedSource(t, "- Seed: ./curl http://x/")
+func TestRunCommandGuardLetsAnAllowedCommandRun(t *testing.T) {
+	root := writeFiles(t, map[string]string{"curl": "#!/bin/sh\necho fake\n"})
 	makeFakeCurlExecutable(t, root)
 	inv := parseInvariant(t, fmt.Sprintf(commandInvariant, "./curl http://x/", `stdout_equals: "fake"`))
-	report := Run([]Invariant{inv}, testConfig("", root))
+	cfg := testConfig("", root)
+	cfg.Guard = func(string) string { return "" }
+	report := Run([]Invariant{inv}, cfg)
 	if !report.Guarded {
-		t.Fatal("a workspace in the source path should guard the run")
+		t.Fatal("a guard in the config should mark the run guarded")
 	}
 	assertResult(t, report.Invariants[0], ResultPass)
 }
 
-func TestRunCommandGuardOff(t *testing.T) {
-	root := guardedSource(t, "- Start: docker compose up -d")
-	cfg := testConfig("", root)
-	cfg.Getenv = func(k string) string {
-		if k == "ENSPHERE_GUARD" {
-			return "off"
+const sizeInvariantRejected = `id: INV-031
+title: "Upload refuses an oversize body"
+origin: {kind: tested_defense, ref: COV-08.5-003}
+kind: size_limit
+request: {path: /upload}
+size_bytes: 8388608
+expect: {rejected: true}
+`
+
+func TestRunSizeLimitServerClosesBeforeReadingTheBody(t *testing.T) {
+	closing := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, _, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			t.Errorf("hijack: %v", err)
+			return
 		}
-		return ""
-	}
-	inv := parseInvariant(t, fmt.Sprintf(commandInvariant, "curl http://x/", "exit_code: 0"))
-	report := Run([]Invariant{inv}, cfg)
-	if report.Guarded {
-		t.Fatal("ENSPHERE_GUARD=off means an unguarded run")
-	}
-	if r := report.Invariants[0]; strings.Contains(r.Message, "Ensphere guard") {
-		t.Fatalf("ENSPHERE_GUARD=off must not apply the guard, got %q", r.Message)
+		_, _ = io.WriteString(conn, "HTTP/1.1 413 Payload Too Large\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+		_ = conn.Close()
+	}))
+	r := runSingle(t, parseInvariant(t, sizeInvariantRejected), testConfig(closing.URL, "."))
+	assertResult(t, r, ResultPass)
+	if m := r.Measured.(SizeLimitMeasured); m.StatusCode != 413 {
+		t.Fatalf("expected the 413 the server sent before the body, got %+v", m)
 	}
 }

@@ -32,7 +32,8 @@ CLI, validate scope, redact secrets, compute CVSS from supplied metrics, map
 categories to compliance controls, compare two workspaces and report what
 changed, translate the analyst's severity into a SARIF level, validate the
 system map and ask git which surfaces changed, run a declared invariant and
-report whether the stated expectation held.
+report whether the stated expectation held, and check, read-only, that a
+run's prerequisites are in place and that the source tree is at one commit.
 
 The CLI must not: assign status, confidence, or severity; apply thresholds
 ("delta > 500ms means SQLi"); decide exploitability; name a technique in a

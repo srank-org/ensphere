@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/srank-org/ensphere/internal/evidence"
+	"github.com/srank-org/ensphere/internal/invariants"
 	"github.com/srank-org/ensphere/internal/sysmap"
 	"gopkg.in/yaml.v3"
 )
@@ -81,6 +83,7 @@ func buildReportGate(workspace string) *ReportGateOutput {
 	issues = append(issues, validateEvidenceFiles(workspace)...)
 	mapIssues, surfaces := validateWorkspaceSystemMap(workspace)
 	issues = append(issues, mapIssues...)
+	issues = append(issues, validateSourceTree(workspace)...)
 	coverageIssues, coverage := validateCoverageFiles(workspace, states, planDecisions(plan), surfaces)
 	issues = append(issues, coverageIssues...)
 
@@ -94,6 +97,7 @@ func buildReportGate(workspace string) *ReportGateOutput {
 			issues = append(issues, registryIssues...)
 		}
 		issues = append(issues, validateSession09Artifacts(workspace)...)
+		issues = append(issues, validateInvariantPromotion(workspace, registryPath, surfaces)...)
 	}
 
 	statementIssues, statementState := validateStatement(workspace, coverage)
@@ -144,6 +148,81 @@ func validateWorkspaceSystemMap(workspace string) ([]ReportGateIssue, map[string
 		issues = append(issues, gateIssue(issue.Severity, issue.Code, path+"#"+issue.Path, issue.Message))
 	}
 	return issues, sysmap.IDs(m)
+}
+
+// validateInvariantPromotion enforces the contract's promotion rule once the
+// finding registry exists: every confirmed or likely finding has an invariant
+// under the source tree's .ensphere/invariants/ whose origin.ref names it,
+// and that invariant carries enforce: false until the fix lands. Invariant
+// files that do not load or validate are gate issues too. The gate never
+// runs an invariant.
+func validateInvariantPromotion(workspace, registryPath string, surfaces map[string]bool) []ReportGateIssue {
+	registry, err := readFindingRegistry(registryPath)
+	if err != nil {
+		return nil // validateFindingRegistry reports the parse failure
+	}
+	var open []FindingSummary
+	for _, finding := range registry.Findings {
+		if vulnerabilityFindingStatus(finding.Status) {
+			open = append(open, finding)
+		}
+	}
+	cfg, err := readConfig(workspace)
+	if err != nil {
+		return nil // validateWorkspaceSystemMap reports the config failure
+	}
+	dir := filepath.Join(cfg.SourcePath, invariants.DefaultDir)
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		issues := make([]ReportGateIssue, 0, len(open))
+		for _, finding := range open {
+			issues = append(issues, gateIssue("error", "finding_invariant_missing", dir,
+				fmt.Sprintf("finding %s is %s and has no invariant: write one under %s with origin.ref %s and enforce: false", displayFindingID(finding.ID), strings.TrimSpace(finding.Status), dir, strings.TrimSpace(finding.ID))))
+		}
+		return issues
+	}
+
+	invs, loadIssues, err := invariants.Load(dir)
+	if err != nil {
+		return []ReportGateIssue{gateIssue("error", "invariants_read_failed", dir, err.Error())}
+	}
+	var issues []ReportGateIssue
+	for _, issue := range loadIssues {
+		issues = append(issues, gateIssue(issue.Severity, issue.Code, issue.Path, issue.Message))
+	}
+	var known []string
+	if surfaces != nil {
+		known = make([]string, 0, len(surfaces))
+		for id := range surfaces {
+			known = append(known, id)
+		}
+		sort.Strings(known)
+	}
+	for _, issue := range invariants.Validate(invs, cfg.SourcePath, known) {
+		issues = append(issues, gateIssue(issue.Severity, issue.Code, issue.Path, issue.Message))
+	}
+
+	byRef := make(map[string][]invariants.Invariant, len(invs))
+	for _, inv := range invs {
+		ref := strings.TrimSpace(inv.Origin.Ref)
+		byRef[ref] = append(byRef[ref], inv)
+	}
+	for _, finding := range open {
+		id := strings.TrimSpace(finding.ID)
+		status := strings.TrimSpace(finding.Status)
+		promoted := byRef[id]
+		if len(promoted) == 0 {
+			issues = append(issues, gateIssue("error", "finding_invariant_missing", dir,
+				fmt.Sprintf("finding %s is %s and no invariant under %s names it as origin.ref", displayFindingID(id), status, dir)))
+			continue
+		}
+		for _, inv := range promoted {
+			if inv.Enforce {
+				issues = append(issues, gateIssue("error", "invariant_enforced_before_fix", inv.Path,
+					fmt.Sprintf("%s comes from finding %s, which is %s: enforce must stay false until the fix lands and is reported", inv.ID, displayFindingID(id), status)))
+			}
+		}
+	}
+	return issues
 }
 
 // planDecisions maps each session id to its plan decision, or nil when there

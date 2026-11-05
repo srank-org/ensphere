@@ -10,7 +10,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/srank-org/ensphere/internal/guard"
 	"github.com/srank-org/ensphere/internal/invariants"
+	"github.com/srank-org/ensphere/internal/runner"
+	"github.com/srank-org/ensphere/internal/sysmap"
 )
 
 var (
@@ -25,6 +28,7 @@ var (
 	invTimeout    int
 	invHeaders    []string
 	invOut        string
+	invSince      string
 )
 
 var invariantsCmd = &cobra.Command{
@@ -105,17 +109,28 @@ Example:
 		if unknown := invariants.UnknownIDs(invs, invOnly); len(unknown) > 0 {
 			return exitRunError(fmt.Errorf("%w: --only names unknown invariants: %s", errUsage, strings.Join(unknown, ", ")))
 		}
+		var changedSurfaces []string
+		if invSince != "" {
+			ids, err := changedSurfaceIDs(invSourcePath, invMap, invSince)
+			if err != nil {
+				return exitRunError(err)
+			}
+			changedSurfaces = ids
+		}
 
 		report := invariants.Run(invs, invariants.RunConfig{
-			Target:     invTarget,
-			SourcePath: invSourcePath,
-			Scope:      invInScope,
-			MaxRisk:    invMaxRisk,
-			ThrottleMs: invThrottle,
-			TimeoutSec: invTimeout,
-			Headers:    headers,
-			Only:       invOnly,
-			Getenv:     os.Getenv,
+			Target:          invTarget,
+			SourcePath:      invSourcePath,
+			Scope:           invInScope,
+			MaxRisk:         invMaxRisk,
+			ThrottleMs:      invThrottle,
+			TimeoutSec:      invTimeout,
+			Headers:         headers,
+			Only:            invOnly,
+			Getenv:          os.Getenv,
+			Since:           invSince,
+			ChangedSurfaces: changedSurfaces,
+			Guard:           guard.CommandGuard(invSourcePath, os.Getenv),
 		})
 		if invOut != "" {
 			raw, err := json.MarshalIndent(report, "", "  ")
@@ -185,7 +200,37 @@ func init() {
 	invariantsRunCmd.Flags().IntVar(&invTimeout, "timeout", 10, "HTTP request timeout in seconds")
 	invariantsRunCmd.Flags().StringSliceVar(&invHeaders, "header", nil, "Header added to every request (key:value, repeatable)")
 	invariantsRunCmd.Flags().StringVar(&invOut, "out", "", "Also write the report JSON to this file")
+	invariantsRunCmd.Flags().StringVar(&invSince, "since", "", "Git commit or ref to compare the working tree with, as ensphere map changed does; each result then says whether its surface changed (needs the system map)")
 
 	invariantsCmd.AddCommand(invariantsValidateCmd, invariantsRunCmd)
 	rootCmd.AddCommand(invariantsCmd)
+}
+
+// changedSurfaceIDs joins the working tree's changes since a ref to the
+// system map, as ensphere map changed does, and returns the changed surface
+// ids. Without a valid map the ref cannot be interpreted, which is a usage
+// error.
+func changedSurfaceIDs(sourcePath, mapPath, since string) ([]string, error) {
+	if mapPath == "" {
+		mapPath = sysmap.Path(sourcePath)
+	}
+	if _, err := os.Stat(mapPath); err != nil {
+		return nil, fmt.Errorf("%w: --since needs the system map at %s", errUsage, mapPath)
+	}
+	validation, m, err := sysmap.ValidateFile(mapPath, sourcePath, runner.CheckSessionIDs())
+	if err != nil {
+		return nil, err
+	}
+	if !validation.Valid {
+		return nil, fmt.Errorf("%w: the system map at %s has errors; run ensphere map validate", errUsage, mapPath)
+	}
+	changes, err := sysmap.Changed(m, sourcePath, since)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(changes.ChangedSurfaces))
+	for _, surface := range changes.ChangedSurfaces {
+		ids = append(ids, surface.ID)
+	}
+	return ids, nil
 }

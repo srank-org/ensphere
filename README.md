@@ -43,7 +43,7 @@ Ensphere is a Claude Code plugin plus a Go binary. In Claude Code:
 /plugin install ensphere@srank
 ```
 
-Then say `ensphere-setup` once. It installs the `ensphere` binary at the plugin's version, from a signed release when one exists and from source otherwise, and tells you which provider CLIs are logged in. The plugin also installs two hooks: while a project holds an assessment workspace, raw network tools such as `curl` are refused so every request goes through the CLI's scope enforcement, and each new session starts from the workspace's next action. Set `ENSPHERE_GUARD=off` to switch the guard off for a shell.
+Then say `ensphere-setup` once. It installs the `ensphere` binary at the plugin's version, from a signed release when one exists and from source otherwise, tells you which provider CLIs are logged in, and ends with `ensphere run doctor`, the read-only check that a run can proceed here. The plugin also installs two hooks: while a project holds an assessment workspace, raw network tools such as `curl` are refused so every request goes through the CLI's scope enforcement, and each new session starts from the workspace's next action. Set `ENSPHERE_GUARD=off` to switch the guard off for a shell.
 
 For Codex or another harness that loads skills from a directory, or to build by hand:
 

@@ -180,13 +180,17 @@ func runSizeLimit(inv Invariant, cfg RunConfig) outcome {
 		return errorOutcome("upload probe returned unexpected measurements %T", result.Measurements)
 	}
 	round := m.Upload[0]
-	measured := SizeLimitMeasured{URL: url, SizeBytes: round.SizeBytes, StatusCode: round.StatusCode, ResponseBytes: round.ResponseBytes}
+	measured := SizeLimitMeasured{URL: url, SizeBytes: round.SizeBytes, StatusCode: round.StatusCode, ResponseBytes: round.ResponseBytes, ConnectionClosed: round.ConnectionClosed}
 
+	got := fmt.Sprintf("got %d", round.StatusCode)
+	if round.ConnectionClosed {
+		got += ", connection closed during the upload"
+	}
 	wantRejected := inv.Expect.Rejected == nil || *inv.Expect.Rejected
 	rejected := round.StatusCode < 200 || round.StatusCode > 299
-	checks := []Check{{Check: fmt.Sprintf("rejected %t (got %d)", wantRejected, round.StatusCode), Held: rejected == wantRejected}}
+	checks := []Check{{Check: fmt.Sprintf("rejected %t (%s)", wantRejected, got), Held: rejected == wantRejected}}
 	if len(inv.Expect.StatusIn) > 0 {
-		checks = append(checks, Check{Check: fmt.Sprintf("status_in %v (got %d)", inv.Expect.StatusIn, round.StatusCode), Held: containsInt(inv.Expect.StatusIn, round.StatusCode)})
+		checks = append(checks, Check{Check: fmt.Sprintf("status_in %v (%s)", inv.Expect.StatusIn, got), Held: containsInt(inv.Expect.StatusIn, round.StatusCode)})
 	}
 	measured.Checks = checks
 	return fromChecks(checks, measured)

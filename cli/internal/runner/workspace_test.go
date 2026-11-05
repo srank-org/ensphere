@@ -494,6 +494,7 @@ func TestRunReportPassesWhenSessionsHaveReports(t *testing.T) {
 		t.Fatalf("run plan: %v", err)
 	}
 	writeReportReadyWorkspace(t, workspace)
+	setSourcePath(t, workspace, t.TempDir())
 
 	gate, err := RunReport(workspace)
 	if err != nil {
@@ -590,6 +591,7 @@ findings:
 	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
 		t.Fatalf("write cited registry: %v", err)
 	}
+	promoteRegistryFindings(t, workspace)
 	gate, err = RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report gate with cited registry: %v", err)
@@ -733,6 +735,7 @@ findings:
 	if err := os.WriteFile(filepath.Join(workspace, "09-report", "finding-registry.yaml"), []byte(registry), 0644); err != nil {
 		t.Fatalf("write registry: %v", err)
 	}
+	promoteRegistryFindings(t, workspace)
 	gate, err := RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report gate: %v", err)
@@ -1058,6 +1061,7 @@ func TestRunReportLetsOnlySkippedSessionsOmitCoverage(t *testing.T) {
 		t.Fatalf("run plan: %v", err)
 	}
 	writeReportReadyWorkspace(t, workspace)
+	setSourcePath(t, workspace, t.TempDir())
 	gate, err := RunReport(workspace)
 	if err != nil {
 		t.Fatalf("run report: %v", err)

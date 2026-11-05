@@ -325,15 +325,18 @@ type Statement struct {
 }
 
 type StatementSystem struct {
-	TargetURL   string   `json:"target_url" yaml:"target_url"`
-	Environment string   `json:"environment" yaml:"environment"`
-	DeltaSince  string   `json:"delta_since,omitempty" yaml:"delta_since,omitempty"`
-	SourcePath  string   `json:"source_path" yaml:"source_path"`
-	TargetType  string   `json:"target_type" yaml:"target_type"`
-	Cloud       []string `json:"cloud" yaml:"cloud"`
-	InScope     string   `json:"in_scope" yaml:"in_scope"`
-	AssessedBy  string   `json:"assessed_by" yaml:"assessed_by"`
-	Operator    string   `json:"operator" yaml:"operator"`
+	TargetURL   string `json:"target_url" yaml:"target_url"`
+	Environment string `json:"environment" yaml:"environment"`
+	DeltaSince  string `json:"delta_since,omitempty" yaml:"delta_since,omitempty"`
+	SourcePath  string `json:"source_path" yaml:"source_path"`
+	// SourceCommit is the git commit the source tree was at when the
+	// statement was generated; empty when the source path is not in git.
+	SourceCommit string   `json:"source_commit,omitempty" yaml:"source_commit,omitempty"`
+	TargetType   string   `json:"target_type" yaml:"target_type"`
+	Cloud        []string `json:"cloud" yaml:"cloud"`
+	InScope      string   `json:"in_scope" yaml:"in_scope"`
+	AssessedBy   string   `json:"assessed_by" yaml:"assessed_by"`
+	Operator     string   `json:"operator" yaml:"operator"`
 }
 
 type StatementDates struct {
